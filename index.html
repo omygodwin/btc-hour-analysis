@@ -1,0 +1,2615 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BTC Hourly Analysis Dashboard v9</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Inter:wght@400;500;600&family=Roboto+Mono:wght@400;500;600&family=Fira+Code:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    
+    :root {
+      --bg-primary: #0a0a0f;
+      --bg-secondary: #12121a;
+      --bg-tertiary: #1a1a24;
+      --bg-solid: #0d0d12;
+      --border-subtle: rgba(255, 255, 255, 0.08);
+      --border-medium: rgba(255, 255, 255, 0.15);
+      --border-hour: rgba(247, 147, 26, 0.5);
+      --text-primary: #e8e8e8;
+      --text-secondary: #a0a0a0;
+      --text-muted: #666;
+      --accent-btc: #f7931a;
+      --accent-btc-dim: rgba(247, 147, 26, 0.2);
+      --accent-blue: #6495ed;
+      --accent-green: #4ade80;
+      --accent-red: #f87171;
+      --accent-purple: #a78bfa;
+      --font-size: 10px;
+      --font-family: 'JetBrains Mono', monospace;
+    }
+    
+    body {
+      background: linear-gradient(135deg, var(--bg-primary) 0%, var(--bg-secondary) 50%, var(--bg-primary) 100%);
+      color: var(--text-primary);
+      font-family: 'Inter', -apple-system, sans-serif;
+      height: 100vh;
+      overflow: hidden;
+    }
+    
+    html { height: 100vh; overflow: hidden; }
+    
+    .upload-screen { height: 100vh; display: flex; align-items: center; justify-content: center; overflow: auto; }
+    
+    .upload-card {
+      text-align: center; padding: 48px;
+      background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 16px; max-width: 450px;
+    }
+    
+    .btc-logo {
+      font-size: 4.5rem;
+      background: linear-gradient(135deg, #f7931a, #ffc73b);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+      background-clip: text; margin-bottom: 16px;
+    }
+    
+    .upload-card h1 { color: var(--accent-btc); font-size: 1.8rem; margin-bottom: 8px; font-family: 'JetBrains Mono', monospace; }
+    .upload-card > p { color: #888; font-size: 0.9rem; margin-bottom: 32px; }
+    
+    .upload-btn {
+      display: inline-flex; align-items: center; gap: 12px; padding: 16px 32px;
+      background: linear-gradient(135deg, #f7931a, #e8820e); border: none; border-radius: 12px;
+      color: #fff; font-size: 1.1rem; font-weight: 600; cursor: pointer;
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+    .upload-btn:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(247,147,26,0.35); }
+    
+    .format-info { margin-top: 36px; padding-top: 28px; border-top: 1px solid rgba(255,255,255,0.08); text-align: left; }
+    .format-info h3 { color: #aaa; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 12px; }
+    .format-info code { display: block; padding: 12px 16px; background: rgba(0,0,0,0.4); border-radius: 8px; font-size: 0.85rem; color: var(--accent-blue); font-family: 'JetBrains Mono', monospace; }
+    
+    .error-msg { color: var(--accent-red); margin-top: 20px; font-size: 0.9rem; padding: 12px; background: rgba(248, 113, 113, 0.1); border-radius: 8px; }
+    
+    .spinner { width: 50px; height: 50px; border: 3px solid rgba(255,255,255,0.1); border-top-color: var(--accent-btc); border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 20px; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    
+    .app { display: none; height: 100vh; flex-direction: column; overflow: hidden; min-height: 0; }
+    .app.visible { display: flex; }
+    
+    .tab-nav { display: flex; background: var(--bg-secondary); border-bottom: 1px solid var(--border-medium); flex-shrink: 0; }
+    .tab-btn { padding: 10px 24px; background: transparent; border: none; border-bottom: 2px solid transparent; color: var(--text-muted); font-size: 0.8rem; font-family: 'Inter', sans-serif; cursor: pointer; transition: all 0.2s; }
+    .tab-btn:hover { color: var(--text-secondary); background: rgba(255,255,255,0.03); }
+    .tab-btn.active { color: var(--accent-btc); border-bottom-color: var(--accent-btc); background: rgba(247,147,26,0.08); }
+    
+    .tab-content { display: none; flex: 1; flex-direction: column; overflow: hidden; min-height: 0; }
+    .tab-content.active { display: flex; }
+    
+    .header { display: flex; justify-content: space-between; align-items: center; padding: 6px 16px; background: linear-gradient(180deg, rgba(247,147,26,0.12) 0%, var(--bg-primary) 100%); border-bottom: 1px solid rgba(247,147,26,0.25); flex-shrink: 0; }
+    .header h1 { font-family: 'JetBrains Mono', monospace; font-size: 1rem; color: var(--accent-btc); display: flex; align-items: center; gap: 6px; }
+    .btc-sym { font-size: 1.2rem; background: linear-gradient(135deg, #f7931a, #ffc73b); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+    .sub { display: block; font-size: 0.55rem; color: var(--text-muted); margin-top: 1px; }
+    
+    .header-stats { display: flex; gap: 8px; }
+    .stat { display: flex; flex-direction: column; align-items: center; padding: 4px 10px; background: rgba(255,255,255,0.04); border-radius: 5px; border: 1px solid var(--border-medium); }
+    .stat-val { font-family: var(--font-family); font-size: 0.85rem; font-weight: 600; color: var(--accent-btc); }
+    .stat-lbl { font-size: 0.45rem; text-transform: uppercase; color: var(--text-muted); }
+    
+    .toolbar { display: flex; gap: 4px; padding: 5px 16px; background: var(--bg-secondary); border-bottom: 1px solid var(--border-subtle); flex-wrap: wrap; align-items: center; flex-shrink: 0; }
+    
+    .tb-btn { display: flex; align-items: center; gap: 3px; padding: 3px 7px; background: rgba(255,255,255,0.04); border: 1px solid var(--border-medium); border-radius: 3px; color: var(--text-secondary); font-size: 0.6rem; font-family: 'Inter', sans-serif; cursor: pointer; transition: all 0.15s; }
+    .tb-btn:hover { background: rgba(255,255,255,0.08); color: var(--text-primary); }
+    .tb-btn.active { background: var(--accent-btc-dim); border-color: rgba(247,147,26,0.4); color: var(--accent-btc); }
+    .tb-btn.preset { background: rgba(100,149,237,0.1); border-color: rgba(100,149,237,0.25); color: var(--accent-blue); }
+    .tb-btn.new-file { background: rgba(139,92,246,0.12); border-color: rgba(139,92,246,0.3); color: #a78bfa; }
+    .tb-btn.filter-btn { background: rgba(74,222,128,0.1); border-color: rgba(74,222,128,0.25); color: var(--accent-green); }
+    .tb-btn.filter-btn.has-filters { background: rgba(74,222,128,0.25); border-color: rgba(74,222,128,0.5); }
+    
+    .tb-spacer { flex: 1; }
+    
+    .tb-group { display: flex; align-items: center; gap: 3px; padding: 0 5px; border-left: 1px solid var(--border-medium); }
+    .tb-group label { font-size: 0.55rem; color: var(--text-muted); }
+    .tb-group select, .tb-group input { padding: 2px 4px; background: rgba(255,255,255,0.05); border: 1px solid var(--border-medium); border-radius: 2px; color: var(--text-primary); font-family: var(--font-family); font-size: 0.6rem; }
+    .tb-group input[type="number"] { width: 50px; }
+    
+    .filters { display: none; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; padding: 10px 16px; background: var(--bg-tertiary); border-bottom: 1px solid var(--border-subtle); flex-shrink: 0; }
+    .filters.visible { display: grid; }
+    
+    .filter-group h3 { font-size: 0.52rem; text-transform: uppercase; letter-spacing: 1px; color: var(--text-muted); margin-bottom: 5px; font-weight: 500; }
+    .filter-btns { display: flex; flex-wrap: wrap; gap: 2px; }
+    
+    .f-btn { padding: 2px 5px; background: rgba(255,255,255,0.04); border: 1px solid var(--border-medium); border-radius: 2px; color: var(--text-muted); font-size: 0.55rem; font-family: 'JetBrains Mono', monospace; cursor: pointer; transition: all 0.15s; }
+    .f-btn:hover { background: rgba(255,255,255,0.08); }
+    .f-btn.active { background: var(--accent-btc-dim); border-color: rgba(247,147,26,0.4); color: var(--accent-btc); }
+    .f-btn.quick { background: rgba(100,149,237,0.1); border-color: rgba(100,149,237,0.2); color: var(--accent-blue); }
+    .f-btn.none-btn { background: rgba(248,113,113,0.1); border-color: rgba(248,113,113,0.25); color: var(--accent-red); }
+    
+    .range-row { display: flex; align-items: center; gap: 5px; flex-wrap: wrap; }
+    .range-row label { display: flex; align-items: center; gap: 2px; font-size: 0.6rem; color: var(--text-muted); }
+    .range-row select { padding: 2px 4px; background: rgba(255,255,255,0.05); border: 1px solid var(--border-medium); border-radius: 2px; color: var(--text-primary); font-family: 'JetBrains Mono', monospace; font-size: 0.6rem; }
+    
+    .hour-presets { display: flex; gap: 2px; }
+    .hour-presets button { padding: 2px 5px; background: rgba(100,149,237,0.1); border: 1px solid rgba(100,149,237,0.2); border-radius: 2px; color: var(--accent-blue); font-size: 0.5rem; cursor: pointer; }
+    
+    .date-picker-btn { padding: 3px 6px; background: rgba(255,255,255,0.04); border: 1px solid var(--border-medium); border-radius: 2px; color: var(--text-secondary); font-size: 0.6rem; cursor: pointer; }
+    
+    .date-picker-dropdown { display: none; position: absolute; top: 100%; left: 0; z-index: 100; background: var(--bg-tertiary); border: 1px solid var(--border-medium); border-radius: 5px; padding: 8px; max-height: 250px; overflow-y: auto; min-width: 260px; box-shadow: 0 8px 24px rgba(0,0,0,0.5); }
+    .date-picker-dropdown.visible { display: block; }
+    
+    .date-picker-actions { display: flex; gap: 3px; margin-bottom: 6px; padding-bottom: 6px; border-bottom: 1px solid var(--border-subtle); }
+    .date-picker-actions button { padding: 2px 6px; background: rgba(100,149,237,0.1); border: 1px solid rgba(100,149,237,0.2); border-radius: 2px; color: var(--accent-blue); font-size: 0.55rem; cursor: pointer; }
+    
+    .date-list { display: grid; grid-template-columns: repeat(3, 1fr); gap: 2px; }
+    .date-item { padding: 2px 4px; background: rgba(255,255,255,0.03); border: 1px solid transparent; border-radius: 2px; font-size: 0.55rem; font-family: 'JetBrains Mono', monospace; color: var(--text-muted); cursor: pointer; text-align: center; }
+    .date-item.selected { background: var(--accent-btc-dim); border-color: rgba(247,147,26,0.4); color: var(--accent-btc); }
+    
+    /* Column Filter Panel */
+    .col-filter-panel { display: none; padding: 10px 16px; background: rgba(74,222,128,0.05); border-bottom: 1px solid rgba(74,222,128,0.2); flex-shrink: 0; }
+    .col-filter-panel.visible { display: block; }
+    .col-filter-panel h3 { font-size: 0.55rem; text-transform: uppercase; color: var(--accent-green); margin-bottom: 8px; }
+    
+    .active-filters { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 8px; }
+    .filter-tag { display: flex; align-items: center; gap: 4px; padding: 3px 8px; background: rgba(74,222,128,0.15); border: 1px solid rgba(74,222,128,0.3); border-radius: 3px; font-size: 0.55rem; color: var(--accent-green); }
+    .filter-tag .remove-filter { cursor: pointer; color: var(--accent-red); font-weight: bold; }
+    
+    .add-filter-row { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+    .add-filter-row select, .add-filter-row input { padding: 3px 6px; background: rgba(255,255,255,0.05); border: 1px solid var(--border-medium); border-radius: 3px; color: var(--text-primary); font-size: 0.6rem; font-family: 'JetBrains Mono', monospace; }
+    .add-filter-row input[type="number"] { width: 80px; }
+    .add-filter-row button { padding: 3px 10px; background: rgba(74,222,128,0.2); border: 1px solid rgba(74,222,128,0.4); border-radius: 3px; color: var(--accent-green); font-size: 0.6rem; cursor: pointer; }
+    
+    .col-selector { display: none; padding: 10px 16px; background: var(--bg-tertiary); border-bottom: 1px solid var(--border-subtle); flex-shrink: 0; }
+    .col-selector.visible { display: block; }
+    .col-selector h3 { font-size: 0.52rem; text-transform: uppercase; letter-spacing: 1px; color: var(--text-muted); margin-bottom: 6px; }
+    
+    .col-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap: 2px; margin-bottom: 8px; }
+    .col-item { display: flex; align-items: center; gap: 4px; padding: 3px 5px; background: rgba(255,255,255,0.02); border-radius: 2px; cursor: pointer; font-size: 0.6rem; }
+    .col-item:hover { background: rgba(255,255,255,0.06); }
+    .col-item input { accent-color: var(--accent-btc); cursor: pointer; }
+    .col-item .col-label { font-weight: 500; color: var(--text-primary); }
+    .col-item .col-desc { font-size: 0.5rem; color: var(--text-muted); margin-left: auto; }
+    
+    .col-presets { display: flex; gap: 4px; flex-wrap: wrap; align-items: center; }
+    .col-presets button { padding: 2px 6px; background: rgba(100,149,237,0.1); border: 1px solid rgba(100,149,237,0.18); border-radius: 2px; color: var(--accent-blue); font-size: 0.55rem; cursor: pointer; }
+    
+    .option-toggle { margin-left: 10px; padding-left: 10px; border-left: 1px solid var(--border-medium); display: flex; align-items: center; gap: 4px; }
+    .option-toggle label { font-size: 0.55rem; color: var(--text-muted); }
+    .option-toggle select { padding: 2px 4px; background: rgba(255,255,255,0.05); border: 1px solid var(--border-medium); border-radius: 2px; color: var(--text-primary); font-size: 0.55rem; }
+    
+    /* Day Totals Column Selector */
+    .dt-col-selector { display: none; padding: 8px 16px; background: rgba(100,149,237,0.05); border-bottom: 1px solid rgba(100,149,237,0.2); flex-shrink: 0; }
+    .dt-col-selector.visible { display: block; }
+    .dt-col-selector h3 { font-size: 0.52rem; text-transform: uppercase; color: var(--accent-blue); margin-bottom: 6px; }
+    .dt-col-grid { display: flex; flex-wrap: wrap; gap: 4px; }
+    .dt-col-item { display: flex; align-items: center; gap: 3px; padding: 2px 6px; background: rgba(255,255,255,0.03); border-radius: 2px; font-size: 0.55rem; cursor: pointer; }
+    .dt-col-item:hover { background: rgba(255,255,255,0.06); }
+    .dt-col-item input { accent-color: var(--accent-blue); }
+    
+    /* RSI Settings Panel */
+    .rsi-settings { display: none; padding: 8px 16px; background: rgba(167,139,250,0.05); border-bottom: 1px solid rgba(167,139,250,0.2); flex-shrink: 0; }
+    .rsi-settings.visible { display: block; }
+    .rsi-settings h3 { font-size: 0.52rem; text-transform: uppercase; color: var(--accent-purple); margin-bottom: 6px; }
+    .rsi-settings-row { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+    .rsi-settings-row label { font-size: 0.55rem; color: var(--text-muted); display: flex; align-items: center; gap: 3px; }
+    .rsi-settings-row input, .rsi-settings-row select { padding: 2px 5px; background: rgba(255,255,255,0.05); border: 1px solid var(--border-medium); border-radius: 2px; color: var(--text-primary); font-size: 0.55rem; }
+    .rsi-settings-row input[type="number"] { width: 45px; }
+    
+    .table-container { flex: 1; overflow: auto; min-height: 0; }
+    
+    .data-table { width: max-content; border-collapse: separate; border-spacing: 0; font-family: var(--font-family); font-size: var(--font-size); }
+    .data-table th, .data-table td { padding: 2px 3px; text-align: center; border: 1px solid var(--border-subtle); white-space: nowrap; }
+    
+    .hour-border-left { border-left: 2px solid var(--border-hour) !important; }
+    
+    .hour-row th { position: sticky; top: 0; z-index: 20; background: var(--bg-tertiary); }
+    .col-row th { position: sticky; top: 18px; z-index: 20; background: var(--bg-secondary); cursor: pointer; }
+    .col-row th:hover { background: rgba(247,147,26,0.15); }
+    .col-row th.sorted { background: rgba(247,147,26,0.25); color: var(--accent-btc); }
+    
+    .hour-header { background: linear-gradient(180deg, rgba(247,147,26,0.18) 0%, rgba(247,147,26,0.08) 100%) !important; color: var(--accent-btc); font-weight: 600; }
+    .day-totals-header { background: linear-gradient(180deg, rgba(100,149,237,0.18) 0%, rgba(100,149,237,0.08) 100%) !important; color: var(--accent-blue); font-weight: 600; }
+    
+    .col-header { color: var(--text-muted); font-weight: 500; font-size: calc(var(--font-size) * 0.8); text-transform: uppercase; }
+    
+    .sticky-col { position: sticky; z-index: 15; }
+    .sticky-header { z-index: 25 !important; background: var(--bg-tertiary) !important; }
+    .sticky-header-sub { z-index: 25 !important; background: var(--bg-secondary) !important; }
+    
+    .date-cell { font-weight: 600; color: var(--text-primary); text-align: left; background: var(--bg-solid) !important; }
+    .day-cell, .occ-cell { color: var(--text-muted); background: var(--bg-solid) !important; }
+    .day-total-cell { color: var(--text-secondary); }
+    
+    .pct-row td { background: rgba(100,149,237,0.08); font-weight: 500; font-size: calc(var(--font-size) * 0.9); }
+    .pct-label { color: var(--accent-blue); font-weight: 600; }
+    
+    .data-cell { font-variant-numeric: tabular-nums; }
+    .data-cell:hover { outline: 1px solid rgba(247,147,26,0.5); z-index: 5; position: relative; }
+    
+    .data-cell.up { color: #a7f3d0 !important; }
+    .data-cell.down { color: #fecaca !important; }
+    .data-cell.neutral { color: var(--text-muted) !important; }
+    .data-cell.ob { color: #fbbf24 !important; font-weight: 600; }
+    .data-cell.os { color: #60a5fa !important; font-weight: 600; }
+    
+    .legend { display: flex; justify-content: center; gap: 16px; padding: 6px; background: var(--bg-secondary); border-top: 1px solid var(--border-subtle); font-size: 0.55rem; flex-wrap: wrap; flex-shrink: 0; }
+    .legend-item { display: flex; align-items: center; gap: 4px; color: var(--text-muted); }
+    .legend-grad { width: 35px; height: 6px; border-radius: 1px; }
+    .grad-orange { background: linear-gradient(90deg, #0d0d12 0%, rgb(251,146,60) 100%); }
+    .grad-rg { background: linear-gradient(90deg, rgb(248,113,113) 0%, #0d0d12 50%, rgb(74,222,128) 100%); }
+    .grad-purple { background: linear-gradient(90deg, #0d0d12 0%, rgb(167,139,250) 100%); }
+    
+    ::-webkit-scrollbar { width: 8px; height: 8px; }
+    ::-webkit-scrollbar-track { background: var(--bg-primary); }
+    ::-webkit-scrollbar-thumb { background: rgba(247,147,26,0.28); border-radius: 4px; }
+    ::-webkit-scrollbar-corner { background: var(--bg-primary); }
+    
+    #file-input { display: none; }
+    
+    /* Day View Styles */
+    .day-view-header { padding: 12px 16px; background: linear-gradient(180deg, rgba(247,147,26,0.15) 0%, var(--bg-primary) 100%); border-bottom: 1px solid rgba(247,147,26,0.3); flex-shrink: 0; }
+    .day-view-title { font-family: 'JetBrains Mono', monospace; font-size: 1.2rem; color: var(--accent-btc); margin-bottom: 8px; }
+    .day-stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(100px, 1fr)); gap: 8px; max-width: 900px; }
+    .day-stat-box { padding: 8px 12px; background: rgba(255,255,255,0.03); border: 1px solid var(--border-medium); border-radius: 6px; text-align: center; }
+    .day-stat-val { font-family: 'JetBrains Mono', monospace; font-size: 1rem; font-weight: 600; color: var(--text-primary); }
+    .day-stat-val.positive { color: var(--accent-green); }
+    .day-stat-val.negative { color: var(--accent-red); }
+    .day-stat-lbl { font-size: 0.55rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; }
+    
+    .day-toolbar { display: flex; gap: 8px; padding: 8px 16px; background: var(--bg-secondary); border-bottom: 1px solid var(--border-subtle); align-items: center; flex-wrap: wrap; flex-shrink: 0; }
+    .day-toolbar label { font-size: 0.65rem; color: var(--text-muted); }
+    .day-toolbar select { padding: 4px 8px; background: rgba(255,255,255,0.05); border: 1px solid var(--border-medium); border-radius: 4px; color: var(--text-primary); font-family: 'JetBrains Mono', monospace; font-size: 0.7rem; min-width: 140px; }
+    
+    .day-table-container { flex: 1; overflow: auto; padding: 8px; min-height: 0; }
+    .day-table { border-collapse: separate; border-spacing: 0; font-family: 'JetBrains Mono', monospace; font-size: 10px; }
+    .day-table th, .day-table td { padding: 3px 4px; border: 1px solid var(--border-medium); text-align: center; }
+    .day-table thead { position: sticky; top: 0; z-index: 50; }
+    .day-table thead tr:first-child th { position: sticky; top: 0; z-index: 50; background: #1a1a24; color: var(--text-muted); font-weight: 500; font-size: 9px; text-transform: uppercase; box-shadow: 0 1px 0 #1a1a24, 0 2px 0 var(--border-medium); }
+    .day-table thead tr:nth-child(2) th { position: sticky; top: 22px; z-index: 49; background: #12121a; color: var(--text-muted); font-weight: 500; font-size: 9px; text-transform: uppercase; box-shadow: 0 1px 0 #12121a, 0 2px 0 var(--border-medium); }
+    .day-table tbody { position: relative; z-index: 1; }
+    .day-table .hour-cell { background: #0d0d12; color: var(--accent-btc); font-weight: 600; position: sticky; left: 0; z-index: 5; }
+    .day-table th.hour-cell { z-index: 55; background: #1a1a24; }
+    .day-table thead tr:first-child th.hour-cell { z-index: 55; background: #1a1a24; }
+    .day-table thead tr:nth-child(2) th.hour-cell { z-index: 54; background: #12121a; }
+    .day-table .hour-cell.highlighted { background: rgba(247, 147, 26, 0.25) !important; color: #ffc73b; }
+    .day-table .hour-row-highlighted td { background: rgba(247, 147, 26, 0.08); }
+    .day-table .hour-row-highlighted .hour-cell { background: rgba(247, 147, 26, 0.25) !important; }
+    .day-table .group-border { border-left: 2px solid rgba(247, 147, 26, 0.5) !important; }
+    .day-table .group-header { background: #1f1f2a !important; color: var(--accent-btc); font-weight: 600; font-size: 8px; }
+    .day-table .ohlc-header { background: #1a1e2a !important; color: var(--accent-blue); }
+    .day-table .cum-header { background: #1a2420 !important; color: var(--accent-green); }
+    .day-table .section-header { background: #1f1c18 !important; color: var(--accent-btc); font-weight: 600; }
+    
+    .min-cell { min-width: 70px; min-height: 52px; padding: 0 !important; border: 1px solid var(--border-medium) !important; }
+    .min-grid { display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr 1fr; min-height: 52px; }
+    .min-grid-top { display: flex; justify-content: center; align-items: center; padding: 2px; font-size: 9px; border-bottom: 1px solid var(--border-medium); }
+    .min-grid-top.left { border-right: 1px solid var(--border-medium); }
+    .min-grid-bottom { grid-column: 1 / 3; display: flex; justify-content: center; align-items: center; padding: 2px; font-size: 9px; }
+    .min-lvl { font-size: 8px; color: var(--text-muted); margin-left: 2px; }
+    
+    /* Calendar Styles */
+    .calendar-toolbar { display: flex; gap: 12px; padding: 10px 16px; background: var(--bg-secondary); border-bottom: 1px solid var(--border-subtle); align-items: center; flex-wrap: wrap; flex-shrink: 0; }
+    .calendar-toolbar label { font-size: 0.65rem; color: var(--text-muted); }
+    .calendar-toolbar select { padding: 4px 8px; background: rgba(255,255,255,0.05); border: 1px solid var(--border-medium); border-radius: 4px; color: var(--text-primary); font-family: 'JetBrains Mono', monospace; font-size: 0.7rem; }
+    
+    .calendar-container { flex: 1; overflow: auto; padding: 16px; min-height: 0; }
+    .calendar-year { margin-bottom: 24px; }
+    .calendar-year-title { font-family: 'JetBrains Mono', monospace; font-size: 1.1rem; color: var(--accent-btc); margin-bottom: 12px; padding-bottom: 6px; border-bottom: 1px solid var(--border-medium); }
+    .calendar-months { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+    .calendar-month { background: rgba(255,255,255,0.02); border: 1px solid var(--border-subtle); border-radius: 8px; padding: 8px; }
+    .calendar-month-title { font-size: 0.75rem; font-weight: 600; color: var(--text-secondary); text-align: center; margin-bottom: 6px; padding-bottom: 4px; border-bottom: 1px solid var(--border-subtle); }
+    .calendar-weekdays { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; margin-bottom: 4px; }
+    .calendar-weekday { font-size: 0.5rem; color: var(--text-muted); text-align: center; padding: 2px; }
+    .calendar-days { display: grid; grid-template-columns: repeat(7, 1fr); gap: 3px; }
+    .calendar-day { min-width: 58px; min-height: 78px; display: flex; flex-direction: column; padding: 3px; border-radius: 4px; font-size: 0.55rem; cursor: pointer; transition: all 0.15s; position: relative; border: 1px solid var(--border-subtle); }
+    .calendar-day:hover { outline: 2px solid var(--accent-btc); z-index: 5; }
+    .calendar-day.empty { background: transparent; cursor: default; border: none; min-height: 78px; }
+    .calendar-day.empty:hover { outline: none; }
+    .calendar-day .day-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2px; }
+    .calendar-day .day-num { font-weight: 600; font-size: 0.65rem; }
+    .calendar-day .day-close { font-size: 0.5rem; color: var(--text-secondary); }
+    .calendar-day .day-urlr { display: grid; grid-template-columns: 1fr 1fr; gap: 2px; margin: 2px 0; }
+    .calendar-day .day-ur, .calendar-day .day-lr { font-size: 0.5rem; text-align: center; padding: 1px; border-radius: 2px; }
+    .calendar-day .day-ur { background: rgba(74, 222, 128, 0.15); color: #a7f3d0; }
+    .calendar-day .day-lr { background: rgba(248, 113, 113, 0.15); color: #fecaca; }
+    .calendar-day .day-oc { font-size: 0.55rem; text-align: center; font-weight: 500; margin-top: auto; }
+    .calendar-day .day-oc.positive { color: #a7f3d0; }
+    .calendar-day .day-oc.negative { color: #fecaca; }
+    .calendar-day .day-rng { font-size: 0.45rem; text-align: center; color: var(--text-muted); }
+    .calendar-day.weekend .day-num { color: var(--text-muted); }
+    .calendar-day.no-color { background: transparent !important; border: 1px dashed var(--border-subtle); }
+    
+    @media (max-width: 1200px) { .calendar-months { grid-template-columns: repeat(3, 1fr); } }
+    @media (max-width: 900px) { .calendar-months { grid-template-columns: repeat(2, 1fr); } }
+    
+    /* ==================== MOBILE RESPONSIVE STYLES ==================== */
+    
+    /* Mobile Detection Class */
+    .is-mobile { --font-size: 11px; }
+    
+    /* Mobile Tab Navigation */
+    @media (max-width: 768px) {
+      .tab-nav { flex-wrap: wrap; justify-content: center; gap: 2px; padding: 5px; }
+      .tab-btn { padding: 8px 12px; font-size: 0.7rem; flex: 1 1 auto; min-width: 70px; text-align: center; }
+      .tab-btn.active { background: var(--accent-btc-dim); }
+      
+      /* Mobile Header */
+      .header { flex-direction: column; padding: 8px 12px; gap: 8px; }
+      .header h1 { font-size: 0.9rem; }
+      .header-stats { flex-wrap: wrap; justify-content: center; gap: 4px; }
+      .stat { padding: 3px 8px; min-width: 50px; }
+      .stat-val { font-size: 0.75rem; }
+      .stat-lbl { font-size: 0.4rem; }
+      
+      /* Mobile Toolbar */
+      .toolbar { gap: 3px; padding: 4px 8px; justify-content: flex-start; overflow-x: auto; flex-wrap: nowrap; }
+      .tb-btn { padding: 4px 6px; font-size: 0.55rem; white-space: nowrap; }
+      .tb-group { display: none; } /* Hide non-essential groups on mobile */
+      .tb-group.mobile-show { display: flex; }
+      .tb-spacer { display: none; }
+      
+      /* Mobile Filters */
+      .filters { grid-template-columns: 1fr; padding: 8px; gap: 8px; }
+      .filter-group { padding: 6px; }
+      .f-btn { padding: 4px 6px; font-size: 0.6rem; }
+      
+      /* Mobile Day View Header */
+      .day-view-header { padding: 8px 12px; }
+      .day-view-title { font-size: 0.85rem !important; }
+      .day-stats-grid { flex-wrap: wrap; gap: 4px; }
+      .day-stat-box { padding: 4px 8px; min-width: 60px; }
+      .day-stat-val { font-size: 0.7rem; }
+      .day-stat-lbl { font-size: 0.4rem; }
+      
+      /* Mobile Day Toolbar */
+      .day-toolbar { gap: 4px; padding: 6px 8px; flex-wrap: wrap; }
+      .day-toolbar select, .day-toolbar input { font-size: 0.65rem; padding: 4px; }
+      
+      /* Mobile Upload Card */
+      .upload-card { padding: 24px 16px; margin: 16px; max-width: calc(100% - 32px); }
+      .upload-card h1 { font-size: 1.4rem; }
+      .upload-btn { padding: 12px 24px; font-size: 0.95rem; }
+      .format-info code { font-size: 0.7rem; word-break: break-all; }
+      
+      /* Mobile Legend */
+      .legend { gap: 8px; padding: 4px; font-size: 0.5rem; }
+      .legend-item { flex-direction: column; align-items: center; }
+      
+      /* Mobile Column Selector */
+      .col-selector, .col-filter-panel, .dt-col-selector, .rsi-settings { padding: 6px 8px; }
+      .col-grid, .dt-col-grid { gap: 3px; }
+      .col-grid label, .dt-col-grid label { font-size: 0.55rem; padding: 3px 5px; }
+      
+      /* Calendar Mobile */
+      .calendar-months { grid-template-columns: 1fr; }
+      .calendar-toolbar { flex-wrap: wrap; gap: 6px; padding: 8px; }
+      .calendar-day { padding: 2px; min-height: 45px; }
+      .calendar-day .day-num { font-size: 0.55rem; }
+      .calendar-day .day-val { font-size: 0.65rem; }
+    }
+    
+    /* Extra Small Mobile */
+    @media (max-width: 480px) {
+      .tab-btn { padding: 6px 8px; font-size: 0.6rem; min-width: 60px; }
+      .header h1 { font-size: 0.8rem; }
+      .stat { padding: 2px 6px; }
+      .tb-btn { padding: 3px 5px; font-size: 0.5rem; }
+      .day-view-title { font-size: 0.75rem !important; }
+      .day-stat-box { min-width: 50px; padding: 3px 6px; }
+    }
+    
+    /* Mobile Table Scrolling */
+    @media (max-width: 768px) {
+      .table-container, .day-table-container { 
+        -webkit-overflow-scrolling: touch;
+        scroll-behavior: smooth;
+      }
+      
+      /* Larger touch targets for mobile */
+      .data-table td, .data-table th,
+      .day-table td, .day-table th { 
+        padding: 4px 3px; 
+        min-width: 35px;
+      }
+      
+      /* Mobile: Show compact 5-min data */
+      .min-cell { min-height: 40px !important; }
+      .min-grid { font-size: 8px; }
+      .min-lvl { font-size: 6px; }
+    }
+    
+    /* Touch-friendly controls */
+    @media (pointer: coarse) {
+      .tb-btn, .f-btn, button { min-height: 36px; min-width: 36px; }
+      select, input[type="number"] { min-height: 36px; font-size: 14px; }
+      .tab-btn { min-height: 40px; }
+    }
+    
+    /* Landscape Mobile */
+    @media (max-width: 900px) and (orientation: landscape) {
+      .header { padding: 4px 12px; }
+      .toolbar { padding: 3px 8px; }
+      .day-view-header { padding: 4px 8px; }
+      .day-stats-grid { gap: 3px; }
+    }
+    
+    /* Mobile Menu Toggle */
+    .mobile-menu-btn { display: none; }
+    @media (max-width: 768px) {
+      .mobile-menu-btn { 
+        display: flex; 
+        position: fixed; 
+        bottom: 16px; 
+        right: 16px; 
+        z-index: 1000;
+        width: 48px;
+        height: 48px;
+        border-radius: 50%;
+        background: var(--accent-btc);
+        color: white;
+        border: none;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.5rem;
+        box-shadow: 0 4px 12px rgba(247,147,26,0.4);
+        cursor: pointer;
+      }
+      .mobile-menu-btn:active { transform: scale(0.95); }
+    }
+    
+    /* Mobile Quick Actions Panel */
+    .mobile-actions { 
+      display: none; 
+      position: fixed;
+      bottom: 72px;
+      right: 16px;
+      z-index: 999;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .mobile-actions.visible { display: flex; }
+    .mobile-action-btn {
+      padding: 10px 16px;
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border-medium);
+      border-radius: 20px;
+      color: var(--text-primary);
+      font-size: 0.75rem;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+    .mobile-action-btn:active { background: var(--accent-btc-dim); }
+    
+    /* Print Styles */
+    @media print {
+      .tab-nav, .toolbar, .filters, .legend, .mobile-menu-btn, .mobile-actions { display: none !important; }
+      body { background: white; color: black; }
+      .app { height: auto; overflow: visible; }
+      .table-container, .day-table-container { overflow: visible; height: auto; }
+    }
+  </style>
+</head>
+<body>
+
+  <input type="file" id="file-input" accept=".csv">
+
+  <div id="upload-screen" class="upload-screen">
+    <div class="upload-card">
+      <div class="btc-logo">₿</div>
+      <h1>BTC Hourly Analyzer v8</h1>
+      <p>Upload your 5-minute Bitcoin OHLCV CSV data</p>
+      <button class="upload-btn" onclick="document.getElementById('file-input').click()">📁 Select CSV File</button>
+      <div id="error-msg" class="error-msg" style="display: none;"></div>
+      <div class="format-info">
+        <h3>Expected Format</h3>
+        <code>timestamp,open,high,low,close,volume,source</code>
+      </div>
+    </div>
+  </div>
+
+  <div id="loading-screen" class="upload-screen" style="display: none;">
+    <div class="upload-card">
+      <div class="spinner"></div>
+      <p style="color:var(--accent-btc);font-family:'JetBrains Mono'">Processing data & calculating RSI...</p>
+    </div>
+  </div>
+
+  <div id="app" class="app">
+    <nav class="tab-nav">
+      <button class="tab-btn active" onclick="switchTab('overview')">📊 Overview</button>
+      <button class="tab-btn" onclick="switchTab('dayview')">📅 Day View</button>
+      <button class="tab-btn" onclick="switchTab('hourview')">🕐 Hour View</button>
+      <button class="tab-btn" onclick="switchTab('calendar')">🗓 Calendar</button>
+    </nav>
+    
+    <!-- Overview Tab -->
+    <div id="tab-overview" class="tab-content active">
+      <header class="header">
+        <div>
+          <h1><span class="btc-sym">₿</span> BTC Hourly Analysis</h1>
+          <span class="sub">5-Min Data • Level Analysis • Ultimate RSI • Eastern Time</span>
+        </div>
+        <div class="header-stats">
+          <div class="stat"><span class="stat-val" id="stat-days">0</span><span class="stat-lbl">Days</span></div>
+          <div class="stat"><span class="stat-val" id="stat-hours">24</span><span class="stat-lbl">Hours</span></div>
+          <div class="stat"><span class="stat-val" id="stat-cols">7</span><span class="stat-lbl">Cols</span></div>
+        </div>
+      </header>
+
+      <div class="toolbar">
+        <button class="tb-btn active" id="btn-filters" onclick="toggleFilters()">⚙ Filters</button>
+        <button class="tb-btn" id="btn-columns" onclick="toggleColumns()">▤ Columns</button>
+        <button class="tb-btn active" id="btn-day-cols" onclick="toggleDayColsPanel()">📊 DayTotals</button>
+        <button class="tb-btn" id="btn-pct" onclick="togglePercentiles()">📈 Pctiles</button>
+        <button class="tb-btn filter-btn" id="btn-col-filter" onclick="toggleColFilterPanel()">🔍 ColFilter</button>
+        <button class="tb-btn" id="btn-rsi" onclick="toggleRsiSettings()" style="background:rgba(167,139,250,0.1);border-color:rgba(167,139,250,0.3);color:var(--accent-purple)">📉 RSI</button>
+        
+        <div class="tb-group">
+          <label>Font:</label>
+          <select id="font-family" onchange="updateFont()">
+            <option value="'JetBrains Mono', monospace">JetBrains</option>
+            <option value="'Roboto Mono', monospace">Roboto</option>
+            <option value="'Fira Code', monospace">Fira</option>
+          </select>
+        </div>
+        
+        <div class="tb-group">
+          <label>Size:</label>
+          <select id="font-size" onchange="updateFont()">
+            <option value="9">9</option>
+            <option value="10" selected>10</option>
+            <option value="11">11</option>
+            <option value="12">12</option>
+          </select>
+        </div>
+        
+        <div class="tb-group">
+          <label>Level:</label>
+          <input type="number" id="level-size" value="250" min="1" onchange="updateLevel()">
+        </div>
+        
+        <div class="tb-spacer"></div>
+        <button class="tb-btn preset" onclick="resetAll()">Reset</button>
+        <button class="tb-btn preset" onclick="setRTH()">US RTH</button>
+        <button class="tb-btn new-file" onclick="loadNewFile()">📁 New</button>
+      </div>
+
+      <!-- Column Filter Panel -->
+      <div id="col-filter-panel" class="col-filter-panel">
+        <h3>Column Filters (rows must match ALL conditions)</h3>
+        <div class="active-filters" id="active-filters"></div>
+        <div class="add-filter-row">
+          <select id="filter-hour">
+            <option value="day">Day Total</option>
+          </select>
+          <select id="filter-column"></select>
+          <select id="filter-op">
+            <option value=">=">≥</option>
+            <option value="<=">≤</option>
+            <option value=">">&gt;</option>
+            <option value="<">&lt;</option>
+            <option value="==">＝</option>
+            <option value="!=">≠</option>
+          </select>
+          <input type="number" id="filter-value" placeholder="Value">
+          <button onclick="addColumnFilter()">+ Add Filter</button>
+          <button onclick="clearAllFilters()" style="background:rgba(248,113,113,0.2);border-color:rgba(248,113,113,0.4);color:var(--accent-red)">Clear All</button>
+        </div>
+      </div>
+
+      <!-- RSI Settings Panel -->
+      <div id="rsi-settings" class="rsi-settings">
+        <h3>Ultimate RSI Settings</h3>
+        <div class="rsi-settings-row">
+          <label>RSI Length: <input type="number" id="rsi-length" value="9" min="2" onchange="recalcRSI()"></label>
+          <label>RSI Method: <select id="rsi-method" onchange="recalcRSI()"><option value="RMA" selected>RMA</option><option value="EMA">EMA</option><option value="SMA">SMA</option></select></label>
+          <label>Signal Length: <input type="number" id="signal-length" value="5" min="1" onchange="recalcRSI()"></label>
+          <label>Signal Method: <select id="signal-method" onchange="recalcRSI()"><option value="EMA" selected>EMA</option><option value="RMA">RMA</option><option value="SMA">SMA</option></select></label>
+          <label>OB Level: <input type="number" id="ob-level" value="88" min="50" max="100" onchange="recalcRSI()"></label>
+          <label>OS Level: <input type="number" id="os-level" value="12" min="0" max="50" onchange="recalcRSI()"></label>
+        </div>
+      </div>
+
+      <!-- Day Totals Column Selector -->
+      <div id="dt-col-selector" class="dt-col-selector">
+        <h3>Day Total Columns</h3>
+        <div class="dt-col-grid" id="dt-col-grid"></div>
+        <div style="margin-top:6px;display:flex;gap:4px;">
+          <button class="f-btn quick" onclick="showAllDTCols()">All</button>
+          <button class="f-btn none-btn" onclick="hideAllDTCols()">None</button>
+          <button class="f-btn" onclick="defaultDTCols()">Default</button>
+          <div style="margin-left:10px;display:flex;align-items:center;gap:4px;">
+            <label style="font-size:0.55rem;color:var(--text-muted)">O-C Hr:</label>
+            <select id="oc-close-hour" style="padding:2px 4px;background:rgba(255,255,255,0.05);border:1px solid var(--border-medium);border-radius:2px;color:var(--text-primary);font-size:0.55rem;" onchange="renderTable()"></select>
+          </div>
+        </div>
+      </div>
+
+      <div id="filters-panel" class="filters visible">
+        <div class="filter-group">
+          <h3>Years</h3>
+          <div class="filter-btns" id="year-filters"></div>
+        </div>
+        
+        <div class="filter-group">
+          <h3>Months</h3>
+          <div class="filter-btns" id="month-filters">
+            <button class="f-btn none-btn" onclick="setNoMonths()">None</button>
+            <button class="f-btn active" data-month="1" onclick="toggleMonth(1)">Jan</button>
+            <button class="f-btn active" data-month="2" onclick="toggleMonth(2)">Feb</button>
+            <button class="f-btn active" data-month="3" onclick="toggleMonth(3)">Mar</button>
+            <button class="f-btn active" data-month="4" onclick="toggleMonth(4)">Apr</button>
+            <button class="f-btn active" data-month="5" onclick="toggleMonth(5)">May</button>
+            <button class="f-btn active" data-month="6" onclick="toggleMonth(6)">Jun</button>
+            <button class="f-btn active" data-month="7" onclick="toggleMonth(7)">Jul</button>
+            <button class="f-btn active" data-month="8" onclick="toggleMonth(8)">Aug</button>
+            <button class="f-btn active" data-month="9" onclick="toggleMonth(9)">Sep</button>
+            <button class="f-btn active" data-month="10" onclick="toggleMonth(10)">Oct</button>
+            <button class="f-btn active" data-month="11" onclick="toggleMonth(11)">Nov</button>
+            <button class="f-btn active" data-month="12" onclick="toggleMonth(12)">Dec</button>
+            <button class="f-btn quick" onclick="setQ1()">Q1</button>
+            <button class="f-btn quick" onclick="setQ2()">Q2</button>
+            <button class="f-btn quick" onclick="setQ3()">Q3</button>
+            <button class="f-btn quick" onclick="setQ4()">Q4</button>
+          </div>
+        </div>
+        
+        <div class="filter-group">
+          <h3>Days</h3>
+          <div class="filter-btns">
+            <button class="f-btn none-btn" onclick="setNoDays()">None</button>
+            <button class="f-btn active" data-day="0" onclick="toggleDay(0)">Sun</button>
+            <button class="f-btn active" data-day="1" onclick="toggleDay(1)">Mon</button>
+            <button class="f-btn active" data-day="2" onclick="toggleDay(2)">Tue</button>
+            <button class="f-btn active" data-day="3" onclick="toggleDay(3)">Wed</button>
+            <button class="f-btn active" data-day="4" onclick="toggleDay(4)">Thu</button>
+            <button class="f-btn active" data-day="5" onclick="toggleDay(5)">Fri</button>
+            <button class="f-btn active" data-day="6" onclick="toggleDay(6)">Sat</button>
+            <button class="f-btn quick" onclick="setWeekdays()">Wkdays</button>
+            <button class="f-btn quick" onclick="setWeekend()">Wkend</button>
+          </div>
+        </div>
+        
+        <div class="filter-group">
+          <h3>Day # in Month</h3>
+          <div class="filter-btns">
+            <button class="f-btn active" data-occ="1" onclick="toggleOcc(1)">1st</button>
+            <button class="f-btn active" data-occ="2" onclick="toggleOcc(2)">2nd</button>
+            <button class="f-btn active" data-occ="3" onclick="toggleOcc(3)">3rd</button>
+            <button class="f-btn active" data-occ="4" onclick="toggleOcc(4)">4th</button>
+            <button class="f-btn active" data-occ="5" onclick="toggleOcc(5)">5th</button>
+          </div>
+        </div>
+        
+        <div class="filter-group">
+          <h3>Hours (Eastern Time)</h3>
+          <div class="range-row">
+            <label>From: <select id="hour-from" onchange="updateHourRange()"></select></label>
+            <label>To: <select id="hour-to" onchange="updateHourRange()"></select></label>
+            <div class="hour-presets">
+              <button onclick="setHours(0, 23)">All</button>
+              <button onclick="setHours(9, 16)">RTH</button>
+              <button onclick="setHours(4, 9)">Pre</button>
+              <button onclick="setHours(16, 20)">AH</button>
+            </div>
+          </div>
+        </div>
+        
+        <div class="filter-group">
+          <h3>Specific Dates</h3>
+          <div class="date-picker-container" style="position:relative;">
+            <button class="date-picker-btn" onclick="toggleDatePicker()">📅 Dates (<span id="date-count">0</span>)</button>
+            <div id="date-picker-dropdown" class="date-picker-dropdown">
+              <div class="date-picker-actions">
+                <button onclick="selectAllDates()">All</button>
+                <button onclick="selectNoDates()">Clear</button>
+                <button onclick="syncDatesFromFilters()">Sync</button>
+              </div>
+              <div class="date-list" id="date-list"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div id="col-selector" class="col-selector">
+        <h3>Columns (per Hour)</h3>
+        <div class="col-grid" id="col-grid"></div>
+        <div class="col-presets">
+          <button onclick="setDefaultCols()">Default</button>
+          <button onclick="setAllCols()">All</button>
+          <button onclick="setRangeCols()">Range</button>
+          <button onclick="setOHLCVCols()">OHLCV</button>
+          <button onclick="setRSICols()">RSI</button>
+          <div class="option-toggle">
+            <label>Gradient:</label>
+            <select id="gradient-mode" onchange="renderTable()">
+              <option value="row">Per Row</option>
+              <option value="column">Per Column</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <div class="table-container" id="table-container">
+        <table class="data-table" id="data-table">
+          <thead id="table-head"></thead>
+          <tbody id="table-body"></tbody>
+        </table>
+      </div>
+
+      <div class="legend">
+        <div class="legend-item"><div class="legend-grad grad-orange"></div><span>Range (→Orange)</span></div>
+        <div class="legend-item"><div class="legend-grad" style="background:linear-gradient(90deg, rgb(251,146,60) 0%, #0d0d12 100%)"></div><span>Rank (Orange→)</span></div>
+        <div class="legend-item"><div class="legend-grad grad-rg"></div><span>+/- (Red←→Green)</span></div>
+        <div class="legend-item"><div class="legend-grad grad-purple"></div><span>RSI (→Purple)</span></div>
+        <div class="legend-item"><span style="color:#fbbf24">OB</span>/<span style="color:#60a5fa">OS</span> = Overbought/Oversold</div>
+      </div>
+    </div>
+    
+    <!-- Day View Tab -->
+    <div id="tab-dayview" class="tab-content">
+      <div class="day-view-header">
+        <div class="day-view-title" id="day-view-title">Select a Date</div>
+        <div class="day-stats-grid" id="day-stats-grid"></div>
+      </div>
+      
+      <div class="day-toolbar">
+        <label>Select Date:</label>
+        <select id="day-view-date" onchange="renderDayView()"></select>
+        <div class="tb-group">
+          <label>Level:</label>
+          <input type="number" id="day-level-size" value="250" min="1" onchange="renderDayView()">
+        </div>
+        <div class="tb-group">
+          <label>Highlight:</label>
+          <select id="day-hl-from" onchange="renderDayView()"></select>
+          <span style="color:var(--text-muted)">to</span>
+          <select id="day-hl-to" onchange="renderDayView()"></select>
+        </div>
+        <button class="tb-btn active" id="btn-day-ohlc" onclick="toggleDayOHLC()">OHLC</button>
+      </div>
+      
+      <div class="day-table-container">
+        <table class="day-table" id="day-table">
+          <thead id="day-table-head"></thead>
+          <tbody id="day-table-body"></tbody>
+        </table>
+      </div>
+    </div>
+    
+    <!-- Calendar View Tab -->
+    <div id="tab-calendar" class="tab-content">
+      <div class="calendar-toolbar">
+        <label>Color By:</label>
+        <select id="calendar-color-by" onchange="renderCalendar()">
+          <option value="dRng">Day Range</option>
+          <option value="dUR">Day UR</option>
+          <option value="dLR">Day LR</option>
+          <option value="dOC">Day O-C</option>
+          <option value="dMx">Max(DUR, DLR)</option>
+        </select>
+        <div class="tb-group" style="border-left:1px solid var(--border-medium);padding-left:10px;margin-left:10px;">
+          <label>Years:</label>
+          <div id="calendar-year-btns" style="display:flex;gap:2px;"></div>
+        </div>
+        <div class="tb-group" style="border-left:1px solid var(--border-medium);padding-left:10px;margin-left:10px;">
+          <label>Color Days:</label>
+          <button class="f-btn active" data-cal-day="0" onclick="toggleCalDay(0)">Sun</button>
+          <button class="f-btn active" data-cal-day="1" onclick="toggleCalDay(1)">Mon</button>
+          <button class="f-btn active" data-cal-day="2" onclick="toggleCalDay(2)">Tue</button>
+          <button class="f-btn active" data-cal-day="3" onclick="toggleCalDay(3)">Wed</button>
+          <button class="f-btn active" data-cal-day="4" onclick="toggleCalDay(4)">Thu</button>
+          <button class="f-btn active" data-cal-day="5" onclick="toggleCalDay(5)">Fri</button>
+          <button class="f-btn active" data-cal-day="6" onclick="toggleCalDay(6)">Sat</button>
+        </div>
+        <div class="tb-group">
+          <button class="tb-btn preset" onclick="syncCalFromOverview()">Sync from Overview</button>
+          <button class="tb-btn" onclick="resetCalDays()">All Days</button>
+        </div>
+      </div>
+      
+      <div class="calendar-container" id="calendar-container"></div>
+    </div>
+    
+    <!-- Hour View Tab -->
+    <div id="tab-hourview" class="tab-content">
+      <div class="day-view-header" style="background:linear-gradient(180deg, rgba(167,139,250,0.15) 0%, var(--bg-primary) 100%);border-bottom-color:rgba(167,139,250,0.3);">
+        <div class="day-view-title" id="hour-view-title" style="color:var(--accent-purple)">Select an Hour</div>
+        <div class="day-stats-grid" id="hour-stats-grid"></div>
+      </div>
+      
+      <div class="day-toolbar">
+        <label>Select Hour:</label>
+        <select id="hour-view-hour" onchange="renderHourView()"></select>
+        <div class="tb-group">
+          <label>Level:</label>
+          <input type="number" id="hour-level-size" value="250" min="1" onchange="renderHourView()">
+        </div>
+        <div class="tb-group" style="border-left:1px solid var(--border-medium);padding-left:10px;">
+          <label>Days:</label>
+          <button class="f-btn active" data-hv-day="0" onclick="toggleHVDay(0)">Sun</button>
+          <button class="f-btn active" data-hv-day="1" onclick="toggleHVDay(1)">Mon</button>
+          <button class="f-btn active" data-hv-day="2" onclick="toggleHVDay(2)">Tue</button>
+          <button class="f-btn active" data-hv-day="3" onclick="toggleHVDay(3)">Wed</button>
+          <button class="f-btn active" data-hv-day="4" onclick="toggleHVDay(4)">Thu</button>
+          <button class="f-btn active" data-hv-day="5" onclick="toggleHVDay(5)">Fri</button>
+          <button class="f-btn active" data-hv-day="6" onclick="toggleHVDay(6)">Sat</button>
+          <button class="f-btn quick" onclick="setHVWeekdays()">Wkdays</button>
+        </div>
+        <button class="tb-btn preset" onclick="syncHVFromOverview()">Sync Filters</button>
+      </div>
+      
+      <div class="day-table-container">
+        <table class="day-table" id="hour-table">
+          <thead id="hour-table-head"></thead>
+          <tbody id="hour-table-body"></tbody>
+        </table>
+      </div>
+    </div>
+    
+    <!-- Mobile Menu Button -->
+    <button class="mobile-menu-btn" onclick="toggleMobileMenu()">☰</button>
+    <div class="mobile-actions" id="mobile-actions">
+      <button class="mobile-action-btn" onclick="toggleFilters(); hideMobileMenu();">⚙ Filters</button>
+      <button class="mobile-action-btn" onclick="toggleColumns(); hideMobileMenu();">▤ Columns</button>
+      <button class="mobile-action-btn" onclick="loadNewFile(); hideMobileMenu();">📁 Load File</button>
+      <button class="mobile-action-btn" onclick="resetAll(); hideMobileMenu();">↺ Reset</button>
+    </div>
+  </div>
+
+  <script>
+    // ==================== CONSTANTS ====================
+    const HOURS = Array.from({ length: 24 }, (_, i) => i);
+    const DAYS_SHORT = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    const MONTHS_SHORT = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const MINS = ['00', '05', '10', '15', '20', '25', '30', '35', '40', '45', '50', '55'];
+    
+    const ALL_COLUMNS = [
+      { id: 'rng', label: 'Rng', desc: 'Range', default: true, gradient: 'orange', group: 'rng' },
+      { id: 'ur', label: 'UR', desc: 'Upper Rng', default: true, gradient: 'orange', group: 'urlr' },
+      { id: 'lr', label: 'LR', desc: 'Lower Rng', default: true, gradient: 'orange', group: 'urlr' },
+      { id: 'mxr', label: 'MxR', desc: 'Max Range', default: false, gradient: 'orange', group: 'mxr' },
+      { id: 'mxrRk', label: 'MxR#', desc: 'Max Rng Rank', default: false, gradient: 'orange-inv', group: 'rank' },
+      { id: 'rngRk', label: 'Rng#', desc: 'Range Rank', default: false, gradient: 'orange-inv', group: 'rank' },
+      { id: 'up', label: '#Up', desc: 'Lvls Up', default: true, gradient: null },
+      { id: 'dn', label: '#Dn', desc: 'Lvls Down', default: true, gradient: null },
+      { id: 'mxl', label: 'MxL', desc: 'Max Level', default: false, gradient: 'orange', group: 'mxl' },
+      { id: 'mxlRk', label: 'MxL#', desc: 'Max Lvl Rank', default: false, gradient: 'orange-inv', group: 'rank' },
+      { id: 'cl', label: '#Cl', desc: 'Net Lvls', default: true, gradient: 'rg', group: 'cl' },
+      { id: 'oc', label: 'O-C', desc: 'Open-Close', default: true, gradient: 'rg', group: 'oc' },
+      { id: 'ocRk', label: 'OC#', desc: 'O-C Rank', default: false, gradient: 'orange-inv', group: 'rank' },
+      { id: 'cdrU', label: 'CDU', desc: 'Cum Day Up', default: false, gradient: 'orange-col', group: 'cdr' },
+      { id: 'cdrD', label: 'CDD', desc: 'Cum Day Dn', default: false, gradient: 'orange-col', group: 'cdr' },
+      { id: 'mxcd', label: 'MxCD', desc: 'Max Cum D', default: false, gradient: 'orange-col', group: 'mxcd' },
+      { id: 'cdr', label: 'CDR', desc: 'Cum Day Rng', default: false, gradient: 'rg-col', group: 'cdrRG' },
+      { id: 'hm', label: 'HMin', desc: 'High Min', default: false, gradient: null },
+      { id: 'lm', label: 'LMin', desc: 'Low Min', default: false, gradient: null },
+      { id: 'o', label: 'Open', desc: 'Open', default: false, gradient: null },
+      { id: 'hi', label: 'High', desc: 'High', default: false, gradient: null },
+      { id: 'lo', label: 'Low', desc: 'Low', default: false, gradient: null },
+      { id: 'c', label: 'Close', desc: 'Close', default: false, gradient: null },
+      { id: 'v', label: 'Vol', desc: 'Volume', default: false, gradient: null },
+      // RSI columns
+      { id: 'rsiMax', label: 'RSI↑', desc: 'Max RSI', default: false, gradient: 'purple', group: 'rsi' },
+      { id: 'rsiMin', label: 'RSI↓', desc: 'Min RSI', default: false, gradient: 'purple', group: 'rsi' },
+      { id: 'rsiAvg', label: 'RSIμ', desc: 'Avg RSI', default: false, gradient: 'purple', group: 'rsi' },
+      { id: 'sigMax', label: 'Sig↑', desc: 'Max Signal', default: false, gradient: 'purple', group: 'sig' },
+      { id: 'sigMin', label: 'Sig↓', desc: 'Min Signal', default: false, gradient: 'purple', group: 'sig' },
+      { id: 'sigAvg', label: 'Sigμ', desc: 'Avg Signal', default: false, gradient: 'purple', group: 'sig' },
+      { id: 'obos', label: 'OB/OS', desc: 'OB/OS Hit', default: false, gradient: null },
+    ];
+    
+    const DAY_TOTAL_COLS = [
+      { id: 'dRng', label: 'DRng', desc: 'Day Range', default: true },
+      { id: 'dUR', label: 'DUR', desc: 'Day Up Rng', default: true },
+      { id: 'dLR', label: 'DLR', desc: 'Day Low Rng', default: true },
+      { id: 'dOC', label: 'DO-C', desc: 'Day O-C', default: true },
+      { id: 'dOCH', label: 'O-CH', desc: 'O-C to Hour', default: false },
+      { id: 'dHiHr', label: 'HiHr', desc: 'High Hour', default: false },
+      { id: 'dLoHr', label: 'LoHr', desc: 'Low Hour', default: false },
+      { id: 'dDD', label: 'DD', desc: 'Drawdown', default: false },
+      { id: 'dRev', label: 'Rev', desc: 'Reversal', default: false },
+      { id: 'dVol', label: 'Vol', desc: 'Total Volume', default: false },
+      { id: 'dRsiMed', label: 'RSIm', desc: 'Median RSI', default: false },
+      { id: 'dOpen', label: 'Open', desc: 'Open', default: false },
+      { id: 'dHigh', label: 'High', desc: 'High', default: false },
+      { id: 'dLow', label: 'Low', desc: 'Low', default: false },
+      { id: 'dClose', label: 'Close', desc: 'Close', default: false },
+    ];
+    
+    // ==================== STATE ====================
+    let rawBars = [];
+    let barsByET = {};
+    let etDays = {};
+    let allETDates = [];
+    let availableYears = [];
+    let selectedYears = new Set();
+    let selectedMonths = new Set([1,2,3,4,5,6,7,8,9,10,11,12]);
+    let selectedDays = new Set([0,1,2,3,4,5,6]);
+    let selectedOccs = new Set([1,2,3,4,5]);
+    let selectedDates = new Set();
+    let useDateFilter = false;
+    let hourFrom = 0;
+    let hourTo = 23;
+    let levelSize = 250;
+    let visibleColumns = new Set(ALL_COLUMNS.filter(c => c.default).map(c => c.id));
+    let visibleDTCols = new Set(DAY_TOTAL_COLS.filter(c => c.default).map(c => c.id));
+    let showDayCols = true;
+    let showPercentiles = false;
+    let sortColumn = 'date';
+    let sortDirection = 'desc';
+    let sortHour = null;
+    let dayHlFrom = 9;
+    let dayHlTo = 15;
+    let showDayOHLC = true;
+    let calColorDays = new Set([0,1,2,3,4,5,6]);
+    let calColorDates = null;
+    let calSelectedYears = new Set();
+    let columnFilters = [];
+    let ocCloseHour = 16;
+    let hvSelectedDays = new Set([0,1,2,3,4,5,6]);
+    let hvSelectedHour = 9;
+    
+    // RSI settings
+    let rsiLength = 9;
+    let rsiMethod = 'RMA';
+    let signalLength = 5;
+    let signalMethod = 'EMA';
+    let obLevel = 88;
+    let osLevel = 12;
+    
+    // ==================== MOBILE DETECTION ====================
+    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || window.innerWidth <= 768;
+    let mobileMenuOpen = false;
+    
+    if (isMobile) {
+      document.documentElement.classList.add('is-mobile');
+      console.log('Mobile device detected');
+    }
+    
+    function toggleMobileMenu() {
+      mobileMenuOpen = !mobileMenuOpen;
+      document.getElementById('mobile-actions').classList.toggle('visible', mobileMenuOpen);
+    }
+    
+    function hideMobileMenu() {
+      mobileMenuOpen = false;
+      document.getElementById('mobile-actions').classList.remove('visible');
+    }
+    
+    // Close mobile menu when clicking outside
+    document.addEventListener('click', (e) => {
+      if (mobileMenuOpen && !e.target.closest('.mobile-menu-btn') && !e.target.closest('.mobile-actions')) {
+        hideMobileMenu();
+      }
+    });
+    
+    // Handle orientation changes
+    window.addEventListener('orientationchange', () => {
+      setTimeout(() => {
+        if (window.innerWidth <= 768) {
+          document.documentElement.classList.add('is-mobile');
+        } else {
+          document.documentElement.classList.remove('is-mobile');
+        }
+      }, 100);
+    });
+    
+    // ==================== INIT ====================
+    document.getElementById('file-input').addEventListener('change', handleFileSelect);
+    
+    HOURS.forEach(h => {
+      const ampm = h >= 12 ? 'PM' : 'AM';
+      const disp = h === 0 ? 12 : h > 12 ? h - 12 : h;
+      ['hour-from', 'hour-to', 'day-hl-from', 'day-hl-to', 'oc-close-hour'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.innerHTML += `<option value="${h}" ${(id==='day-hl-from'&&h===9)||(id==='day-hl-to'&&h===15)||(id==='oc-close-hour'&&h===16)?'selected':''}>${disp}${ampm}</option>`;
+      });
+    });
+    document.getElementById('hour-to').value = 23;
+    
+    const colGrid = document.getElementById('col-grid');
+    ALL_COLUMNS.forEach(col => {
+      colGrid.innerHTML += `<label class="col-item" title="${col.desc}"><input type="checkbox" ${col.default ? 'checked' : ''} onchange="toggleColumn('${col.id}')"><span class="col-label">${col.label}</span><span class="col-desc">${col.desc}</span></label>`;
+    });
+    
+    const dtColGrid = document.getElementById('dt-col-grid');
+    DAY_TOTAL_COLS.forEach(col => {
+      dtColGrid.innerHTML += `<label class="dt-col-item"><input type="checkbox" ${col.default ? 'checked' : ''} data-dtcol="${col.id}" onchange="toggleDTCol('${col.id}')"><span>${col.label}</span></label>`;
+    });
+    
+    document.addEventListener('click', (e) => {
+      const dd = document.getElementById('date-picker-dropdown');
+      const btn = document.querySelector('.date-picker-btn');
+      if (dd && btn && !dd.contains(e.target) && !btn.contains(e.target)) dd.classList.remove('visible');
+    });
+    
+    // ==================== TAB SWITCHING ====================
+    function switchTab(tab) {
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+      document.querySelector(`[onclick="switchTab('${tab}')"]`).classList.add('active');
+      document.getElementById('tab-' + tab).classList.add('active');
+      if (tab === 'dayview' && allETDates.length > 0) renderDayView();
+      if (tab === 'hourview' && allETDates.length > 0) renderHourView();
+      if (tab === 'calendar' && allETDates.length > 0) renderCalendar();
+    }
+    
+    // ==================== FILE ====================
+    function handleFileSelect(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+      document.getElementById('upload-screen').style.display = 'none';
+      document.getElementById('loading-screen').style.display = 'flex';
+      
+      Papa.parse(file, {
+        header: true, skipEmptyLines: true,
+        complete: function(results) {
+          try {
+            rawBars = results.data.map(row => ({
+              timestamp: new Date(row.timestamp),
+              open: parseFloat(row.open),
+              high: parseFloat(row.high),
+              low: parseFloat(row.low),
+              close: parseFloat(row.close),
+              volume: parseFloat(row.volume) || 0,
+            })).filter(b => !isNaN(b.open) && !isNaN(b.timestamp)).sort((a, b) => a.timestamp - b.timestamp);
+            
+            calculateRSI();
+            processDataET();
+            populateFilterSelects();
+            document.getElementById('loading-screen').style.display = 'none';
+            document.getElementById('app').classList.add('visible');
+            renderTable();
+            populateDayViewSelect();
+            populateHourViewSelect();
+            populateCalendarYearSelect();
+          } catch (err) { showError(err.message); }
+        },
+        error: (err) => showError(err.message)
+      });
+    }
+    
+    function showError(msg) {
+      document.getElementById('loading-screen').style.display = 'none';
+      document.getElementById('upload-screen').style.display = 'flex';
+      document.getElementById('error-msg').textContent = msg;
+      document.getElementById('error-msg').style.display = 'block';
+    }
+    
+    function loadNewFile() {
+      document.getElementById('app').classList.remove('visible');
+      document.getElementById('upload-screen').style.display = 'flex';
+      document.getElementById('error-msg').style.display = 'none';
+      document.getElementById('file-input').value = '';
+    }
+    
+    // ==================== RSI CALCULATION ====================
+    function maCalc(arr, length, method) {
+      const result = new Array(arr.length).fill(null);
+      if (arr.length < length) return result;
+      
+      if (method === 'SMA') {
+        for (let i = length - 1; i < arr.length; i++) {
+          let sum = 0;
+          for (let j = 0; j < length; j++) sum += arr[i - j];
+          result[i] = sum / length;
+        }
+      } else if (method === 'EMA') {
+        const k = 2 / (length + 1);
+        let ema = 0;
+        for (let i = 0; i < length; i++) ema += arr[i];
+        ema /= length;
+        result[length - 1] = ema;
+        for (let i = length; i < arr.length; i++) {
+          ema = arr[i] * k + ema * (1 - k);
+          result[i] = ema;
+        }
+      } else if (method === 'RMA') {
+        const alpha = 1 / length;
+        let rma = 0;
+        for (let i = 0; i < length; i++) rma += arr[i];
+        rma /= length;
+        result[length - 1] = rma;
+        for (let i = length; i < arr.length; i++) {
+          rma = alpha * arr[i] + (1 - alpha) * rma;
+          result[i] = rma;
+        }
+      }
+      return result;
+    }
+    
+    function calculateRSI() {
+      rsiLength = parseInt(document.getElementById('rsi-length')?.value) || 9;
+      rsiMethod = document.getElementById('rsi-method')?.value || 'RMA';
+      signalLength = parseInt(document.getElementById('signal-length')?.value) || 5;
+      signalMethod = document.getElementById('signal-method')?.value || 'EMA';
+      obLevel = parseInt(document.getElementById('ob-level')?.value) || 88;
+      osLevel = parseInt(document.getElementById('os-level')?.value) || 12;
+      
+      const closes = rawBars.map(b => b.close);
+      const highs = rawBars.map(b => b.high);
+      const lows = rawBars.map(b => b.low);
+      const n = closes.length;
+      
+      // Calculate Ultimate RSI
+      const upper = [], lower = [], range = [], diff = [];
+      for (let i = 0; i < n; i++) {
+        let hi = -Infinity, lo = Infinity;
+        for (let j = Math.max(0, i - rsiLength + 1); j <= i; j++) {
+          hi = Math.max(hi, closes[j]);
+          lo = Math.min(lo, closes[j]);
+        }
+        upper[i] = hi;
+        lower[i] = lo;
+        range[i] = hi - lo;
+        
+        const d = i > 0 ? closes[i] - closes[i-1] : 0;
+        const prevUpper = i > 0 ? upper[i-1] : hi;
+        const prevLower = i > 0 ? lower[i-1] : lo;
+        diff[i] = hi > prevUpper ? range[i] : lo < prevLower ? -range[i] : d;
+      }
+      
+      const absDiff = diff.map(d => Math.abs(d));
+      const num = maCalc(diff, rsiLength, rsiMethod);
+      const den = maCalc(absDiff, rsiLength, rsiMethod);
+      
+      const rsiVals = num.map((n, i) => {
+        if (n === null || den[i] === null || den[i] === 0) return null;
+        return (n / den[i]) * 50 + 50;
+      });
+      
+      const sigVals = maCalc(rsiVals.map(v => v ?? 50), signalLength, signalMethod);
+      
+      rawBars.forEach((bar, i) => {
+        bar.rsi = rsiVals[i];
+        bar.signal = sigVals[i];
+      });
+    }
+    
+    function recalcRSI() {
+      if (rawBars.length === 0) return;
+      calculateRSI();
+      processDataET();
+      renderTable();
+    }
+    
+    // ==================== EASTERN TIME ====================
+    function getETOffset(date) {
+      const year = date.getUTCFullYear();
+      const mar = new Date(Date.UTC(year, 2, 1));
+      while (mar.getUTCDay() !== 0) mar.setUTCDate(mar.getUTCDate() + 1);
+      mar.setUTCDate(mar.getUTCDate() + 7);
+      mar.setUTCHours(7);
+      const nov = new Date(Date.UTC(year, 10, 1));
+      while (nov.getUTCDay() !== 0) nov.setUTCDate(nov.getUTCDate() + 1);
+      nov.setUTCHours(6);
+      return (date >= mar && date < nov) ? -4 : -5;
+    }
+    
+    function utcToET(utcDate) { return new Date(utcDate.getTime() + getETOffset(utcDate) * 3600000); }
+    function getETDateString(utcDate) { return utcToET(utcDate).toISOString().split('T')[0]; }
+    function getETHour(utcDate) { return utcToET(utcDate).getUTCHours(); }
+    function getETMinute(utcDate) { return utcToET(utcDate).getUTCMinutes(); }
+    
+    // ==================== LEVEL CALCS ====================
+    function getLevel(price) { return Math.floor(price / levelSize); }
+    function calcLvlUp(o, h) { return Math.max(0, getLevel(h) - getLevel(o)); }
+    function calcLvlDn(o, l) { return Math.max(0, getLevel(o) - getLevel(l)); }
+    function calcLvlCl(o, c) { return getLevel(c) - getLevel(o); }
+    function calcDayOcc(date) { return Math.ceil(new Date(date + 'T12:00:00Z').getUTCDate() / 7); }
+    
+    // ==================== DATA PROCESSING ====================
+    function processDataET() {
+      etDays = {};
+      barsByET = {};
+      
+      rawBars.forEach(bar => {
+        const etDate = getETDateString(bar.timestamp);
+        const etHour = getETHour(bar.timestamp);
+        const etMin = getETMinute(bar.timestamp);
+        
+        if (!barsByET[etDate]) barsByET[etDate] = [];
+        barsByET[etDate].push({ ...bar, etHour, etMin });
+        
+        if (!etDays[etDate]) {
+          const etDateObj = new Date(etDate + 'T12:00:00Z');
+          etDays[etDate] = {
+            date: etDate,
+            month: etDateObj.getUTCMonth() + 1,
+            dow: etDateObj.getUTCDay(),
+            occ: calcDayOcc(etDate),
+            hrs: {},
+            dO: null, dH: -Infinity, dL: Infinity, dC: null,
+            dHiHr: null, dLoHr: null, dHiIdx: -1, dLoIdx: -1,
+          };
+        }
+        
+        const day = etDays[etDate];
+        if (etHour === 0 && day.dO === null) day.dO = bar.open;
+        if (etHour === 23) day.dC = bar.close;
+        if (bar.high > day.dH) { day.dH = bar.high; day.dHiHr = etHour; }
+        if (bar.low < day.dL) { day.dL = bar.low; day.dLoHr = etHour; }
+        
+        if (!day.hrs[etHour]) {
+          day.hrs[etHour] = { 
+            o: bar.open, h: bar.high, l: bar.low, c: bar.close, v: 0, 
+            hm: etMin, lm: etMin, greenBars: 0,
+            rsiVals: [], sigVals: []
+          };
+        }
+        
+        const hd = day.hrs[etHour];
+        hd.c = bar.close;
+        hd.v += bar.volume;
+        if (bar.high > hd.h) { hd.h = bar.high; hd.hm = etMin; }
+        if (bar.low < hd.l) { hd.l = bar.low; hd.lm = etMin; }
+        if (bar.close >= bar.open) hd.greenBars++;
+        if (bar.rsi != null) hd.rsiVals.push(bar.rsi);
+        if (bar.signal != null) hd.sigVals.push(bar.signal);
+      });
+      
+      // Second pass: calculate derived metrics
+      Object.values(etDays).forEach(day => {
+        if (day.dO === null) {
+          for (let h = 0; h < 24; h++) {
+            if (day.hrs[h]) { day.dO = day.hrs[h].o; break; }
+          }
+        }
+        if (day.dC === null) {
+          for (let h = 23; h >= 0; h--) {
+            if (day.hrs[h]) { day.dC = day.hrs[h].c; break; }
+          }
+        }
+        
+        day.dRng = day.dH > -Infinity ? Math.round(day.dH - day.dL) : null;
+        day.dUR = day.dO && day.dH > -Infinity ? Math.round(day.dH - day.dO) : null;
+        day.dLR = day.dO && day.dL < Infinity ? Math.round(day.dO - day.dL) : null;
+        day.dOC = day.dO && day.dC ? Math.round(day.dC - day.dO) : null;
+        day.dMx = Math.max(day.dUR || 0, day.dLR || 0);
+        
+        // Calculate total volume and collect RSI values
+        let totalVol = 0;
+        const dayRsiVals = [];
+        HOURS.forEach(h => {
+          if (day.hrs[h]) {
+            totalVol += day.hrs[h].v || 0;
+            if (day.hrs[h].rsiVals) dayRsiVals.push(...day.hrs[h].rsiVals);
+          }
+        });
+        day.dVol = totalVol;
+        
+        // Calculate median RSI
+        if (dayRsiVals.length > 0) {
+          dayRsiVals.sort((a, b) => a - b);
+          const mid = Math.floor(dayRsiVals.length / 2);
+          day.dRsiMed = dayRsiVals.length % 2 ? dayRsiVals[mid] : (dayRsiVals[mid - 1] + dayRsiVals[mid]) / 2;
+          day.dRsiMed = Math.round(day.dRsiMed * 100) / 100;
+        } else {
+          day.dRsiMed = null;
+        }
+        
+        // Drawdown: fall from high to subsequent low
+        // Reversal: rise from low to subsequent high
+        let postHiLow = Infinity, postLoHigh = -Infinity;
+        let foundHi = false, foundLo = false;
+        
+        HOURS.forEach(h => {
+          if (day.hrs[h]) {
+            if (day.dHiHr !== null && h >= day.dHiHr) {
+              foundHi = true;
+              postHiLow = Math.min(postHiLow, day.hrs[h].l);
+            }
+            if (day.dLoHr !== null && h >= day.dLoHr) {
+              foundLo = true;
+              postLoHigh = Math.max(postLoHigh, day.hrs[h].h);
+            }
+          }
+        });
+        
+        day.dDD = foundHi && day.dH > -Infinity && postHiLow < Infinity ? Math.round(day.dH - postHiLow) : null;
+        day.dRev = foundLo && day.dL < Infinity && postLoHigh > -Infinity ? Math.round(postLoHigh - day.dL) : null;
+        
+        let runH = -Infinity, runL = Infinity;
+        let prevCdrU = null, prevCdrD = null, prevMxcd = null;
+        
+        HOURS.forEach(h => {
+          if (day.hrs[h]) {
+            const hd = day.hrs[h];
+            runH = Math.max(runH, hd.h);
+            runL = Math.min(runL, hd.l);
+            
+            const cdrU = day.dO ? Math.round(runH - day.dO) : null;
+            const cdrD = day.dO ? Math.round(day.dO - runL) : null;
+            const mxcd = Math.max(cdrU || 0, cdrD || 0);
+            
+            // RSI metrics
+            const rsiMax = hd.rsiVals.length ? Math.max(...hd.rsiVals) : null;
+            const rsiMin = hd.rsiVals.length ? Math.min(...hd.rsiVals) : null;
+            const rsiAvg = hd.rsiVals.length ? hd.rsiVals.reduce((a,b) => a+b, 0) / hd.rsiVals.length : null;
+            const sigMax = hd.sigVals.length ? Math.max(...hd.sigVals) : null;
+            const sigMin = hd.sigVals.length ? Math.min(...hd.sigVals) : null;
+            const sigAvg = hd.sigVals.length ? hd.sigVals.reduce((a,b) => a+b, 0) / hd.sigVals.length : null;
+            const obos = hd.rsiVals.some(r => r >= obLevel) ? 'OB' : hd.rsiVals.some(r => r <= osLevel) ? 'OS' : null;
+            
+            hd.m = {
+              rng: Math.round(hd.h - hd.l),
+              ur: Math.round(hd.h - hd.o),
+              lr: Math.round(hd.o - hd.l),
+              up: calcLvlUp(hd.o, hd.h),
+              dn: calcLvlDn(hd.o, hd.l),
+              cl: calcLvlCl(hd.o, hd.c),
+              oc: Math.round(hd.c - hd.o),
+              hm: hd.hm, lm: hd.lm,
+              o: Math.round(hd.o), hi: Math.round(hd.h), lo: Math.round(hd.l), c: Math.round(hd.c),
+              v: Math.round(hd.v * 100) / 100,
+              cdr: day.dO ? Math.round(hd.c - day.dO) : null,
+              greenBars: hd.greenBars,
+              cdrU: (cdrU !== prevCdrU) ? cdrU : null,
+              cdrD: (cdrD !== prevCdrD) ? cdrD : null,
+              mxcd: (mxcd !== prevMxcd) ? mxcd : null,
+              cdrUActual: cdrU,
+              cdrDActual: cdrD,
+              mxcdActual: mxcd,
+              rsiMax, rsiMin, rsiAvg: rsiAvg ? Math.round(rsiAvg * 10) / 10 : null,
+              sigMax, sigMin, sigAvg: sigAvg ? Math.round(sigAvg * 10) / 10 : null,
+              obos,
+            };
+            hd.m.mxr = Math.max(hd.m.ur, hd.m.lr);
+            hd.m.mxl = Math.max(hd.m.up, hd.m.dn);
+            
+            prevCdrU = cdrU;
+            prevCdrD = cdrD;
+            prevMxcd = mxcd;
+          }
+        });
+      });
+      
+      allETDates = Object.keys(etDays).sort().reverse();
+      availableYears = [...new Set(allETDates.map(d => d.slice(0, 4)))].sort();
+      selectedYears = new Set(availableYears);
+      
+      document.getElementById('year-filters').innerHTML = availableYears.map(y => 
+        `<button class="f-btn active" data-year="${y}" onclick="toggleYear('${y}')">${y}</button>`
+      ).join('');
+      
+      populateDatePicker();
+    }
+    
+    function updateLevel() {
+      levelSize = parseInt(document.getElementById('level-size').value) || 250;
+      Object.values(etDays).forEach(day => {
+        HOURS.forEach(h => {
+          if (day.hrs[h]) {
+            const hd = day.hrs[h];
+            hd.m.up = calcLvlUp(hd.o, hd.h);
+            hd.m.dn = calcLvlDn(hd.o, hd.l);
+            hd.m.cl = calcLvlCl(hd.o, hd.c);
+            hd.m.mxl = Math.max(hd.m.up, hd.m.dn);
+          }
+        });
+      });
+      renderTable();
+    }
+    
+    // ==================== COLUMN FILTERS ====================
+    function populateFilterSelects() {
+      const hourSel = document.getElementById('filter-hour');
+      hourSel.innerHTML = '<option value="day">Day Total</option>';
+      HOURS.forEach(h => {
+        const ampm = h >= 12 ? 'PM' : 'AM';
+        const disp = h === 0 ? 12 : h > 12 ? h - 12 : h;
+        hourSel.innerHTML += `<option value="${h}">${disp}${ampm}</option>`;
+      });
+      
+      updateFilterColumnSelect();
+    }
+    
+    function updateFilterColumnSelect() {
+      const hourVal = document.getElementById('filter-hour').value;
+      const colSel = document.getElementById('filter-column');
+      
+      if (hourVal === 'day') {
+        colSel.innerHTML = DAY_TOTAL_COLS.map(c => `<option value="${c.id}">${c.label}</option>`).join('');
+      } else {
+        colSel.innerHTML = ALL_COLUMNS.map(c => `<option value="${c.id}">${c.label}</option>`).join('');
+      }
+    }
+    
+    document.getElementById('filter-hour')?.addEventListener('change', updateFilterColumnSelect);
+    
+    function addColumnFilter() {
+      const hour = document.getElementById('filter-hour').value;
+      const col = document.getElementById('filter-column').value;
+      const op = document.getElementById('filter-op').value;
+      const val = parseFloat(document.getElementById('filter-value').value);
+      
+      if (isNaN(val)) { alert('Please enter a valid number'); return; }
+      
+      columnFilters.push({ hour, col, op, val });
+      document.getElementById('filter-value').value = '';
+      updateFilterUI();
+      renderTable();
+    }
+    
+    function removeFilter(idx) {
+      columnFilters.splice(idx, 1);
+      updateFilterUI();
+      renderTable();
+    }
+    
+    function clearAllFilters() {
+      columnFilters = [];
+      updateFilterUI();
+      renderTable();
+    }
+    
+    function updateFilterUI() {
+      const container = document.getElementById('active-filters');
+      container.innerHTML = columnFilters.map((f, i) => {
+        const hourLabel = f.hour === 'day' ? 'Day' : formatHourHeader(parseInt(f.hour));
+        const colDef = f.hour === 'day' ? DAY_TOTAL_COLS.find(c => c.id === f.col) : ALL_COLUMNS.find(c => c.id === f.col);
+        return `<div class="filter-tag">${hourLabel} ${colDef?.label || f.col} ${f.op} ${f.val}<span class="remove-filter" onclick="removeFilter(${i})">×</span></div>`;
+      }).join('');
+      
+      document.getElementById('btn-col-filter').classList.toggle('has-filters', columnFilters.length > 0);
+    }
+    
+    function applyColumnFilters(data) {
+      if (columnFilters.length === 0) return data;
+      
+      return data.filter(day => {
+        return columnFilters.every(f => {
+          let val;
+          if (f.hour === 'day') {
+            val = day[f.col];
+          } else {
+            const h = parseInt(f.hour);
+            val = day.hrs[h]?.m?.[f.col];
+          }
+          
+          if (val == null) return false;
+          
+          switch (f.op) {
+            case '>=': return val >= f.val;
+            case '<=': return val <= f.val;
+            case '>': return val > f.val;
+            case '<': return val < f.val;
+            case '==': return val === f.val;
+            case '!=': return val !== f.val;
+            default: return true;
+          }
+        });
+      });
+    }
+    
+    // ==================== RANKS ====================
+    function calcRanks(day, hours) {
+      ['mxr', 'mxl', 'oc', 'rng'].forEach(m => {
+        const vals = hours.map(h => ({ h, v: day.hrs[h]?.m?.[m] }))
+          .filter(x => x.v != null)
+          .sort((a, b) => Math.abs(b.v) - Math.abs(a.v));
+        vals.forEach((x, i) => { if (day.hrs[x.h]?.m) day.hrs[x.h].m[m + 'Rk'] = i + 1; });
+      });
+    }
+    
+    // ==================== DATE PICKER ====================
+    function populateDatePicker() {
+      document.getElementById('date-list').innerHTML = allETDates.map(d => 
+        `<div class="date-item ${selectedDates.has(d) ? 'selected' : ''}" data-date="${d}" onclick="toggleDate('${d}')">${d}</div>`
+      ).join('');
+      updateDateCount();
+    }
+    
+    function toggleDatePicker() { document.getElementById('date-picker-dropdown').classList.toggle('visible'); }
+    function toggleDate(d) {
+      selectedDates.has(d) ? selectedDates.delete(d) : selectedDates.add(d);
+      useDateFilter = selectedDates.size > 0;
+      updateDatePickerUI();
+      renderTable();
+    }
+    function selectAllDates() { selectedDates = new Set(allETDates); useDateFilter = true; updateDatePickerUI(); renderTable(); }
+    function selectNoDates() { selectedDates.clear(); useDateFilter = false; updateDatePickerUI(); renderTable(); }
+    function syncDatesFromFilters() {
+      selectedDates.clear();
+      Object.values(etDays).forEach(d => {
+        if (selectedYears.has(d.date.slice(0,4)) && selectedMonths.has(d.month) && selectedDays.has(d.dow) && selectedOccs.has(d.occ))
+          selectedDates.add(d.date);
+      });
+      useDateFilter = true;
+      updateDatePickerUI();
+      renderTable();
+    }
+    function updateDatePickerUI() {
+      document.querySelectorAll('.date-item').forEach(el => el.classList.toggle('selected', selectedDates.has(el.dataset.date)));
+      updateDateCount();
+    }
+    function updateDateCount() { document.getElementById('date-count').textContent = selectedDates.size; }
+    
+    // ==================== FILTERING ====================
+    function getFilteredData() {
+      let data = Object.values(etDays).filter(d => {
+        if (useDateFilter && selectedDates.size > 0) return selectedDates.has(d.date);
+        return selectedYears.has(d.date.slice(0,4)) && selectedMonths.has(d.month) && selectedDays.has(d.dow) && selectedOccs.has(d.occ);
+      });
+      
+      data = applyColumnFilters(data);
+      
+      data.sort((a, b) => {
+        let va, vb;
+        if (sortColumn === 'date') { va = a.date; vb = b.date; }
+        else if (DAY_TOTAL_COLS.some(c => c.id === sortColumn)) { va = a[sortColumn]; vb = b[sortColumn]; }
+        else if (sortHour !== null && a.hrs[sortHour]?.m && b.hrs[sortHour]?.m) {
+          va = a.hrs[sortHour].m[sortColumn]; vb = b.hrs[sortHour].m[sortColumn];
+        } else { va = a.date; vb = b.date; }
+        if (va == null) va = -Infinity;
+        if (vb == null) vb = -Infinity;
+        return sortDirection === 'asc' ? (va < vb ? -1 : va > vb ? 1 : 0) : (va > vb ? -1 : va < vb ? 1 : 0);
+      });
+      
+      return data;
+    }
+    
+    function getVisibleHours() { return HOURS.filter(h => h >= hourFrom && h <= hourTo); }
+    function getActiveColumns() { return ALL_COLUMNS.filter(c => visibleColumns.has(c.id)); }
+    function getActiveDTCols() { return DAY_TOTAL_COLS.filter(c => visibleDTCols.has(c.id)); }
+    
+    // ==================== GRADIENTS ====================
+    function getOrangeGradient(val, min, max) {
+      if (val == null || max === min) return '#0d0d12';
+      const t = Math.max(0, Math.min(1, (val - min) / (max - min)));
+      return `rgb(${Math.round(13 + t * 238)}, ${Math.round(13 + t * 133)}, ${Math.round(18 + t * 42)})`;
+    }
+    
+    function getOrangeGradientInverted(val, min, max) {
+      if (val == null || max === min) return '#0d0d12';
+      const t = 1 - Math.max(0, Math.min(1, (val - min) / (max - min)));
+      return `rgb(${Math.round(13 + t * 238)}, ${Math.round(13 + t * 133)}, ${Math.round(18 + t * 42)})`;
+    }
+    
+    function getPurpleGradient(val, min, max) {
+      if (val == null || max === min) return '#0d0d12';
+      const t = Math.max(0, Math.min(1, (val - min) / (max - min)));
+      return `rgb(${Math.round(13 + t * 154)}, ${Math.round(13 + t * 126)}, ${Math.round(18 + t * 232)})`;
+    }
+    
+    function getRGGradient(val, min, max) {
+      if (val == null) return '#0d0d12';
+      if (val === 0) return '#0d0d12';
+      if (val > 0) {
+        const t = Math.min(1, val / Math.max(max, 1));
+        return `rgb(${Math.round(13 + t * 61)}, ${Math.round(13 + t * 209)}, ${Math.round(18 + t * 110)})`;
+      } else {
+        const t = Math.min(1, Math.abs(val) / Math.abs(Math.min(min, -1)));
+        return `rgb(${Math.round(13 + t * 235)}, ${Math.round(13 + t * 100)}, ${Math.round(18 + t * 95)})`;
+      }
+    }
+    
+    function getGreenBarGradient(val) {
+      if (val == null) return '#0d0d12';
+      if (val < 6) {
+        const t = (6 - val) / 6;
+        return `rgb(${Math.round(13 + t * 235)}, ${Math.round(13 + t * 100)}, ${Math.round(18 + t * 95)})`;
+      } else if (val > 6) {
+        const t = (val - 6) / 6;
+        return `rgb(${Math.round(13 + t * 61)}, ${Math.round(13 + t * 209)}, ${Math.round(18 + t * 110)})`;
+      }
+      return '#0d0d12';
+    }
+    
+    function calcRowStats(day, hours) {
+      const s = { rng: [], urlr: [], mxr: [], mxl: [], rank: [], cl: [], oc: [], cdr: [], cdrRG: [], mxcd: [], rsi: [], sig: [] };
+      hours.forEach(h => {
+        const m = day.hrs[h]?.m;
+        if (!m) return;
+        if (m.rng != null) s.rng.push(m.rng);
+        if (m.ur != null) s.urlr.push(m.ur);
+        if (m.lr != null) s.urlr.push(m.lr);
+        if (m.mxr != null) s.mxr.push(m.mxr);
+        if (m.mxl != null) s.mxl.push(m.mxl);
+        ['mxrRk','mxlRk','ocRk','rngRk'].forEach(r => { if (m[r] != null) s.rank.push(m[r]); });
+        if (m.cl != null) s.cl.push(m.cl);
+        if (m.oc != null) s.oc.push(m.oc);
+        if (m.cdrUActual != null) s.cdr.push(m.cdrUActual);
+        if (m.cdrDActual != null) s.cdr.push(m.cdrDActual);
+        if (m.cdr != null) s.cdrRG.push(m.cdr);
+        if (m.mxcdActual != null) s.mxcd.push(m.mxcdActual);
+        ['rsiMax','rsiMin','rsiAvg'].forEach(r => { if (m[r] != null) s.rsi.push(m[r]); });
+        ['sigMax','sigMin','sigAvg'].forEach(r => { if (m[r] != null) s.sig.push(m[r]); });
+      });
+      const r = {};
+      Object.keys(s).forEach(k => {
+        r[k] = s[k].length ? { min: Math.min(...s[k]), max: Math.max(...s[k]) } : { min: 0, max: 100 };
+      });
+      return r;
+    }
+    
+    function calcColStats(data, hours) {
+      const s = {};
+      hours.forEach(h => {
+        s[h] = { rng: [], urlr: [], mxr: [], mxl: [], rank: [], cl: [], oc: [], cdrRG: [], cdr: [], mxcd: [], rsi: [], sig: [] };
+        data.forEach(d => {
+          const m = d.hrs[h]?.m;
+          if (!m) return;
+          if (m.rng != null) s[h].rng.push(m.rng);
+          if (m.ur != null) s[h].urlr.push(m.ur);
+          if (m.lr != null) s[h].urlr.push(m.lr);
+          if (m.mxr != null) s[h].mxr.push(m.mxr);
+          if (m.mxl != null) s[h].mxl.push(m.mxl);
+          ['mxrRk','mxlRk','ocRk','rngRk'].forEach(r => { if (m[r] != null) s[h].rank.push(m[r]); });
+          if (m.cl != null) s[h].cl.push(m.cl);
+          if (m.oc != null) s[h].oc.push(m.oc);
+          if (m.cdr != null) s[h].cdrRG.push(m.cdr);
+          if (m.cdrUActual != null) s[h].cdr.push(m.cdrUActual);
+          if (m.cdrDActual != null) s[h].cdr.push(m.cdrDActual);
+          if (m.mxcdActual != null) s[h].mxcd.push(m.mxcdActual);
+          ['rsiMax','rsiMin','rsiAvg'].forEach(r => { if (m[r] != null) s[h].rsi.push(m[r]); });
+          ['sigMax','sigMin','sigAvg'].forEach(r => { if (m[r] != null) s[h].sig.push(m[r]); });
+        });
+      });
+      const r = {};
+      hours.forEach(h => {
+        r[h] = {};
+        Object.keys(s[h]).forEach(k => {
+          r[h][k] = s[h][k].length ? { min: Math.min(...s[h][k]), max: Math.max(...s[h][k]) } : { min: 0, max: 100 };
+        });
+      });
+      return r;
+    }
+    
+    function calcDayTotalsStats(data) {
+      const s = { drng: [], durdlr: [], doc: [], doch: [], ddd: [], drev: [] };
+      data.forEach(d => {
+        if (d.dRng != null) s.drng.push(d.dRng);
+        if (d.dUR != null) s.durdlr.push(d.dUR);
+        if (d.dLR != null) s.durdlr.push(d.dLR);
+        if (d.dOC != null) s.doc.push(d.dOC);
+        if (d.dDD != null) s.ddd.push(d.dDD);
+        if (d.dRev != null) s.drev.push(d.dRev);
+      });
+      return {
+        drng: s.drng.length ? { min: Math.min(...s.drng), max: Math.max(...s.drng) } : { min: 0, max: 0 },
+        durdlr: s.durdlr.length ? { min: Math.min(...s.durdlr), max: Math.max(...s.durdlr) } : { min: 0, max: 0 },
+        doc: s.doc.length ? { min: Math.min(...s.doc), max: Math.max(...s.doc) } : { min: 0, max: 0 },
+        ddd: s.ddd.length ? { min: Math.min(...s.ddd), max: Math.max(...s.ddd) } : { min: 0, max: 0 },
+        drev: s.drev.length ? { min: Math.min(...s.drev), max: Math.max(...s.drev) } : { min: 0, max: 0 },
+      };
+    }
+    
+    // ==================== FORMATTING ====================
+    function fmt(v, id) {
+      if (v == null) return '—';
+      if (['hm','lm'].includes(id)) return ':' + String(v).padStart(2, '0');
+      if (['up','dn','mxl'].includes(id)) return v;
+      if (id === 'cl') return v === 0 ? '0' : (v > 0 ? '+' + v : v);
+      if (id === 'v') return v.toFixed(1);
+      if (['o','hi','lo','c'].includes(id)) return v.toLocaleString();
+      if (['oc','cdr'].includes(id)) return (v >= 0 ? '+' : '') + v.toLocaleString();
+      if (id.endsWith('Rk')) return v;
+      if (['cdrU','cdrD','mxcd'].includes(id)) return v.toLocaleString();
+      if (['rsiMax','rsiMin','rsiAvg','sigMax','sigMin','sigAvg'].includes(id)) return v.toFixed(1);
+      if (id === 'obos') return v;
+      return v.toLocaleString();
+    }
+    
+    function formatHourHeader(h) {
+      const ampm = h >= 12 ? 'PM' : 'AM';
+      const disp = h === 0 ? 12 : h > 12 ? h - 12 : h;
+      return disp + ampm;
+    }
+    
+    // ==================== RENDER TABLE ====================
+    function renderTable() {
+      const data = getFilteredData();
+      const hours = getVisibleHours();
+      const cols = getActiveColumns();
+      const dtCols = getActiveDTCols();
+      const gMode = document.getElementById('gradient-mode').value;
+      ocCloseHour = parseInt(document.getElementById('oc-close-hour').value) || 16;
+      
+      // Calculate O-C to hour for each day
+      data.forEach(d => {
+        const closeHr = d.hrs[ocCloseHour];
+        d.dOCH = d.dO && closeHr ? Math.round(closeHr.c - d.dO) : null;
+      });
+      
+      data.forEach(d => calcRanks(d, hours));
+      
+      document.getElementById('stat-days').textContent = data.length;
+      document.getElementById('stat-hours').textContent = hours.length;
+      document.getElementById('stat-cols').textContent = cols.length;
+      
+      const dtStats = calcDayTotalsStats(data);
+      const colStats = calcColStats(data, hours);
+      
+      // Build header
+      let hd = '<tr class="hour-row">';
+      hd += `<th class="sticky-col sticky-header" style="left:0;min-width:65px" rowspan="2" onclick="sortBy('date',null)">Date${sortColumn==='date'?(sortDirection==='asc'?'↑':'↓'):''}</th>`;
+      hd += `<th class="sticky-col sticky-header" style="left:65px;min-width:28px" rowspan="2">Day</th>`;
+      hd += `<th class="sticky-col sticky-header" style="left:93px;min-width:20px" rowspan="2">#</th>`;
+      
+      if (showDayCols && dtCols.length > 0) {
+        hd += `<th class="sticky-col sticky-header day-totals-header" style="left:113px" colspan="${dtCols.length}">Day Totals (ET)</th>`;
+      }
+      
+      hours.forEach((h, i) => {
+        hd += `<th class="hour-header${i===0?' hour-border-left':''}" colspan="${cols.length}">${formatHourHeader(h)}</th>`;
+      });
+      hd += '</tr><tr class="col-row">';
+      
+      if (showDayCols && dtCols.length > 0) {
+        let pos = 113;
+        dtCols.forEach((c, i) => {
+          const w = ['dOpen','dHigh','dLow','dClose'].includes(c.id) ? 52 : ['dOC','dOCH'].includes(c.id) ? 48 : 38;
+          const isSorted = sortColumn === c.id;
+          const isLast = i === dtCols.length - 1;
+          hd += `<th class="sticky-col sticky-header-sub col-header${isSorted?' sorted':''}" style="left:${pos}px;min-width:${w}px${isLast?';border-right:2px solid rgba(100,149,237,0.3)':''}" onclick="sortBy('${c.id}',null)">${c.label}${isSorted?(sortDirection==='asc'?'↑':'↓'):''}</th>`;
+          pos += w;
+        });
+      }
+      
+      hours.forEach((h, hi) => {
+        cols.forEach((col, ci) => {
+          const isSorted = sortColumn === col.id && sortHour === h;
+          hd += `<th class="col-header${ci===0?' hour-border-left':''}${isSorted?' sorted':''}" onclick="sortBy('${col.id}',${h})">${col.label}${isSorted?(sortDirection==='asc'?'↑':'↓'):''}</th>`;
+        });
+      });
+      hd += '</tr>';
+      document.getElementById('table-head').innerHTML = hd;
+      
+      // Build body
+      let bd = '';
+      data.forEach(day => {
+        const rowStats = gMode === 'row' ? calcRowStats(day, hours) : null;
+        
+        bd += '<tr>';
+        bd += `<td class="sticky-col date-cell" style="left:0;min-width:65px">${day.date}</td>`;
+        bd += `<td class="sticky-col day-cell" style="left:65px;min-width:28px">${DAYS_SHORT[day.dow]}</td>`;
+        bd += `<td class="sticky-col occ-cell" style="left:93px;min-width:20px">${day.occ}</td>`;
+        
+        if (showDayCols && dtCols.length > 0) {
+          let pos = 113;
+          dtCols.forEach((c, i) => {
+            const w = ['dOpen','dHigh','dLow','dClose'].includes(c.id) ? 52 : ['dOC','dOCH'].includes(c.id) ? 48 : 38;
+            const isLast = i === dtCols.length - 1;
+            let val = day[c.id];
+            let bg = '#0d0d12';
+            let cls = 'day-total-cell';
+            
+            if (c.id === 'dRng') bg = getOrangeGradient(val, dtStats.drng.min, dtStats.drng.max);
+            else if (c.id === 'dUR' || c.id === 'dLR') bg = getOrangeGradient(val, dtStats.durdlr.min, dtStats.durdlr.max);
+            else if (c.id === 'dOC' || c.id === 'dOCH') {
+              bg = getRGGradient(val, dtStats.doc.min, dtStats.doc.max);
+              cls += val >= 0 ? ' up' : ' down';
+            }
+            else if (c.id === 'dDD') bg = getOrangeGradient(val, dtStats.ddd.min, dtStats.ddd.max);
+            else if (c.id === 'dRev') bg = getOrangeGradient(val, dtStats.drev.min, dtStats.drev.max);
+            else if (c.id === 'dHiHr' || c.id === 'dLoHr') val = val != null ? formatHourHeader(val) : '—';
+            else if (['dOpen','dHigh','dLow','dClose'].includes(c.id)) {
+              val = c.id === 'dOpen' ? day.dO : c.id === 'dHigh' ? day.dH : c.id === 'dLow' ? day.dL : day.dC;
+              val = val && val !== -Infinity && val !== Infinity ? Math.round(val).toLocaleString() : '—';
+            }
+            
+            const fmtVal = typeof val === 'number' ? ((['dOC','dOCH'].includes(c.id) ? (val >= 0 ? '+' : '') : '') + val.toLocaleString()) : val;
+            bd += `<td class="sticky-col ${cls}" style="left:${pos}px;min-width:${w}px;background:${bg}${isLast?';border-right:2px solid rgba(100,149,237,0.3)':''}">${fmtVal ?? '—'}</td>`;
+            pos += w;
+          });
+        }
+        
+        hours.forEach((h, hi) => {
+          const m = day.hrs[h]?.m;
+          const stats = gMode === 'row' ? rowStats : colStats[h];
+          const cStats = colStats[h];
+          
+          cols.forEach((col, ci) => {
+            // For Overview tab, always show actual CDU/CDD/MXCD values (not conditional)
+            let v;
+            if (col.id === 'cdrU') v = m?.cdrUActual;
+            else if (col.id === 'cdrD') v = m?.cdrDActual;
+            else if (col.id === 'mxcd') v = m?.mxcdActual;
+            else v = m?.[col.id];
+            
+            let bg = '#0d0d12';
+            
+            if (col.gradient === 'orange' && stats[col.group]) bg = getOrangeGradient(v, stats[col.group].min, stats[col.group].max);
+            else if (col.gradient === 'orange-inv' && stats[col.group]) bg = getOrangeGradientInverted(v, stats[col.group].min, stats[col.group].max);
+            else if (col.gradient === 'rg' && stats[col.group]) bg = getRGGradient(v, stats[col.group].min, stats[col.group].max);
+            else if (col.gradient === 'orange-col' && cStats?.cdr) bg = getOrangeGradient(v, cStats.cdr.min, cStats.cdr.max);
+            else if (col.gradient === 'rg-col' && cStats?.cdrRG) bg = getRGGradient(v, cStats.cdrRG.min, cStats.cdrRG.max);
+            else if (col.gradient === 'purple' && stats[col.group]) bg = getPurpleGradient(v, stats[col.group].min, stats[col.group].max);
+            
+            if (col.id === 'mxcd' && cStats?.mxcd) bg = getOrangeGradient(v, cStats.mxcd.min, cStats.mxcd.max);
+            
+            let cls = 'data-cell';
+            if (col.id === 'cl') cls += v > 0 ? ' up' : v < 0 ? ' down' : ' neutral';
+            else if (col.id === 'up' && v > 0) cls += ' up';
+            else if (col.id === 'dn' && v > 0) cls += ' down';
+            else if (['oc','cdr'].includes(col.id)) cls += v > 0 ? ' up' : v < 0 ? ' down' : '';
+            else if (col.id === 'obos') cls += v === 'OB' ? ' ob' : v === 'OS' ? ' os' : '';
+            
+            bd += `<td class="${cls}${ci===0?' hour-border-left':''}" style="background:${bg}">${fmt(v, col.id)}</td>`;
+          });
+        });
+        bd += '</tr>';
+      });
+      
+      document.getElementById('table-body').innerHTML = bd;
+    }
+    
+    // ==================== DAY VIEW ====================
+    function populateDayViewSelect() {
+      const sel = document.getElementById('day-view-date');
+      sel.innerHTML = allETDates.map(d => `<option value="${d}">${d} (${DAYS_SHORT[etDays[d].dow]})</option>`).join('');
+    }
+    
+    function renderDayView() {
+      const date = document.getElementById('day-view-date').value;
+      if (!date || !barsByET[date]) return;
+      
+      const lvl = parseInt(document.getElementById('day-level-size').value) || 250;
+      const hlFrom = parseInt(document.getElementById('day-hl-from').value);
+      const hlTo = parseInt(document.getElementById('day-hl-to').value);
+      const day = etDays[date];
+      const bars = barsByET[date];
+      
+      document.getElementById('day-view-title').textContent = `${date} (${DAYS_SHORT[day.dow]})`;
+      
+      document.getElementById('day-stats-grid').innerHTML = `
+        <div class="day-stat-box"><div class="day-stat-val">${day.dRng?.toLocaleString() ?? '—'}</div><div class="day-stat-lbl">Day Range</div></div>
+        <div class="day-stat-box"><div class="day-stat-val">${day.dUR?.toLocaleString() ?? '—'}</div><div class="day-stat-lbl">Day UR</div></div>
+        <div class="day-stat-box"><div class="day-stat-val">${day.dLR?.toLocaleString() ?? '—'}</div><div class="day-stat-lbl">Day LR</div></div>
+        <div class="day-stat-box"><div class="day-stat-val ${day.dOC >= 0 ? 'positive' : 'negative'}">${day.dOC != null ? ((day.dOC>=0?'+':'')+day.dOC.toLocaleString()) : '—'}</div><div class="day-stat-lbl">Day O-C</div></div>
+        <div class="day-stat-box"><div class="day-stat-val">${day.dHiHr != null ? formatHourHeader(day.dHiHr) : '—'}</div><div class="day-stat-lbl">High Hour</div></div>
+        <div class="day-stat-box"><div class="day-stat-val">${day.dLoHr != null ? formatHourHeader(day.dLoHr) : '—'}</div><div class="day-stat-lbl">Low Hour</div></div>
+        <div class="day-stat-box"><div class="day-stat-val">${day.dDD?.toLocaleString() ?? '—'}</div><div class="day-stat-lbl">Drawdown</div></div>
+        <div class="day-stat-box"><div class="day-stat-val">${day.dRev?.toLocaleString() ?? '—'}</div><div class="day-stat-lbl">Reversal</div></div>
+      `;
+      
+      const hourBars = {};
+      bars.forEach(b => {
+        if (!hourBars[b.etHour]) hourBars[b.etHour] = {};
+        hourBars[b.etHour][String(b.etMin).padStart(2, '0')] = b;
+      });
+      
+      // Pre-calculate which minutes made new highs/lows for each hour
+      const hourHighLowMins = {};
+      HOURS.forEach(h => {
+        if (!hourBars[h]) return;
+        hourHighLowMins[h] = { highMins: new Set(), lowMins: new Set() };
+        let runningHigh = -Infinity;
+        let runningLow = Infinity;
+        
+        MINS.forEach(m => {
+          const bar = hourBars[h][m];
+          if (bar) {
+            if (bar.high > runningHigh) {
+              runningHigh = bar.high;
+              hourHighLowMins[h].highMins.add(m);
+            }
+            if (bar.low < runningLow) {
+              runningLow = bar.low;
+              hourHighLowMins[h].lowMins.add(m);
+            }
+          }
+        });
+        
+        if (hourHighLowMins[h].highMins.size > 1 && hourHighLowMins[h].highMins.has('00')) {
+          hourHighLowMins[h].highMins.delete('00');
+        }
+        if (hourHighLowMins[h].lowMins.size > 1 && hourHighLowMins[h].lowMins.has('00')) {
+          hourHighLowMins[h].lowMins.delete('00');
+        }
+      });
+      
+      // Pre-calculate which bars made new DAY high/low
+      const dayHighLowBars = { highBars: new Set(), lowBars: new Set() };
+      let dayRunningHigh = -Infinity;
+      let dayRunningLow = Infinity;
+      HOURS.forEach(h => {
+        if (!hourBars[h]) return;
+        MINS.forEach(m => {
+          const bar = hourBars[h][m];
+          if (bar) {
+            if (bar.high > dayRunningHigh) {
+              dayRunningHigh = bar.high;
+              dayHighLowBars.highBars.add(`${h}-${m}`);
+            }
+            if (bar.low < dayRunningLow) {
+              dayRunningLow = bar.low;
+              dayHighLowBars.lowBars.add(`${h}-${m}`);
+            }
+          }
+        });
+      });
+      // Remove first bar if others made new high/low
+      const firstBarKey = HOURS.find(h => hourBars[h]) !== undefined ? 
+        `${HOURS.find(h => hourBars[h])}-00` : null;
+      if (firstBarKey && dayHighLowBars.highBars.size > 1 && dayHighLowBars.highBars.has(firstBarKey)) {
+        dayHighLowBars.highBars.delete(firstBarKey);
+      }
+      if (firstBarKey && dayHighLowBars.lowBars.size > 1 && dayHighLowBars.lowBars.has(firstBarKey)) {
+        dayHighLowBars.lowBars.delete(firstBarKey);
+      }
+      
+      // Calculate hourly drawdown and reversal for each hour
+      const hourlyDDRev = {};
+      HOURS.forEach(h => {
+        const hd = day.hrs[h];
+        if (!hd) return;
+        
+        // Hourly high drawdown: drop from hour high to lowest point after
+        let postHiLow = Infinity;
+        let foundHi = false;
+        MINS.forEach(m => {
+          const bar = hourBars[h]?.[m];
+          if (bar) {
+            if (bar.high >= hd.h - 0.01) foundHi = true; // Found the high
+            if (foundHi) postHiLow = Math.min(postHiLow, bar.low);
+          }
+        });
+        const hDD = foundHi && postHiLow < Infinity ? Math.round(hd.h - postHiLow) : null;
+        
+        // Hourly low reversal: rise from hour low to highest point after
+        let postLoHigh = -Infinity;
+        let foundLo = false;
+        MINS.forEach(m => {
+          const bar = hourBars[h]?.[m];
+          if (bar) {
+            if (bar.low <= hd.l + 0.01) foundLo = true; // Found the low
+            if (foundLo) postLoHigh = Math.max(postLoHigh, bar.high);
+          }
+        });
+        const hRev = foundLo && postLoHigh > -Infinity ? Math.round(postLoHigh - hd.l) : null;
+        
+        hourlyDDRev[h] = { hDD, hRev };
+      });
+      
+      // Calculate cumulative max drawdown and max reversal (resets on new extremes)
+      const cumDDRev = {};
+      let currentHigh = -Infinity;
+      let currentLow = Infinity;
+      let currentDD = 0;
+      let currentRev = 0;
+      let prevDD = null, prevRev = null;
+      
+      HOURS.forEach(h => {
+        const hd = day.hrs[h];
+        if (!hd) return;
+        
+        const hourHigh = hd.h;
+        const hourLow = hd.l;
+        
+        // Check if new high is made - reset drawdown
+        let madeNewHigh = false;
+        if (hourHigh > currentHigh) {
+          currentHigh = hourHigh;
+          currentDD = 0; // Reset drawdown when new high is made
+          madeNewHigh = true;
+        }
+        
+        // Check if new low is made - reset reversal
+        let madeNewLow = false;
+        if (hourLow < currentLow) {
+          currentLow = hourLow;
+          currentRev = 0; // Reset reversal when new low is made
+          madeNewLow = true;
+        }
+        
+        // Calculate current drawdown from high (if not new high)
+        if (!madeNewHigh) {
+          const ddFromHigh = Math.round(currentHigh - hourLow);
+          currentDD = Math.max(currentDD, ddFromHigh);
+        }
+        
+        // Calculate current reversal from low (if not new low)
+        if (!madeNewLow) {
+          const revFromLow = Math.round(hourHigh - currentLow);
+          currentRev = Math.max(currentRev, revFromLow);
+        }
+        
+        // Only show value if it changed (new max DD or Rev, or reset)
+        cumDDRev[h] = {
+          mxDD: (currentDD !== prevDD || madeNewHigh) ? currentDD : null,
+          mxRev: (currentRev !== prevRev || madeNewLow) ? currentRev : null,
+          mxDDActual: currentDD,
+          mxRevActual: currentRev,
+          madeNewHigh,
+          madeNewLow,
+        };
+        prevDD = currentDD;
+        prevRev = currentRev;
+      });
+      
+      let hd = '<tr>';
+      hd += '<th rowspan="2" class="hour-cell" style="min-width:45px;background:#1a1a24">Hour</th>';
+      hd += '<th colspan="11" class="group-header">Range &amp; Levels</th>';
+      if (showDayOHLC) hd += '<th colspan="4" class="group-header ohlc-header">OHLC</th>';
+      hd += '<th colspan="7" class="group-header cum-header">Cumulative</th>';
+      hd += `<th colspan="${MINS.length}" class="group-header section-header">5-Min Bars</th>`;
+      hd += '</tr><tr>';
+      hd += '<th class="group-border">Rng</th><th>UR</th><th>LR</th><th>#Up</th><th>#Dn</th><th>#Cl</th><th>HMin</th><th>LMin</th><th>O-C</th><th>HDD</th><th>HRev</th>';
+      if (showDayOHLC) hd += '<th class="group-border">Open</th><th>High</th><th>Low</th><th>Close</th>';
+      hd += '<th class="group-border">CDR</th><th>CURng</th><th>CDUp</th><th>CDDn</th><th>MxDD</th><th>MxRev</th><th>#Grn</th>';
+      MINS.forEach((m, i) => { hd += `<th class="${i === 0 ? 'group-border section-header' : 'section-header'}">:${m}</th>`; });
+      hd += '</tr>';
+      document.getElementById('day-table-head').innerHTML = hd;
+      
+      const hourStats = { rng: [], urlr: [], oc: [], cdr: [], ddrev: [] };
+      const minStats = { ur: [], lr: [], oc: [] };
+      
+      HOURS.forEach(h => {
+        const hd = day.hrs[h];
+        if (hd?.m) {
+          hourStats.rng.push(hd.m.rng);
+          hourStats.urlr.push(hd.m.ur, hd.m.lr);
+          hourStats.oc.push(hd.m.oc);
+          hourStats.cdr.push(hd.m.cdr);
+        }
+        if (hourlyDDRev[h]) {
+          if (hourlyDDRev[h].hDD != null) hourStats.ddrev.push(hourlyDDRev[h].hDD);
+          if (hourlyDDRev[h].hRev != null) hourStats.ddrev.push(hourlyDDRev[h].hRev);
+        }
+        if (hourBars[h]) {
+          MINS.forEach(m => {
+            const bar = hourBars[h][m];
+            if (bar) {
+              minStats.ur.push(Math.round(bar.high - bar.open));
+              minStats.lr.push(Math.round(bar.open - bar.low));
+              minStats.oc.push(Math.round(bar.close - bar.open));
+            }
+          });
+        }
+      });
+      
+      const hStats = {
+        rng: { min: Math.min(...hourStats.rng), max: Math.max(...hourStats.rng) },
+        urlr: { min: Math.min(...hourStats.urlr), max: Math.max(...hourStats.urlr) },
+        oc: { min: Math.min(...hourStats.oc), max: Math.max(...hourStats.oc) },
+        cdr: { min: Math.min(...hourStats.cdr), max: Math.max(...hourStats.cdr) },
+        ddrev: hourStats.ddrev.length ? { min: Math.min(...hourStats.ddrev), max: Math.max(...hourStats.ddrev) } : { min: 0, max: 100 },
+      };
+      const mStats = {
+        urlr: { min: Math.min(...minStats.ur, ...minStats.lr), max: Math.max(...minStats.ur, ...minStats.lr) },
+        oc: { min: Math.min(...minStats.oc), max: Math.max(...minStats.oc) },
+      };
+      
+      let bd = '';
+      HOURS.forEach(h => {
+        const hd = day.hrs[h];
+        const hm = hd?.m;
+        const isHL = h >= hlFrom && h <= hlTo;
+        const rowCls = isHL ? ' class="hour-row-highlighted"' : '';
+        const hourCls = isHL ? 'hour-cell highlighted' : 'hour-cell';
+        const ddrev = hourlyDDRev[h] || {};
+        const cumDD = cumDDRev[h] || {};
+        
+        bd += `<tr${rowCls}><td class="${hourCls}">${formatHourHeader(h)}</td>`;
+        
+        if (hm) {
+          bd += `<td class="group-border" style="background:${getOrangeGradient(hm.rng, hStats.rng.min, hStats.rng.max)}">${hm.rng}</td>`;
+          bd += `<td style="background:${getOrangeGradient(hm.ur, hStats.urlr.min, hStats.urlr.max)}">${hm.ur}</td>`;
+          bd += `<td style="background:${getOrangeGradient(hm.lr, hStats.urlr.min, hStats.urlr.max)}">${hm.lr}</td>`;
+          bd += `<td style="color:${hm.up > 0 ? '#a7f3d0' : ''}">${hm.up}</td>`;
+          bd += `<td style="color:${hm.dn > 0 ? '#fecaca' : ''}">${hm.dn}</td>`;
+          bd += `<td style="color:${hm.cl > 0 ? '#a7f3d0' : hm.cl < 0 ? '#fecaca' : ''}">${hm.cl > 0 ? '+' + hm.cl : hm.cl}</td>`;
+          bd += `<td>:${String(hm.hm).padStart(2,'0')}</td>`;
+          bd += `<td>:${String(hm.lm).padStart(2,'0')}</td>`;
+          bd += `<td class="${hm.oc >= 0 ? 'up' : 'down'}" style="background:${getRGGradient(hm.oc, hStats.oc.min, hStats.oc.max)}">${hm.oc >= 0 ? '+' : ''}${hm.oc}</td>`;
+          bd += `<td style="background:${ddrev.hDD != null ? getOrangeGradient(ddrev.hDD, hStats.ddrev.min, hStats.ddrev.max) : ''}">${ddrev.hDD ?? ''}</td>`;
+          bd += `<td style="background:${ddrev.hRev != null ? getOrangeGradient(ddrev.hRev, hStats.ddrev.min, hStats.ddrev.max) : ''}">${ddrev.hRev ?? ''}</td>`;
+          if (showDayOHLC) {
+            bd += `<td class="group-border">${hm.o.toLocaleString()}</td>`;
+            bd += `<td>${hm.hi.toLocaleString()}</td>`;
+            bd += `<td>${hm.lo.toLocaleString()}</td>`;
+            bd += `<td>${hm.c.toLocaleString()}</td>`;
+          }
+          bd += `<td class="group-border ${hm.cdr >= 0 ? 'up' : 'down'}" style="background:${getRGGradient(hm.cdr, hStats.cdr.min, hStats.cdr.max)}">${hm.cdr >= 0 ? '+' : ''}${hm.cdr}</td>`;
+          bd += `<td style="background:${hm.mxcd != null ? getOrangeGradient(hm.mxcdActual, 0, hStats.urlr.max) : ''}">${hm.mxcd != null ? hm.mxcd : ''}</td>`;
+          bd += `<td style="background:${hm.cdrU != null ? getOrangeGradient(hm.cdrUActual, 0, hStats.urlr.max) : ''}">${hm.cdrU != null ? hm.cdrU : ''}</td>`;
+          bd += `<td style="background:${hm.cdrD != null ? getOrangeGradient(hm.cdrDActual, 0, hStats.urlr.max) : ''}">${hm.cdrD != null ? hm.cdrD : ''}</td>`;
+          const ddBorder = cumDD.madeNewHigh ? 'border:2px solid #4ade80;' : '';
+          const revBorder = cumDD.madeNewLow ? 'border:2px solid #f87171;' : '';
+          bd += `<td style="background:${cumDD.mxDD != null ? getOrangeGradient(cumDD.mxDDActual, 0, hStats.urlr.max) : ''};${ddBorder}">${cumDD.mxDD != null ? cumDD.mxDD : ''}</td>`;
+          bd += `<td style="background:${cumDD.mxRev != null ? getOrangeGradient(cumDD.mxRevActual, 0, hStats.urlr.max) : ''};${revBorder}">${cumDD.mxRev != null ? cumDD.mxRev : ''}</td>`;
+          bd += `<td style="background:${getGreenBarGradient(hm.greenBars)}">${hm.greenBars}</td>`;
+        } else {
+          bd += `<td colspan="${11 + (showDayOHLC ? 4 : 0) + 7}" class="group-border" style="color:var(--text-muted)">No data</td>`;
+        }
+        
+        const hlMins = hourHighLowMins[h] || { highMins: new Set(), lowMins: new Set() };
+        
+        MINS.forEach((m, mi) => {
+          const bar = hourBars[h]?.[m];
+          const borderCls = mi === 0 ? ' group-border' : '';
+          if (bar && hd) {
+            const ur = Math.round(bar.high - bar.open);
+            const lr = Math.round(bar.open - bar.low);
+            const oc = Math.round(bar.close - bar.open);
+            const lvlUp = Math.max(0, Math.floor(bar.high / lvl) - Math.floor(bar.open / lvl));
+            const lvlDn = Math.max(0, Math.floor(bar.open / lvl) - Math.floor(bar.low / lvl));
+            const lvlCl = Math.floor(bar.close / lvl) - Math.floor(bar.open / lvl);
+            const hrOC = Math.round(bar.close - hd.o);
+            const hrLvl = Math.floor(bar.close / lvl) - Math.floor(hd.o / lvl);
+            
+            // Check if this minute made a new high or low for the hour
+            const madeNewHourHigh = hlMins.highMins.has(m);
+            const madeNewHourLow = hlMins.lowMins.has(m);
+            const urBorder = madeNewHourHigh ? 'border:2px solid #4ade80;' : '';
+            const lrBorder = madeNewHourLow ? 'border:2px solid #f87171;' : '';
+            
+            // Check if this minute made a new high or low for the DAY
+            const barKey = `${h}-${m}`;
+            const madeNewDayHigh = dayHighLowBars.highBars.has(barKey);
+            const madeNewDayLow = dayHighLowBars.lowBars.has(barKey);
+            let ocBorder = '';
+            if (madeNewDayHigh && madeNewDayLow) ocBorder = 'border:2px solid #fbbf24;'; // Yellow for both
+            else if (madeNewDayHigh) ocBorder = 'border:2px solid #4ade80;';
+            else if (madeNewDayLow) ocBorder = 'border:2px solid #f87171;';
+            
+            bd += `<td class="min-cell${borderCls}" style="min-height:52px;">
+              <div class="min-grid" style="grid-template-rows:1fr 1fr 1fr;">
+                <div class="min-grid-top left" style="background:${getOrangeGradient(ur, mStats.urlr.min, mStats.urlr.max)};${urBorder}">${ur}<span class="min-lvl">(${lvlUp})</span></div>
+                <div class="min-grid-top" style="background:${getOrangeGradient(lr, mStats.urlr.min, mStats.urlr.max)};${lrBorder}">${lr}<span class="min-lvl">(${lvlDn})</span></div>
+                <div class="min-grid-bottom ${oc >= 0 ? 'up' : 'down'}" style="background:${getRGGradient(oc, mStats.oc.min, mStats.oc.max)};border-bottom:1px solid var(--border-medium);${ocBorder}">${oc >= 0 ? '+' : ''}${oc}<span class="min-lvl">(${lvlCl >= 0 ? '+' : ''}${lvlCl})</span></div>
+                <div class="min-grid-bottom ${hrOC >= 0 ? 'up' : 'down'}" style="background:${getRGGradient(hrOC, hStats.oc.min, hStats.oc.max)};grid-column:1/3;font-size:8px;">${hrOC >= 0 ? '+' : ''}${hrOC}<span class="min-lvl">(${hrLvl >= 0 ? '+' : ''}${hrLvl})</span></div>
+              </div>
+            </td>`;
+          } else {
+            bd += `<td class="min-cell${borderCls}" style="color:var(--text-muted)">—</td>`;
+          }
+        });
+        
+        bd += '</tr>';
+      });
+      
+      document.getElementById('day-table-body').innerHTML = bd;
+    }
+    
+    // ==================== CALENDAR VIEW ====================
+    function populateCalendarYearSelect() {
+      calSelectedYears = new Set(availableYears);
+      const container = document.getElementById('calendar-year-btns');
+      container.innerHTML = availableYears.map(y => 
+        `<button class="f-btn active" data-cal-year="${y}" onclick="toggleCalYear('${y}')">${y}</button>`
+      ).join('');
+    }
+    
+    function toggleCalYear(y) {
+      calSelectedYears.has(y) ? calSelectedYears.delete(y) : calSelectedYears.add(y);
+      document.querySelector(`[data-cal-year="${y}"]`).classList.toggle('active');
+      renderCalendar();
+    }
+    
+    function populateHourViewSelect() {
+      const sel = document.getElementById('hour-view-hour');
+      sel.innerHTML = HOURS.map(h => {
+        const ampm = h >= 12 ? 'PM' : 'AM';
+        const disp = h === 0 ? 12 : h > 12 ? h - 12 : h;
+        return `<option value="${h}" ${h === 9 ? 'selected' : ''}>${disp}${ampm}</option>`;
+      }).join('');
+    }
+    
+    function toggleHVDay(d) {
+      hvSelectedDays.has(d) ? hvSelectedDays.delete(d) : hvSelectedDays.add(d);
+      document.querySelector(`[data-hv-day="${d}"]`).classList.toggle('active');
+      renderHourView();
+    }
+    
+    function setHVWeekdays() {
+      hvSelectedDays = new Set([1,2,3,4,5]);
+      document.querySelectorAll('[data-hv-day]').forEach(b => b.classList.toggle('active', hvSelectedDays.has(+b.dataset.hvDay)));
+      renderHourView();
+    }
+    
+    function syncHVFromOverview() {
+      hvSelectedDays = new Set(selectedDays);
+      document.querySelectorAll('[data-hv-day]').forEach(b => b.classList.toggle('active', hvSelectedDays.has(+b.dataset.hvDay)));
+      renderHourView();
+    }
+    
+    function renderHourView() {
+      const hour = parseInt(document.getElementById('hour-view-hour').value);
+      const lvl = parseInt(document.getElementById('hour-level-size').value) || 250;
+      hvSelectedHour = hour;
+      
+      document.getElementById('hour-view-title').textContent = `${formatHourHeader(hour)} Hour Analysis`;
+      
+      // Get filtered days that have this hour
+      const filteredDays = Object.values(etDays).filter(d => {
+        if (!hvSelectedDays.has(d.dow)) return false;
+        if (!selectedYears.has(d.date.slice(0,4))) return false;
+        if (!selectedMonths.has(d.month)) return false;
+        return d.hrs[hour] != null;
+      }).sort((a, b) => b.date.localeCompare(a.date));
+      
+      // Calculate stats
+      const hourStats = { rng: [], urlr: [], oc: [], cdr: [], ddrev: [] };
+      const minStats = { ur: [], lr: [], oc: [] };
+      
+      // Pre-calculate hourly DD/Rev for each day
+      const dayHourlyDDRev = {};
+      
+      filteredDays.forEach(day => {
+        const hd = day.hrs[hour];
+        if (hd?.m) {
+          hourStats.rng.push(hd.m.rng);
+          hourStats.urlr.push(hd.m.ur, hd.m.lr);
+          hourStats.oc.push(hd.m.oc);
+          hourStats.cdr.push(hd.m.cdr);
+        }
+        const bars = barsByET[day.date];
+        const hourBars = {};
+        if (bars) {
+          bars.filter(b => b.etHour === hour).forEach(bar => {
+            hourBars[String(bar.etMin).padStart(2, '0')] = bar;
+            minStats.ur.push(Math.round(bar.high - bar.open));
+            minStats.lr.push(Math.round(bar.open - bar.low));
+            minStats.oc.push(Math.round(bar.close - bar.open));
+          });
+        }
+        
+        // Calculate hourly drawdown and reversal for this day's hour
+        if (hd) {
+          let postHiLow = Infinity;
+          let foundHi = false;
+          MINS.forEach(m => {
+            const bar = hourBars[m];
+            if (bar) {
+              if (bar.high >= hd.h - 0.01) foundHi = true;
+              if (foundHi) postHiLow = Math.min(postHiLow, bar.low);
+            }
+          });
+          const hDD = foundHi && postHiLow < Infinity ? Math.round(hd.h - postHiLow) : null;
+          
+          let postLoHigh = -Infinity;
+          let foundLo = false;
+          MINS.forEach(m => {
+            const bar = hourBars[m];
+            if (bar) {
+              if (bar.low <= hd.l + 0.01) foundLo = true;
+              if (foundLo) postLoHigh = Math.max(postLoHigh, bar.high);
+            }
+          });
+          const hRev = foundLo && postLoHigh > -Infinity ? Math.round(postLoHigh - hd.l) : null;
+          
+          dayHourlyDDRev[day.date] = { hDD, hRev };
+          if (hDD != null) hourStats.ddrev.push(hDD);
+          if (hRev != null) hourStats.ddrev.push(hRev);
+        }
+      });
+      
+      const hStats = {
+        rng: hourStats.rng.length ? { min: Math.min(...hourStats.rng), max: Math.max(...hourStats.rng) } : { min: 0, max: 100 },
+        urlr: hourStats.urlr.length ? { min: Math.min(...hourStats.urlr), max: Math.max(...hourStats.urlr) } : { min: 0, max: 100 },
+        oc: hourStats.oc.length ? { min: Math.min(...hourStats.oc), max: Math.max(...hourStats.oc) } : { min: 0, max: 100 },
+        cdr: hourStats.cdr.length ? { min: Math.min(...hourStats.cdr), max: Math.max(...hourStats.cdr) } : { min: 0, max: 100 },
+        ddrev: hourStats.ddrev.length ? { min: Math.min(...hourStats.ddrev), max: Math.max(...hourStats.ddrev) } : { min: 0, max: 100 },
+      };
+      const mStats = {
+        urlr: minStats.ur.length ? { min: Math.min(...minStats.ur, ...minStats.lr), max: Math.max(...minStats.ur, ...minStats.lr) } : { min: 0, max: 100 },
+        oc: minStats.oc.length ? { min: Math.min(...minStats.oc), max: Math.max(...minStats.oc) } : { min: 0, max: 100 },
+      };
+      
+      // Stats summary
+      const avgRng = hourStats.rng.length ? Math.round(hourStats.rng.reduce((a,b) => a+b, 0) / hourStats.rng.length) : 0;
+      const avgOC = hourStats.oc.length ? Math.round(hourStats.oc.reduce((a,b) => a+b, 0) / hourStats.oc.length) : 0;
+      
+      document.getElementById('hour-stats-grid').innerHTML = `
+        <div class="day-stat-box"><div class="day-stat-val">${filteredDays.length}</div><div class="day-stat-lbl">Days</div></div>
+        <div class="day-stat-box"><div class="day-stat-val">${avgRng.toLocaleString()}</div><div class="day-stat-lbl">Avg Range</div></div>
+        <div class="day-stat-box"><div class="day-stat-val ${avgOC >= 0 ? 'positive' : 'negative'}">${avgOC >= 0 ? '+' : ''}${avgOC.toLocaleString()}</div><div class="day-stat-lbl">Avg O-C</div></div>
+        <div class="day-stat-box"><div class="day-stat-val">${hStats.rng.max.toLocaleString()}</div><div class="day-stat-lbl">Max Range</div></div>
+      `;
+      
+      // Build header
+      let hd = '<tr>';
+      hd += '<th rowspan="2" class="hour-cell" style="min-width:70px;background:#1a1a24">Date</th>';
+      hd += '<th rowspan="2" class="hour-cell" style="min-width:35px;background:#1a1a24">Day</th>';
+      hd += '<th colspan="11" class="group-header">Range &amp; Levels</th>';
+      hd += '<th colspan="5" class="group-header cum-header">Cumulative</th>';
+      hd += `<th colspan="${MINS.length}" class="group-header section-header">5-Min Bars</th>`;
+      hd += '</tr><tr>';
+      hd += '<th class="group-border">Rng</th><th>UR</th><th>LR</th><th>#Up</th><th>#Dn</th><th>#Cl</th><th>HMin</th><th>LMin</th><th>O-C</th><th>HDD</th><th>HRev</th>';
+      hd += '<th class="group-border">CDR</th><th>CURng</th><th>CDUp</th><th>CDDn</th><th>#Grn</th>';
+      MINS.forEach((m, i) => { hd += `<th class="${i === 0 ? 'group-border section-header' : 'section-header'}">:${m}</th>`; });
+      hd += '</tr>';
+      document.getElementById('hour-table-head').innerHTML = hd;
+      
+      // Build body
+      let bd = '';
+      filteredDays.forEach(day => {
+        const hd = day.hrs[hour];
+        const hm = hd?.m;
+        const bars = barsByET[day.date];
+        const hourBars = {};
+        if (bars) bars.filter(b => b.etHour === hour).forEach(b => hourBars[String(b.etMin).padStart(2, '0')] = b);
+        const ddrev = dayHourlyDDRev[day.date] || {};
+        
+        bd += `<tr>`;
+        bd += `<td class="hour-cell" style="text-align:left">${day.date}</td>`;
+        bd += `<td class="hour-cell">${DAYS_SHORT[day.dow]}</td>`;
+        
+        if (hm) {
+          bd += `<td class="group-border" style="background:${getOrangeGradient(hm.rng, hStats.rng.min, hStats.rng.max)}">${hm.rng}</td>`;
+          bd += `<td style="background:${getOrangeGradient(hm.ur, hStats.urlr.min, hStats.urlr.max)}">${hm.ur}</td>`;
+          bd += `<td style="background:${getOrangeGradient(hm.lr, hStats.urlr.min, hStats.urlr.max)}">${hm.lr}</td>`;
+          bd += `<td style="color:${hm.up > 0 ? '#a7f3d0' : ''}">${hm.up}</td>`;
+          bd += `<td style="color:${hm.dn > 0 ? '#fecaca' : ''}">${hm.dn}</td>`;
+          bd += `<td style="color:${hm.cl > 0 ? '#a7f3d0' : hm.cl < 0 ? '#fecaca' : ''}">${hm.cl > 0 ? '+' + hm.cl : hm.cl}</td>`;
+          bd += `<td>:${String(hm.hm).padStart(2,'0')}</td>`;
+          bd += `<td>:${String(hm.lm).padStart(2,'0')}</td>`;
+          bd += `<td class="${hm.oc >= 0 ? 'up' : 'down'}" style="background:${getRGGradient(hm.oc, hStats.oc.min, hStats.oc.max)}">${hm.oc >= 0 ? '+' : ''}${hm.oc}</td>`;
+          bd += `<td style="background:${ddrev.hDD != null ? getOrangeGradient(ddrev.hDD, hStats.ddrev.min, hStats.ddrev.max) : ''}">${ddrev.hDD ?? ''}</td>`;
+          bd += `<td style="background:${ddrev.hRev != null ? getOrangeGradient(ddrev.hRev, hStats.ddrev.min, hStats.ddrev.max) : ''}">${ddrev.hRev ?? ''}</td>`;
+          bd += `<td class="group-border ${hm.cdr >= 0 ? 'up' : 'down'}" style="background:${getRGGradient(hm.cdr, hStats.cdr.min, hStats.cdr.max)}">${hm.cdr >= 0 ? '+' : ''}${hm.cdr}</td>`;
+          bd += `<td style="background:${hm.mxcd != null ? getOrangeGradient(hm.mxcdActual, 0, hStats.urlr.max) : ''}">${hm.mxcd != null ? hm.mxcd : ''}</td>`;
+          bd += `<td style="background:${hm.cdrU != null ? getOrangeGradient(hm.cdrUActual, 0, hStats.urlr.max) : ''}">${hm.cdrU != null ? hm.cdrU : ''}</td>`;
+          bd += `<td style="background:${hm.cdrD != null ? getOrangeGradient(hm.cdrDActual, 0, hStats.urlr.max) : ''}">${hm.cdrD != null ? hm.cdrD : ''}</td>`;
+          bd += `<td style="background:${getGreenBarGradient(hm.greenBars)}">${hm.greenBars}</td>`;
+        } else {
+          bd += `<td colspan="16" class="group-border" style="color:var(--text-muted)">No data</td>`;
+        }
+        
+        // Calculate running O-C for each minute
+        let runningOC = 0;
+        const minOCs = {};
+        MINS.forEach(m => {
+          const bar = hourBars[m];
+          if (bar && hd) {
+            runningOC = Math.round(bar.close - hd.o);
+            minOCs[m] = { oc: runningOC, lvl: Math.floor(bar.close / lvl) - Math.floor(hd.o / lvl) };
+          }
+        });
+        
+        // Calculate which minutes made new highs/lows for this hour
+        const hlMins = { highMins: new Set(), lowMins: new Set() };
+        let runningHigh = -Infinity;
+        let runningLow = Infinity;
+        MINS.forEach(m => {
+          const bar = hourBars[m];
+          if (bar) {
+            if (bar.high > runningHigh) {
+              runningHigh = bar.high;
+              hlMins.highMins.add(m);
+            }
+            if (bar.low < runningLow) {
+              runningLow = bar.low;
+              hlMins.lowMins.add(m);
+            }
+          }
+        });
+        // Remove :00 if later bars also made new high/low
+        if (hlMins.highMins.size > 1 && hlMins.highMins.has('00')) hlMins.highMins.delete('00');
+        if (hlMins.lowMins.size > 1 && hlMins.lowMins.has('00')) hlMins.lowMins.delete('00');
+        
+        MINS.forEach((m, mi) => {
+          const bar = hourBars[m];
+          const borderCls = mi === 0 ? ' group-border' : '';
+          if (bar && hd) {
+            const ur = Math.round(bar.high - bar.open);
+            const lr = Math.round(bar.open - bar.low);
+            const oc = Math.round(bar.close - bar.open);
+            const lvlUp = Math.max(0, Math.floor(bar.high / lvl) - Math.floor(bar.open / lvl));
+            const lvlDn = Math.max(0, Math.floor(bar.open / lvl) - Math.floor(bar.low / lvl));
+            const lvlCl = Math.floor(bar.close / lvl) - Math.floor(bar.open / lvl);
+            const hrOC = minOCs[m] || { oc: 0, lvl: 0 };
+            
+            // Check if this minute made a new high or low for the hour
+            const madeNewHigh = hlMins.highMins.has(m);
+            const madeNewLow = hlMins.lowMins.has(m);
+            const urBorder = madeNewHigh ? 'border:2px solid #4ade80;' : '';
+            const lrBorder = madeNewLow ? 'border:2px solid #f87171;' : '';
+            
+            bd += `<td class="min-cell${borderCls}" style="min-height:52px;">
+              <div class="min-grid" style="grid-template-rows:1fr 1fr 1fr;">
+                <div class="min-grid-top left" style="background:${getOrangeGradient(ur, mStats.urlr.min, mStats.urlr.max)};${urBorder}">${ur}<span class="min-lvl">(${lvlUp})</span></div>
+                <div class="min-grid-top" style="background:${getOrangeGradient(lr, mStats.urlr.min, mStats.urlr.max)};${lrBorder}">${lr}<span class="min-lvl">(${lvlDn})</span></div>
+                <div class="min-grid-bottom ${oc >= 0 ? 'up' : 'down'}" style="background:${getRGGradient(oc, mStats.oc.min, mStats.oc.max)};border-bottom:1px solid var(--border-medium);">${oc >= 0 ? '+' : ''}${oc}<span class="min-lvl">(${lvlCl >= 0 ? '+' : ''}${lvlCl})</span></div>
+                <div class="min-grid-bottom ${hrOC.oc >= 0 ? 'up' : 'down'}" style="background:${getRGGradient(hrOC.oc, hStats.oc.min, hStats.oc.max)};grid-column:1/3;font-size:8px;">${hrOC.oc >= 0 ? '+' : ''}${hrOC.oc}<span class="min-lvl">(${hrOC.lvl >= 0 ? '+' : ''}${hrOC.lvl})</span></div>
+              </div>
+            </td>`;
+          } else {
+            bd += `<td class="min-cell${borderCls}" style="color:var(--text-muted)">—</td>`;
+          }
+        });
+        
+        bd += '</tr>';
+      });
+      
+      document.getElementById('hour-table-body').innerHTML = bd;
+    }
+    
+    function renderCalendar() {
+      const colorBy = document.getElementById('calendar-color-by').value;
+      
+      const allVals = [];
+      Object.values(etDays).forEach(d => {
+        if (!calSelectedYears.has(d.date.slice(0,4))) return;
+        if (!calColorDays.has(d.dow)) return;
+        if (calColorDates && !calColorDates.has(d.date)) return;
+        const v = colorBy === 'dMx' ? d.dMx : d[colorBy];
+        if (v != null) allVals.push(v);
+      });
+      
+      const stats = allVals.length ? { min: Math.min(...allVals), max: Math.max(...allVals) } : { min: 0, max: 0 };
+      const years = availableYears.filter(y => calSelectedYears.has(y));
+      
+      let html = '';
+      years.forEach(year => {
+        html += `<div class="calendar-year"><div class="calendar-year-title">${year}</div><div class="calendar-months">`;
+        
+        for (let m = 0; m < 12; m++) {
+          html += `<div class="calendar-month"><div class="calendar-month-title">${MONTHS_SHORT[m]}</div>`;
+          html += '<div class="calendar-weekdays">';
+          ['S','M','T','W','T','F','S'].forEach(d => html += `<div class="calendar-weekday">${d}</div>`);
+          html += '</div><div class="calendar-days">';
+          
+          const firstDay = new Date(year, m, 1).getDay();
+          const daysInMonth = new Date(year, m + 1, 0).getDate();
+          
+          for (let i = 0; i < firstDay; i++) html += '<div class="calendar-day empty"></div>';
+          
+          for (let d = 1; d <= daysInMonth; d++) {
+            const dateStr = `${year}-${String(m + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+            const dayData = etDays[dateStr];
+            const dow = new Date(year, m, d).getDay();
+            const isWeekend = dow === 0 || dow === 6;
+            
+            if (dayData) {
+              const v = colorBy === 'dMx' ? dayData.dMx : dayData[colorBy];
+              const shouldColor = calColorDays.has(dow) && (!calColorDates || calColorDates.has(dateStr));
+              let bg = '#0d0d12';
+              
+              if (shouldColor) {
+                bg = colorBy === 'dOC' ? getRGGradient(v, stats.min, stats.max) : getOrangeGradient(v, stats.min, stats.max);
+              }
+              
+              const ocClass = dayData.dOC >= 0 ? 'positive' : 'negative';
+              const maxURLR = Math.max(dayData.dUR || 0, dayData.dLR || 0);
+              
+              html += `<div class="calendar-day${isWeekend ? ' weekend' : ''}${shouldColor ? '' : ' no-color'}" style="background:${bg}" onclick="goToDate('${dateStr}')">
+                <div class="day-header"><span class="day-num">${d}</span><span class="day-close">${dayData.dC ? Math.round(dayData.dC).toLocaleString() : ''}</span></div>
+                <div class="day-rng" style="color:var(--text-secondary)">Rng: ${dayData.dRng?.toLocaleString() ?? '—'}</div>
+                <div class="day-urlr"><span class="day-ur">↑${dayData.dUR?.toLocaleString() ?? '—'}</span><span class="day-lr">↓${dayData.dLR?.toLocaleString() ?? '—'}</span></div>
+                <div class="day-mx" style="font-size:0.5rem;text-align:center;color:var(--accent-btc);">Mx: ${maxURLR.toLocaleString()}</div>
+                <div class="day-oc ${ocClass}">${dayData.dOC != null ? ((dayData.dOC >= 0 ? '+' : '') + dayData.dOC.toLocaleString()) : '—'}</div>
+              </div>`;
+            } else {
+              html += `<div class="calendar-day empty${isWeekend ? ' weekend' : ''}"><span class="day-num" style="color:var(--text-muted)">${d}</span></div>`;
+            }
+          }
+          
+          html += '</div></div>';
+        }
+        
+        html += '</div></div>';
+      });
+      
+      document.getElementById('calendar-container').innerHTML = html;
+    }
+    
+    function toggleCalDay(d) {
+      calColorDays.has(d) ? calColorDays.delete(d) : calColorDays.add(d);
+      document.querySelector(`[data-cal-day="${d}"]`).classList.toggle('active');
+      renderCalendar();
+    }
+    
+    function resetCalDays() {
+      calColorDays = new Set([0,1,2,3,4,5,6]);
+      calColorDates = null;
+      document.querySelectorAll('[data-cal-day]').forEach(b => b.classList.add('active'));
+      renderCalendar();
+    }
+    
+    function syncCalFromOverview() {
+      calColorDays = new Set(selectedDays);
+      document.querySelectorAll('[data-cal-day]').forEach(b => b.classList.toggle('active', calColorDays.has(+b.dataset.calDay)));
+      
+      if (useDateFilter && selectedDates.size > 0) {
+        calColorDates = new Set(selectedDates);
+      } else {
+        calColorDates = new Set();
+        Object.values(etDays).forEach(d => {
+          if (selectedYears.has(d.date.slice(0,4)) && selectedMonths.has(d.month) && selectedDays.has(d.dow) && selectedOccs.has(d.occ)) {
+            calColorDates.add(d.date);
+          }
+        });
+      }
+      
+      renderCalendar();
+    }
+    
+    function goToDate(dateStr) {
+      document.getElementById('day-view-date').value = dateStr;
+      switchTab('dayview');
+    }
+    
+    // ==================== SORTING ====================
+    function sortBy(col, hour) {
+      if (sortColumn === col && sortHour === hour) sortDirection = sortDirection === 'desc' ? 'asc' : 'desc';
+      else { sortColumn = col; sortHour = hour; sortDirection = 'desc'; }
+      renderTable();
+    }
+    
+    // ==================== UI ====================
+    function updateFont() {
+      document.documentElement.style.setProperty('--font-family', document.getElementById('font-family').value);
+      document.documentElement.style.setProperty('--font-size', document.getElementById('font-size').value + 'px');
+      renderTable();
+    }
+    
+    function toggleFilters() { document.getElementById('filters-panel').classList.toggle('visible'); document.getElementById('btn-filters').classList.toggle('active'); }
+    function toggleColumns() { document.getElementById('col-selector').classList.toggle('visible'); document.getElementById('btn-columns').classList.toggle('active'); }
+    function toggleDayColsPanel() { document.getElementById('dt-col-selector').classList.toggle('visible'); document.getElementById('btn-day-cols').classList.toggle('active'); showDayCols = document.getElementById('btn-day-cols').classList.contains('active'); renderTable(); }
+    function togglePercentiles() { showPercentiles = !showPercentiles; document.getElementById('btn-pct').classList.toggle('active', showPercentiles); renderTable(); }
+    function toggleDayOHLC() { showDayOHLC = !showDayOHLC; document.getElementById('btn-day-ohlc').classList.toggle('active', showDayOHLC); renderDayView(); }
+    function toggleColFilterPanel() { document.getElementById('col-filter-panel').classList.toggle('visible'); document.getElementById('btn-col-filter').classList.toggle('active'); }
+    function toggleRsiSettings() { document.getElementById('rsi-settings').classList.toggle('visible'); document.getElementById('btn-rsi').classList.toggle('active'); }
+    
+    function toggleYear(y) { selectedYears.has(y) ? selectedYears.delete(y) : selectedYears.add(y); document.querySelector(`[data-year="${y}"]`).classList.toggle('active'); useDateFilter = false; selectedDates.clear(); updateDatePickerUI(); renderTable(); }
+    function toggleMonth(m) { selectedMonths.has(m) ? selectedMonths.delete(m) : selectedMonths.add(m); document.querySelector(`[data-month="${m}"]`).classList.toggle('active'); useDateFilter = false; selectedDates.clear(); updateDatePickerUI(); renderTable(); }
+    function toggleDay(d) { selectedDays.has(d) ? selectedDays.delete(d) : selectedDays.add(d); document.querySelector(`[data-day="${d}"]`).classList.toggle('active'); useDateFilter = false; selectedDates.clear(); updateDatePickerUI(); renderTable(); }
+    function toggleOcc(o) { selectedOccs.has(o) ? selectedOccs.delete(o) : selectedOccs.add(o); document.querySelector(`[data-occ="${o}"]`).classList.toggle('active'); useDateFilter = false; selectedDates.clear(); updateDatePickerUI(); renderTable(); }
+    
+    function setNoMonths() { selectedMonths.clear(); document.querySelectorAll('[data-month]').forEach(b => b.classList.remove('active')); useDateFilter = false; selectedDates.clear(); updateDatePickerUI(); renderTable(); }
+    function setNoDays() { selectedDays.clear(); document.querySelectorAll('[data-day]').forEach(b => b.classList.remove('active')); useDateFilter = false; selectedDates.clear(); updateDatePickerUI(); renderTable(); }
+    function setWeekdays() { selectedDays = new Set([1,2,3,4,5]); document.querySelectorAll('[data-day]').forEach(b => b.classList.toggle('active', selectedDays.has(+b.dataset.day))); useDateFilter = false; selectedDates.clear(); updateDatePickerUI(); renderTable(); }
+    function setWeekend() { selectedDays = new Set([0,6]); document.querySelectorAll('[data-day]').forEach(b => b.classList.toggle('active', selectedDays.has(+b.dataset.day))); useDateFilter = false; selectedDates.clear(); updateDatePickerUI(); renderTable(); }
+    function setQ1() { selectedMonths = new Set([1,2,3]); document.querySelectorAll('[data-month]').forEach(b => b.classList.toggle('active', selectedMonths.has(+b.dataset.month))); useDateFilter = false; selectedDates.clear(); updateDatePickerUI(); renderTable(); }
+    function setQ2() { selectedMonths = new Set([4,5,6]); document.querySelectorAll('[data-month]').forEach(b => b.classList.toggle('active', selectedMonths.has(+b.dataset.month))); useDateFilter = false; selectedDates.clear(); updateDatePickerUI(); renderTable(); }
+    function setQ3() { selectedMonths = new Set([7,8,9]); document.querySelectorAll('[data-month]').forEach(b => b.classList.toggle('active', selectedMonths.has(+b.dataset.month))); useDateFilter = false; selectedDates.clear(); updateDatePickerUI(); renderTable(); }
+    function setQ4() { selectedMonths = new Set([10,11,12]); document.querySelectorAll('[data-month]').forEach(b => b.classList.toggle('active', selectedMonths.has(+b.dataset.month))); useDateFilter = false; selectedDates.clear(); updateDatePickerUI(); renderTable(); }
+    
+    function updateHourRange() { hourFrom = +document.getElementById('hour-from').value; hourTo = +document.getElementById('hour-to').value; renderTable(); }
+    function setHours(f, t) { hourFrom = f; hourTo = t; document.getElementById('hour-from').value = f; document.getElementById('hour-to').value = t; renderTable(); }
+    
+    function toggleColumn(id) { visibleColumns.has(id) ? visibleColumns.delete(id) : visibleColumns.add(id); renderTable(); }
+    function toggleDTCol(id) { visibleDTCols.has(id) ? visibleDTCols.delete(id) : visibleDTCols.add(id); renderTable(); }
+    function showAllDTCols() { visibleDTCols = new Set(DAY_TOTAL_COLS.map(c => c.id)); document.querySelectorAll('[data-dtcol]').forEach(cb => cb.checked = true); renderTable(); }
+    function hideAllDTCols() { visibleDTCols.clear(); document.querySelectorAll('[data-dtcol]').forEach(cb => cb.checked = false); renderTable(); }
+    function defaultDTCols() { visibleDTCols = new Set(DAY_TOTAL_COLS.filter(c => c.default).map(c => c.id)); document.querySelectorAll('[data-dtcol]').forEach(cb => cb.checked = visibleDTCols.has(cb.dataset.dtcol)); renderTable(); }
+    
+    function setDefaultCols() { visibleColumns = new Set(ALL_COLUMNS.filter(c => c.default).map(c => c.id)); document.querySelectorAll('#col-grid input').forEach((cb, i) => cb.checked = ALL_COLUMNS[i].default); renderTable(); }
+    function setAllCols() { visibleColumns = new Set(ALL_COLUMNS.map(c => c.id)); document.querySelectorAll('#col-grid input').forEach(cb => cb.checked = true); renderTable(); }
+    function setRangeCols() { visibleColumns = new Set(['rng','ur','lr','mxr','mxrRk','rngRk']); document.querySelectorAll('#col-grid input').forEach((cb, i) => cb.checked = visibleColumns.has(ALL_COLUMNS[i].id)); renderTable(); }
+    function setOHLCVCols() { visibleColumns = new Set(['o','hi','lo','c','v']); document.querySelectorAll('#col-grid input').forEach((cb, i) => cb.checked = visibleColumns.has(ALL_COLUMNS[i].id)); renderTable(); }
+    function setRSICols() { visibleColumns = new Set(['rsiMax','rsiMin','rsiAvg','sigMax','sigMin','sigAvg','obos']); document.querySelectorAll('#col-grid input').forEach((cb, i) => cb.checked = visibleColumns.has(ALL_COLUMNS[i].id)); renderTable(); }
+    
+    function resetAll() {
+      selectedYears = new Set(availableYears);
+      selectedMonths = new Set([1,2,3,4,5,6,7,8,9,10,11,12]);
+      selectedDays = new Set([0,1,2,3,4,5,6]);
+      selectedOccs = new Set([1,2,3,4,5]);
+      selectedDates.clear(); useDateFilter = false;
+      hourFrom = 0; hourTo = 23; levelSize = 250;
+      visibleColumns = new Set(ALL_COLUMNS.filter(c => c.default).map(c => c.id));
+      visibleDTCols = new Set(DAY_TOTAL_COLS.filter(c => c.default).map(c => c.id));
+      showDayCols = true; showPercentiles = false;
+      sortColumn = 'date'; sortDirection = 'desc'; sortHour = null;
+      columnFilters = [];
+      
+      document.querySelectorAll('[data-year]').forEach(b => b.classList.add('active'));
+      document.querySelectorAll('[data-month]').forEach(b => b.classList.add('active'));
+      document.querySelectorAll('[data-day]').forEach(b => b.classList.add('active'));
+      document.querySelectorAll('[data-occ]').forEach(b => b.classList.add('active'));
+      document.getElementById('hour-from').value = 0;
+      document.getElementById('hour-to').value = 23;
+      document.getElementById('level-size').value = 250;
+      document.getElementById('btn-day-cols').classList.add('active');
+      document.getElementById('btn-pct').classList.remove('active');
+      document.getElementById('gradient-mode').value = 'row';
+      document.querySelectorAll('#col-grid input').forEach((cb, i) => cb.checked = ALL_COLUMNS[i].default);
+      document.querySelectorAll('[data-dtcol]').forEach(cb => cb.checked = DAY_TOTAL_COLS.find(c => c.id === cb.dataset.dtcol)?.default);
+      updateFilterUI();
+      updateDatePickerUI();
+      updateLevel();
+    }
+    
+    function setRTH() {
+      selectedDays = new Set([1,2,3,4,5]);
+      document.querySelectorAll('[data-day]').forEach(b => b.classList.toggle('active', selectedDays.has(+b.dataset.day)));
+      setHours(9, 16);
+      useDateFilter = false; selectedDates.clear(); updateDatePickerUI();
+    }
+  </script>
+</body>
+</html>
