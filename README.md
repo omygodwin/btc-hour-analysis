@@ -4,7 +4,7 @@ A comprehensive Bitcoin price analysis dashboard that processes 5-minute OHLCV d
 
 ## 🚀 Live Dashboard
 
-**[Open Dashboard](https://YOUR_USERNAME.github.io/btc-hourly-analysis/)**
+**[Open Dashboard](https://omygodwin.github.io/btc-hour-analysis/)**
 
 ## ✨ Features
 
