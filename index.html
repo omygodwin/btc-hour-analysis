@@ -495,13 +495,18 @@
   <div id="upload-screen" class="upload-screen">
     <div class="upload-card">
       <div class="btc-logo">₿</div>
-      <h1>BTC Hourly Analyzer v8</h1>
+      <h1>BTC Hourly Analyzer v9</h1>
       <p>Upload your 5-minute Bitcoin OHLCV CSV data</p>
+      <p id="auto-load-msg" style="color:var(--text-muted);font-size:0.8rem;margin:8px 0;display:none;">
+        <span class="spinner" style="width:12px;height:12px;border-width:2px;display:inline-block;vertical-align:middle;margin-right:6px;"></span>
+        Checking for auto-load data...
+      </p>
       <button class="upload-btn" onclick="document.getElementById('file-input').click()">📁 Select CSV File</button>
       <div id="error-msg" class="error-msg" style="display: none;"></div>
       <div class="format-info">
         <h3>Expected Format</h3>
         <code>timestamp,open,high,low,close,volume,source</code>
+        <p style="margin-top:8px;font-size:0.7rem;color:var(--text-muted);">On GitHub Pages, data loads automatically from /data/ folder</p>
       </div>
     </div>
   </div>
@@ -509,7 +514,7 @@
   <div id="loading-screen" class="upload-screen" style="display: none;">
     <div class="upload-card">
       <div class="spinner"></div>
-      <p style="color:var(--accent-btc);font-family:'JetBrains Mono'">Processing data & calculating RSI...</p>
+      <p id="loading-text" style="color:var(--accent-btc);font-family:'JetBrains Mono'">Processing data & calculating RSI...</p>
     </div>
   </div>
 
@@ -1023,6 +1028,11 @@
       if (dd && btn && !dd.contains(e.target) && !btn.contains(e.target)) dd.classList.remove('visible');
     });
     
+    // Auto-load data on page load (for GitHub Pages)
+    window.addEventListener('DOMContentLoaded', () => {
+      setTimeout(() => autoLoadData(), 100);
+    });
+    
     // ==================== TAB SWITCHING ====================
     function switchTab(tab) {
       document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
@@ -1035,11 +1045,96 @@
     }
     
     // ==================== FILE ====================
+    
+    // Auto-load data from GitHub Pages
+    const DATA_URLS = [
+      './data/bitcoin_5m_combined.csv',
+      './data/bitcoin_5m_coinbase.csv',
+      'data/bitcoin_5m_combined.csv',
+      'data/bitcoin_5m_coinbase.csv'
+    ];
+    
+    async function autoLoadData() {
+      // Check if we're on GitHub Pages or a web server (not file://)
+      if (window.location.protocol === 'file:') {
+        console.log('Local file, skipping auto-load');
+        return false;
+      }
+      
+      document.getElementById('upload-screen').style.display = 'none';
+      document.getElementById('loading-screen').style.display = 'flex';
+      document.getElementById('loading-text').textContent = 'Loading Bitcoin data...';
+      
+      for (const url of DATA_URLS) {
+        try {
+          console.log(`Trying to load: ${url}`);
+          const response = await fetch(url);
+          
+          if (response.ok) {
+            const csvText = await response.text();
+            
+            if (csvText && csvText.includes('timestamp') && csvText.length > 100) {
+              console.log(`Successfully loaded from: ${url}`);
+              processCSVText(csvText);
+              return true;
+            }
+          }
+        } catch (err) {
+          console.log(`Failed to load ${url}: ${err.message}`);
+        }
+      }
+      
+      // If auto-load fails, show upload screen
+      console.log('Auto-load failed, showing upload screen');
+      document.getElementById('loading-screen').style.display = 'none';
+      document.getElementById('upload-screen').style.display = 'flex';
+      return false;
+    }
+    
+    function processCSVText(csvText) {
+      Papa.parse(csvText, {
+        header: true, 
+        skipEmptyLines: true,
+        complete: function(results) {
+          try {
+            rawBars = results.data.map(row => ({
+              timestamp: new Date(row.timestamp),
+              open: parseFloat(row.open),
+              high: parseFloat(row.high),
+              low: parseFloat(row.low),
+              close: parseFloat(row.close),
+              volume: parseFloat(row.volume) || 0,
+            })).filter(b => !isNaN(b.open) && !isNaN(b.timestamp)).sort((a, b) => a.timestamp - b.timestamp);
+            
+            if (rawBars.length === 0) {
+              throw new Error('No valid data found in CSV');
+            }
+            
+            calculateRSI();
+            processDataET();
+            populateFilterSelects();
+            document.getElementById('loading-screen').style.display = 'none';
+            document.getElementById('app').classList.add('visible');
+            renderTable();
+            populateDayViewSelect();
+            populateHourViewSelect();
+            populateCalendarYearSelect();
+            
+            console.log(`Loaded ${rawBars.length} bars, ${allETDates.length} days`);
+          } catch (err) { 
+            showError(err.message); 
+          }
+        },
+        error: (err) => showError(err.message)
+      });
+    }
+    
     function handleFileSelect(e) {
       const file = e.target.files[0];
       if (!file) return;
       document.getElementById('upload-screen').style.display = 'none';
       document.getElementById('loading-screen').style.display = 'flex';
+      document.getElementById('loading-text').textContent = 'Processing file...';
       
       Papa.parse(file, {
         header: true, skipEmptyLines: true,
