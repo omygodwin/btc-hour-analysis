@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>BTC Hourly Analysis Dashboard v9</title>
+  <title>BTC Hourly Analysis Dashboard v12</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
   <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Inter:wght@400;500;600&family=Roboto+Mono:wght@400;500;600&family=Fira+Code:wght@400;500;600&display=swap" rel="stylesheet">
   <style>
@@ -26,8 +26,45 @@
       --accent-green: #4ade80;
       --accent-red: #f87171;
       --accent-purple: #a78bfa;
+      --accent-orange: #fb923c;
       --font-size: 10px;
       --font-family: 'JetBrains Mono', monospace;
+    }
+    
+    /* Tooltip styles */
+    .info-tooltip { 
+      position: relative; 
+      display: inline-flex; 
+      align-items: center;
+      justify-content: center;
+      width: 11px;
+      height: 11px;
+      font-size: 7px;
+      border-radius: 50%;
+      background: rgba(100,149,237,0.3);
+      color: var(--accent-blue);
+      cursor: help;
+      margin-left: 2px;
+      flex-shrink: 0;
+    }
+    .info-tooltip:hover::after {
+      content: attr(data-tooltip);
+      position: absolute;
+      bottom: 100%;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(20,20,30,0.98);
+      border: 1px solid var(--border-medium);
+      padding: 6px 8px;
+      border-radius: 6px;
+      font-size: 9px;
+      white-space: pre-line;
+      z-index: 1000;
+      min-width: 120px;
+      max-width: 200px;
+      color: var(--text-primary);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+      pointer-events: none;
     }
     
     body {
@@ -260,16 +297,30 @@
     .day-toolbar select { padding: 4px 8px; background: rgba(255,255,255,0.05); border: 1px solid var(--border-medium); border-radius: 4px; color: var(--text-primary); font-family: 'JetBrains Mono', monospace; font-size: 0.7rem; min-width: 140px; }
     
     .day-table-container { flex: 1; overflow: auto; padding: 8px; min-height: 0; }
+    .day-compare-container { display: flex; flex: 1; min-height: 0; gap: 4px; }
+    .day-table-panel { flex: 1; display: flex; flex-direction: column; min-width: 0; overflow: hidden; }
+    .day-table-panel .day-table-container { flex: 1; }
+    .compare-mode .day-table-panel { border: 1px solid var(--border-medium); border-radius: 4px; }
+    .compare-mode .day-table-panel:first-child { border-color: var(--accent-btc); }
+    .compare-mode .day-table-panel:last-child { border-color: var(--accent-purple); }
     .day-table { border-collapse: separate; border-spacing: 0; font-family: 'JetBrains Mono', monospace; font-size: 10px; }
     .day-table th, .day-table td { padding: 3px 4px; border: 1px solid var(--border-medium); text-align: center; }
     .day-table thead { position: sticky; top: 0; z-index: 50; }
     .day-table thead tr:first-child th { position: sticky; top: 0; z-index: 50; background: #1a1a24; color: var(--text-muted); font-weight: 500; font-size: 9px; text-transform: uppercase; box-shadow: 0 1px 0 #1a1a24, 0 2px 0 var(--border-medium); }
     .day-table thead tr:nth-child(2) th { position: sticky; top: 22px; z-index: 49; background: #12121a; color: var(--text-muted); font-weight: 500; font-size: 9px; text-transform: uppercase; box-shadow: 0 1px 0 #12121a, 0 2px 0 var(--border-medium); }
     .day-table tbody { position: relative; z-index: 1; }
-    .day-table .hour-cell { background: #0d0d12; color: var(--accent-btc); font-weight: 600; position: sticky; left: 0; z-index: 5; }
-    .day-table th.hour-cell { z-index: 55; background: #1a1a24; }
-    .day-table thead tr:first-child th.hour-cell { z-index: 55; background: #1a1a24; }
-    .day-table thead tr:nth-child(2) th.hour-cell { z-index: 54; background: #12121a; }
+    .day-table .hour-cell { 
+      background: #0d0d12 !important; 
+      color: var(--accent-btc); 
+      font-weight: 600; 
+      position: sticky; 
+      left: 0; 
+      z-index: 10;
+      box-shadow: 2px 0 4px rgba(0,0,0,0.5);
+    }
+    .day-table th.hour-cell { z-index: 55; background: #1a1a24 !important; }
+    .day-table thead tr:first-child th.hour-cell { z-index: 55; background: #1a1a24 !important; }
+    .day-table thead tr:nth-child(2) th.hour-cell { z-index: 54; background: #12121a !important; }
     .day-table .hour-cell.highlighted { background: rgba(247, 147, 26, 0.25) !important; color: #ffc73b; }
     .day-table .hour-row-highlighted td { background: rgba(247, 147, 26, 0.08); }
     .day-table .hour-row-highlighted .hour-cell { background: rgba(247, 147, 26, 0.25) !important; }
@@ -279,11 +330,16 @@
     .day-table .cum-header { background: #1a2420 !important; color: var(--accent-green); }
     .day-table .section-header { background: #1f1c18 !important; color: var(--accent-btc); font-weight: 600; }
     
-    .min-cell { min-width: 70px; min-height: 52px; padding: 0 !important; border: 1px solid var(--border-medium) !important; }
-    .min-grid { display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr 1fr; min-height: 52px; }
-    .min-grid-top { display: flex; justify-content: center; align-items: center; padding: 2px; font-size: 9px; border-bottom: 1px solid var(--border-medium); }
+    .min-cell { min-width: 70px; min-height: 56px; padding: 0 !important; border: 1px solid var(--border-medium) !important; }
+    .min-grid { display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr 1fr 1fr; min-height: 56px; }
+    .min-grid-top { display: flex; justify-content: center; align-items: center; padding: 1px; font-size: 9px; border-bottom: 1px solid var(--border-medium); }
     .min-grid-top.left { border-right: 1px solid var(--border-medium); }
-    .min-grid-bottom { grid-column: 1 / 3; display: flex; justify-content: center; align-items: center; padding: 2px; font-size: 9px; }
+    .min-grid-bottom { grid-column: 1 / 3; display: flex; justify-content: center; align-items: center; padding: 1px; font-size: 9px; }
+    .min-grid-row4 { display: flex; justify-content: space-between; align-items: center; padding: 0 2px; font-size: 8px; min-height: 14px; }
+    .min-grid-row4 .hr-oc { flex: 1; text-align: left; }
+    .min-grid-row4 .bar-rsi { flex: 0 0 auto; text-align: right; padding: 0 2px; border-radius: 2px; font-weight: 500; }
+    .min-grid-row4.rsi-ob-border { border: 2px solid var(--accent-purple) !important; }
+    .min-grid-row4.rsi-os-border { border: 2px solid var(--accent-orange) !important; }
     .min-lvl { font-size: 8px; color: var(--text-muted); margin-left: 2px; }
     
     /* Calendar Styles */
@@ -495,7 +551,7 @@
   <div id="upload-screen" class="upload-screen">
     <div class="upload-card">
       <div class="btc-logo">₿</div>
-      <h1>BTC Hourly Analyzer v9</h1>
+      <h1>BTC Hourly Analyzer v12</h1>
       <p>Upload your 5-minute Bitcoin OHLCV CSV data</p>
       <p id="auto-load-msg" style="color:var(--text-muted);font-size:0.8rem;margin:8px 0;display:none;">
         <span class="spinner" style="width:12px;height:12px;border-width:2px;display:inline-block;vertical-align:middle;margin-right:6px;"></span>
@@ -521,6 +577,7 @@
   <div id="app" class="app">
     <nav class="tab-nav">
       <button class="tab-btn active" onclick="switchTab('overview')">📊 Overview</button>
+      <button class="tab-btn" onclick="switchTab('pm5session')">🌙 5PM Session</button>
       <button class="tab-btn" onclick="switchTab('dayview')">📅 Day View</button>
       <button class="tab-btn" onclick="switchTab('hourview')">🕐 Hour View</button>
       <button class="tab-btn" onclick="switchTab('calendar')">🗓 Calendar</button>
@@ -541,9 +598,9 @@
       </header>
 
       <div class="toolbar">
-        <button class="tb-btn active" id="btn-filters" onclick="toggleFilters()">⚙ Filters</button>
+        <button class="tb-btn" id="btn-filters" onclick="toggleFilters()">⚙ Filters</button>
         <button class="tb-btn" id="btn-columns" onclick="toggleColumns()">▤ Columns</button>
-        <button class="tb-btn active" id="btn-day-cols" onclick="toggleDayColsPanel()">📊 DayTotals</button>
+        <button class="tb-btn" id="btn-day-cols" onclick="toggleDayColsPanel()">📊 DayTotals</button>
         <button class="tb-btn" id="btn-pct" onclick="togglePercentiles()">📈 Pctiles</button>
         <button class="tb-btn filter-btn" id="btn-col-filter" onclick="toggleColFilterPanel()">🔍 ColFilter</button>
         <button class="tb-btn" id="btn-rsi" onclick="toggleRsiSettings()" style="background:rgba(167,139,250,0.1);border-color:rgba(167,139,250,0.3);color:var(--accent-purple)">📉 RSI</button>
@@ -616,7 +673,10 @@
 
       <!-- Day Totals Column Selector -->
       <div id="dt-col-selector" class="dt-col-selector">
-        <h3>Day Total Columns</h3>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+          <h3 style="margin-bottom:0;">Day Total Columns</h3>
+          <button id="btn-show-dt-cols" class="f-btn active" onclick="toggleShowDayCols()" style="font-size:0.55rem;padding:2px 8px;">Show in Table</button>
+        </div>
         <div class="dt-col-grid" id="dt-col-grid"></div>
         <div style="margin-top:6px;display:flex;gap:4px;">
           <button class="f-btn quick" onclick="showAllDTCols()">All</button>
@@ -629,7 +689,7 @@
         </div>
       </div>
 
-      <div id="filters-panel" class="filters visible">
+      <div id="filters-panel" class="filters">
         <div class="filter-group">
           <h3>Years</h3>
           <div class="filter-btns" id="year-filters"></div>
@@ -760,6 +820,10 @@
       <div class="day-toolbar">
         <label>Select Date:</label>
         <select id="day-view-date" onchange="renderDayView()"></select>
+        <div class="tb-group" id="compare-group" style="display:none;">
+          <label>Compare:</label>
+          <select id="day-view-date2" onchange="renderDayView()"></select>
+        </div>
         <div class="tb-group">
           <label>Level:</label>
           <input type="number" id="day-level-size" value="250" min="1" onchange="renderDayView()">
@@ -771,13 +835,26 @@
           <select id="day-hl-to" onchange="renderDayView()"></select>
         </div>
         <button class="tb-btn active" id="btn-day-ohlc" onclick="toggleDayOHLC()">OHLC</button>
+        <button class="tb-btn" id="btn-compare" onclick="toggleCompareMode()">⚖ Compare</button>
       </div>
       
-      <div class="day-table-container">
-        <table class="day-table" id="day-table">
-          <thead id="day-table-head"></thead>
-          <tbody id="day-table-body"></tbody>
-        </table>
+      <div class="day-compare-container" id="day-compare-container">
+        <div class="day-table-panel" id="day-table-panel-1">
+          <div class="day-table-container">
+            <table class="day-table" id="day-table">
+              <thead id="day-table-head"></thead>
+              <tbody id="day-table-body"></tbody>
+            </table>
+          </div>
+        </div>
+        <div class="day-table-panel" id="day-table-panel-2" style="display:none;">
+          <div class="day-table-container">
+            <table class="day-table" id="day-table-2">
+              <thead id="day-table-head-2"></thead>
+              <tbody id="day-table-body-2"></tbody>
+            </table>
+          </div>
+        </div>
       </div>
     </div>
     
@@ -786,12 +863,17 @@
       <div class="calendar-toolbar">
         <label>Color By:</label>
         <select id="calendar-color-by" onchange="renderCalendar()">
+          <option value="dMxToHr" selected>Max DUR/DLR to Hour</option>
           <option value="dRng">Day Range</option>
           <option value="dUR">Day UR</option>
           <option value="dLR">Day LR</option>
           <option value="dOC">Day O-C</option>
           <option value="dMx">Max(DUR, DLR)</option>
         </select>
+        <div class="tb-group" id="cal-hour-group">
+          <label>Close Hour:</label>
+          <select id="calendar-close-hour" onchange="renderCalendar()"></select>
+        </div>
         <div class="tb-group" style="border-left:1px solid var(--border-medium);padding-left:10px;margin-left:10px;">
           <label>Years:</label>
           <div id="calendar-year-btns" style="display:flex;gap:2px;"></div>
@@ -813,6 +895,66 @@
       </div>
       
       <div class="calendar-container" id="calendar-container"></div>
+    </div>
+    
+    <!-- 5PM Session Tab -->
+    <div id="tab-pm5session" class="tab-content">
+      <header class="header" style="background:linear-gradient(180deg, rgba(139,92,246,0.15) 0%, var(--bg-primary) 100%);border-bottom-color:rgba(139,92,246,0.3);">
+        <div>
+          <h1 style="color:#a78bfa;"><span class="btc-sym">₿</span> 5PM Session Analysis</h1>
+          <span class="sub">5PM Previous Day → 4PM Current Day • Cumulative Ranges • Eastern Time</span>
+        </div>
+        <div class="header-stats">
+          <div class="stat"><span class="stat-val" id="pm5-stat-days">0</span><span class="stat-lbl">Days</span></div>
+          <div class="stat"><span class="stat-val" id="pm5-stat-hours">24</span><span class="stat-lbl">Hours</span></div>
+        </div>
+      </header>
+
+      <div class="toolbar">
+        <button class="tb-btn" id="btn-pm5-filters" onclick="togglePm5Filters()">⚙ Filters</button>
+        <button class="tb-btn active" id="btn-pm5-cum" onclick="togglePm5Cumulative()">📊 Cumulative</button>
+        <div class="tb-group">
+          <label>Level:</label>
+          <input type="number" id="pm5-level-size" value="250" min="1" onchange="render5pmSession()">
+        </div>
+        <div class="tb-group">
+          <label>Gradient:</label>
+          <select id="pm5-gradient-mode" onchange="render5pmSession()">
+            <option value="row">Row</option>
+            <option value="col">Column</option>
+          </select>
+        </div>
+        <div class="tb-spacer"></div>
+        <button class="tb-btn preset" onclick="syncPm5FromOverview()">Sync from Overview</button>
+      </div>
+
+      <div id="pm5-filters-panel" class="filters" style="display:none;">
+        <div class="filter-group">
+          <h3>Years</h3>
+          <div class="filter-btns" id="pm5-year-filters"></div>
+        </div>
+        <div class="filter-group">
+          <h3>Days of Week</h3>
+          <div class="filter-btns">
+            <button class="f-btn none-btn" onclick="setPm5NoDays()">None</button>
+            <button class="f-btn active" data-pm5-day="0" onclick="togglePm5Day(0)">Sun</button>
+            <button class="f-btn active" data-pm5-day="1" onclick="togglePm5Day(1)">Mon</button>
+            <button class="f-btn active" data-pm5-day="2" onclick="togglePm5Day(2)">Tue</button>
+            <button class="f-btn active" data-pm5-day="3" onclick="togglePm5Day(3)">Wed</button>
+            <button class="f-btn active" data-pm5-day="4" onclick="togglePm5Day(4)">Thu</button>
+            <button class="f-btn active" data-pm5-day="5" onclick="togglePm5Day(5)">Fri</button>
+            <button class="f-btn active" data-pm5-day="6" onclick="togglePm5Day(6)">Sat</button>
+            <button class="f-btn quick" onclick="setPm5Weekdays()">Weekdays</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="table-container">
+        <table class="data-table" id="pm5-table">
+          <thead id="pm5-table-head"></thead>
+          <tbody id="pm5-table-body"></tbody>
+        </table>
+      </div>
     </div>
     
     <!-- Hour View Tab -->
@@ -869,23 +1011,23 @@
     const MINS = ['00', '05', '10', '15', '20', '25', '30', '35', '40', '45', '50', '55'];
     
     const ALL_COLUMNS = [
-      { id: 'rng', label: 'Rng', desc: 'Range', default: true, gradient: 'orange', group: 'rng' },
-      { id: 'ur', label: 'UR', desc: 'Upper Rng', default: true, gradient: 'orange', group: 'urlr' },
-      { id: 'lr', label: 'LR', desc: 'Lower Rng', default: true, gradient: 'orange', group: 'urlr' },
-      { id: 'mxr', label: 'MxR', desc: 'Max Range', default: false, gradient: 'orange', group: 'mxr' },
+      { id: 'rng', label: 'Rng', desc: 'Range', default: false, gradient: 'orange', group: 'rng' },
+      { id: 'ur', label: 'UR', desc: 'Upper Rng', default: false, gradient: 'orange', group: 'urlr' },
+      { id: 'lr', label: 'LR', desc: 'Lower Rng', default: false, gradient: 'orange', group: 'urlr' },
+      { id: 'mxr', label: 'MxR', desc: 'Max Range', default: true, gradient: 'orange', group: 'mxr' },
       { id: 'mxrRk', label: 'MxR#', desc: 'Max Rng Rank', default: false, gradient: 'orange-inv', group: 'rank' },
       { id: 'rngRk', label: 'Rng#', desc: 'Range Rank', default: false, gradient: 'orange-inv', group: 'rank' },
-      { id: 'up', label: '#Up', desc: 'Lvls Up', default: true, gradient: null },
-      { id: 'dn', label: '#Dn', desc: 'Lvls Down', default: true, gradient: null },
+      { id: 'up', label: '#Up', desc: 'Lvls Up', default: false, gradient: null },
+      { id: 'dn', label: '#Dn', desc: 'Lvls Down', default: false, gradient: null },
       { id: 'mxl', label: 'MxL', desc: 'Max Level', default: false, gradient: 'orange', group: 'mxl' },
       { id: 'mxlRk', label: 'MxL#', desc: 'Max Lvl Rank', default: false, gradient: 'orange-inv', group: 'rank' },
-      { id: 'cl', label: '#Cl', desc: 'Net Lvls', default: true, gradient: 'rg', group: 'cl' },
+      { id: 'cl', label: '#Cl', desc: 'Net Lvls', default: false, gradient: 'rg', group: 'cl' },
       { id: 'oc', label: 'O-C', desc: 'Open-Close', default: true, gradient: 'rg', group: 'oc' },
       { id: 'ocRk', label: 'OC#', desc: 'O-C Rank', default: false, gradient: 'orange-inv', group: 'rank' },
       { id: 'cdrU', label: 'CDU', desc: 'Cum Day Up', default: false, gradient: 'orange-col', group: 'cdr' },
       { id: 'cdrD', label: 'CDD', desc: 'Cum Day Dn', default: false, gradient: 'orange-col', group: 'cdr' },
-      { id: 'mxcd', label: 'MxCD', desc: 'Max Cum D', default: false, gradient: 'orange-col', group: 'mxcd' },
-      { id: 'cdr', label: 'CDR', desc: 'Cum Day Rng', default: false, gradient: 'rg-col', group: 'cdrRG' },
+      { id: 'mxcd', label: 'MxCD', desc: 'Max Cum D', default: true, gradient: 'orange-col', group: 'mxcd' },
+      { id: 'cdr', label: 'CDR', desc: 'Cum Day Rng', default: true, gradient: 'rg-col', group: 'cdrRG' },
       { id: 'hm', label: 'HMin', desc: 'High Min', default: false, gradient: null },
       { id: 'lm', label: 'LMin', desc: 'Low Min', default: false, gradient: null },
       { id: 'o', label: 'Open', desc: 'Open', default: false, gradient: null },
@@ -901,6 +1043,16 @@
       { id: 'sigMin', label: 'Sig↓', desc: 'Min Signal', default: false, gradient: 'purple', group: 'sig' },
       { id: 'sigAvg', label: 'Sigμ', desc: 'Avg Signal', default: false, gradient: 'purple', group: 'sig' },
       { id: 'obos', label: 'OB/OS', desc: 'OB/OS Hit', default: false, gradient: null },
+      // Weekly cumulative columns
+      { id: 'wCdrU', label: 'WCU', desc: 'Weekly Cum Up', default: false, gradient: 'orange-col', group: 'wcdr' },
+      { id: 'wCdrD', label: 'WCD', desc: 'Weekly Cum Dn', default: false, gradient: 'orange-col', group: 'wcdr' },
+      { id: 'wMxcd', label: 'WMxC', desc: 'Weekly Max Cum', default: false, gradient: 'orange-col', group: 'wmxcd' },
+      { id: 'wCdr', label: 'WCR', desc: 'Weekly Cum Rng', default: false, gradient: 'rg-col', group: 'wcdrRG' },
+      // 5PM hourly cumulative columns
+      { id: 'p5CdrU', label: '5CU', desc: '5PM Cum Up', default: false, gradient: 'orange-col', group: 'p5cdr' },
+      { id: 'p5CdrD', label: '5CD', desc: '5PM Cum Dn', default: false, gradient: 'orange-col', group: 'p5cdr' },
+      { id: 'p5Mxcd', label: '5MxC', desc: '5PM Max Cum', default: false, gradient: 'orange-col', group: 'p5mxcd' },
+      { id: 'p5Cdr', label: '5CR', desc: '5PM Cum Rng', default: false, gradient: 'rg-col', group: 'p5cdrRG' },
     ];
     
     const DAY_TOTAL_COLS = [
@@ -911,6 +1063,8 @@
       { id: 'dOCH', label: 'O-CH', desc: 'O-C to Hour', default: false },
       { id: 'dHiHr', label: 'HiHr', desc: 'High Hour', default: false },
       { id: 'dLoHr', label: 'LoHr', desc: 'Low Hour', default: false },
+      { id: 'dRthHiHr', label: 'RTHHi', desc: 'RTH High Hour (9a-3p)', default: false },
+      { id: 'dRthLoHr', label: 'RTHLo', desc: 'RTH Low Hour (9a-3p)', default: false },
       { id: 'dDD', label: 'DD', desc: 'Drawdown', default: false },
       { id: 'dRev', label: 'Rev', desc: 'Reversal', default: false },
       { id: 'dVol', label: 'Vol', desc: 'Total Volume', default: false },
@@ -919,6 +1073,16 @@
       { id: 'dHigh', label: 'High', desc: 'High', default: false },
       { id: 'dLow', label: 'Low', desc: 'Low', default: false },
       { id: 'dClose', label: 'Close', desc: 'Close', default: false },
+      // 5PM Session metrics
+      { id: 'd5pmUR', label: '5pUR', desc: '5PM Up Range', default: false },
+      { id: 'd5pmLR', label: '5pLR', desc: '5PM Low Range', default: false },
+      { id: 'd5pmMx', label: '5pMx', desc: '5PM Max Range', default: false },
+      { id: 'd5pmOC', label: '5pOC', desc: '5PM Open-Close', default: false },
+      // Weekly metrics
+      { id: 'wUR', label: 'WUR', desc: 'Weekly Up Range', default: false },
+      { id: 'wLR', label: 'WLR', desc: 'Weekly Low Range', default: false },
+      { id: 'wMx', label: 'WMx', desc: 'Weekly Max Range', default: false },
+      { id: 'wOC', label: 'WOC', desc: 'Weekly Open-Close', default: false },
     ];
     
     // ==================== STATE ====================
@@ -946,6 +1110,7 @@
     let dayHlFrom = 9;
     let dayHlTo = 15;
     let showDayOHLC = true;
+    let compareMode = false;
     let calColorDays = new Set([0,1,2,3,4,5,6]);
     let calColorDates = null;
     let calSelectedYears = new Set();
@@ -961,6 +1126,20 @@
     let signalMethod = 'EMA';
     let obLevel = 88;
     let osLevel = 12;
+    
+    // 5PM Session & Weekly tracking
+    let pmSessionDays = {}; // Days keyed by 5PM session date
+    let weeklyData = {}; // Weekly data keyed by week start (Sunday)
+    let hvFilteredDates = new Set(); // Track actual filtered dates from overview for hour view sync
+    let showDayColsPanel = false; // Panel visibility (separate from column display)
+    
+    // 5PM Session tab state
+    let pm5SelectedYears = new Set();
+    let pm5SelectedDays = new Set([0,1,2,3,4,5,6]);
+    let pm5SortColumn = 'date';
+    let pm5SortDirection = 'desc';
+    let pm5SortHour = null;
+    let pm5ShowCumulative = true;
     
     // ==================== MOBILE DETECTION ====================
     const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || window.innerWidth <= 768;
@@ -1005,9 +1184,9 @@
     HOURS.forEach(h => {
       const ampm = h >= 12 ? 'PM' : 'AM';
       const disp = h === 0 ? 12 : h > 12 ? h - 12 : h;
-      ['hour-from', 'hour-to', 'day-hl-from', 'day-hl-to', 'oc-close-hour'].forEach(id => {
+      ['hour-from', 'hour-to', 'day-hl-from', 'day-hl-to', 'oc-close-hour', 'calendar-close-hour'].forEach(id => {
         const el = document.getElementById(id);
-        if (el) el.innerHTML += `<option value="${h}" ${(id==='day-hl-from'&&h===9)||(id==='day-hl-to'&&h===15)||(id==='oc-close-hour'&&h===16)?'selected':''}>${disp}${ampm}</option>`;
+        if (el) el.innerHTML += `<option value="${h}" ${(id==='day-hl-from'&&h===9)||(id==='day-hl-to'&&h===15)||(id==='oc-close-hour'&&h===16)||(id==='calendar-close-hour'&&h===16)?'selected':''}>${disp}${ampm}</option>`;
       });
     });
     document.getElementById('hour-to').value = 23;
@@ -1042,6 +1221,7 @@
       if (tab === 'dayview' && allETDates.length > 0) renderDayView();
       if (tab === 'hourview' && allETDates.length > 0) renderHourView();
       if (tab === 'calendar' && allETDates.length > 0) renderCalendar();
+      if (tab === 'pm5session' && allETDates.length > 0) render5pmSession();
     }
     
     // ==================== FILE ====================
@@ -1104,7 +1284,7 @@
               low: parseFloat(row.low),
               close: parseFloat(row.close),
               volume: parseFloat(row.volume) || 0,
-            })).filter(b => !isNaN(b.open) && !isNaN(b.timestamp)).sort((a, b) => a.timestamp - b.timestamp);
+            })).filter(b => !isNaN(b.open) && b.timestamp instanceof Date && !isNaN(b.timestamp.getTime())).sort((a, b) => a.timestamp - b.timestamp);
             
             if (rawBars.length === 0) {
               throw new Error('No valid data found in CSV');
@@ -1119,6 +1299,7 @@
             populateDayViewSelect();
             populateHourViewSelect();
             populateCalendarYearSelect();
+            initPm5YearFilters();
             
             console.log(`Loaded ${rawBars.length} bars, ${allETDates.length} days`);
           } catch (err) { 
@@ -1147,7 +1328,7 @@
               low: parseFloat(row.low),
               close: parseFloat(row.close),
               volume: parseFloat(row.volume) || 0,
-            })).filter(b => !isNaN(b.open) && !isNaN(b.timestamp)).sort((a, b) => a.timestamp - b.timestamp);
+            })).filter(b => !isNaN(b.open) && b.timestamp instanceof Date && !isNaN(b.timestamp.getTime())).sort((a, b) => a.timestamp - b.timestamp);
             
             calculateRSI();
             processDataET();
@@ -1158,6 +1339,7 @@
             populateDayViewSelect();
             populateHourViewSelect();
             populateCalendarYearSelect();
+            initPm5YearFilters();
           } catch (err) { showError(err.message); }
         },
         error: (err) => showError(err.message)
@@ -1404,6 +1586,18 @@
         day.dDD = foundHi && day.dH > -Infinity && postHiLow < Infinity ? Math.round(day.dH - postHiLow) : null;
         day.dRev = foundLo && day.dL < Infinity && postLoHigh > -Infinity ? Math.round(postLoHigh - day.dL) : null;
         
+        // Calculate RTH (9am-3pm) high/low hours
+        let rthHigh = -Infinity, rthLow = Infinity;
+        let rthHiHr = null, rthLoHr = null;
+        for (let h = 9; h <= 15; h++) {
+          if (day.hrs[h]) {
+            if (day.hrs[h].h > rthHigh) { rthHigh = day.hrs[h].h; rthHiHr = h; }
+            if (day.hrs[h].l < rthLow) { rthLow = day.hrs[h].l; rthLoHr = h; }
+          }
+        }
+        day.dRthHiHr = rthHiHr;
+        day.dRthLoHr = rthLoHr;
+        
         let runH = -Infinity, runL = Infinity;
         let prevCdrU = null, prevCdrD = null, prevMxcd = null;
         
@@ -1457,6 +1651,185 @@
             prevMxcd = mxcd;
           }
         });
+      });
+      
+      // Calculate 5PM session metrics (5PM previous day to 4PM current day)
+      // Also calculate weekly metrics (Sunday 12AM open)
+      const sortedDates = Object.keys(etDays).sort();
+      pmSessionDays = {};
+      weeklyData = {};
+      
+      sortedDates.forEach((dateStr, idx) => {
+        const day = etDays[dateStr];
+        
+        // Get 5PM open from previous day
+        const prevDateIdx = idx - 1;
+        if (prevDateIdx >= 0) {
+          const prevDateStr = sortedDates[prevDateIdx];
+          const prevDay = etDays[prevDateStr];
+          const pm5Hour = prevDay?.hrs[17]; // 5PM = hour 17
+          if (pm5Hour) {
+            const pm5Open = pm5Hour.o;
+            
+            // Calculate high/low from 5PM previous day to 4PM current day
+            let pmHigh = pm5Open, pmLow = pm5Open;
+            
+            // Include 5PM-11PM from previous day
+            for (let h = 17; h <= 23; h++) {
+              if (prevDay.hrs[h]) {
+                pmHigh = Math.max(pmHigh, prevDay.hrs[h].h);
+                pmLow = Math.min(pmLow, prevDay.hrs[h].l);
+              }
+            }
+            
+            // Include 12AM-4PM from current day
+            for (let h = 0; h <= 16; h++) {
+              if (day.hrs[h]) {
+                pmHigh = Math.max(pmHigh, day.hrs[h].h);
+                pmLow = Math.min(pmLow, day.hrs[h].l);
+              }
+            }
+            
+            // Get 4PM close
+            const pm4Hour = day.hrs[16];
+            const pm4Close = pm4Hour ? pm4Hour.c : day.dC;
+            
+            day.d5pmOpen = pm5Open;
+            day.d5pmUR = Math.round(pmHigh - pm5Open);
+            day.d5pmLR = Math.round(pm5Open - pmLow);
+            day.d5pmMx = Math.max(day.d5pmUR, day.d5pmLR);
+            day.d5pmOC = pm4Close ? Math.round(pm4Close - pm5Open) : null;
+          }
+        }
+        
+        // Calculate weekly metrics (from Sunday 12AM open)
+        const dateObj = new Date(dateStr + 'T12:00:00Z');
+        const dayOfWeek = dateObj.getUTCDay(); // 0=Sunday
+        
+        // Find the Sunday of this week
+        const sundayOffset = dayOfWeek;
+        const sundayDate = new Date(dateObj);
+        sundayDate.setUTCDate(sundayDate.getUTCDate() - sundayOffset);
+        const sundayStr = sundayDate.toISOString().split('T')[0];
+        
+        // Get Sunday's open (12AM)
+        const sundayDay = etDays[sundayStr];
+        const weekOpen = sundayDay?.dO;
+        
+        if (weekOpen != null) {
+          // Calculate cumulative high/low from Sunday to this day
+          let weekHigh = weekOpen, weekLow = weekOpen;
+          
+          // Loop through all days from Sunday to current day
+          const currentDate = new Date(sundayDate);
+          while (currentDate <= dateObj) {
+            const checkStr = currentDate.toISOString().split('T')[0];
+            const checkDay = etDays[checkStr];
+            if (checkDay) {
+              if (checkDay.dH > weekHigh) weekHigh = checkDay.dH;
+              if (checkDay.dL < weekLow) weekLow = checkDay.dL;
+            }
+            currentDate.setUTCDate(currentDate.getUTCDate() + 1);
+          }
+          
+          day.wOpen = weekOpen;
+          day.wUR = Math.round(weekHigh - weekOpen);
+          day.wLR = Math.round(weekOpen - weekLow);
+          day.wMx = Math.max(day.wUR, day.wLR);
+          day.wOC = day.dC ? Math.round(day.dC - weekOpen) : null;
+          day.wHigh = weekHigh;
+          day.wLow = weekLow;
+          
+          // Calculate hourly weekly cumulative metrics
+          let wRunH = weekOpen, wRunL = weekOpen;
+          let wPrevCdrU = null, wPrevCdrD = null, wPrevMxcd = null;
+          
+          // First accumulate high/low from previous days this week
+          const prevDaysDate = new Date(sundayDate);
+          while (prevDaysDate < dateObj) {
+            const prevStr = prevDaysDate.toISOString().split('T')[0];
+            const prevDayData = etDays[prevStr];
+            if (prevDayData) {
+              if (prevDayData.dH > wRunH) wRunH = prevDayData.dH;
+              if (prevDayData.dL < wRunL) wRunL = prevDayData.dL;
+            }
+            prevDaysDate.setUTCDate(prevDaysDate.getUTCDate() + 1);
+          }
+          
+          // Now calculate for each hour today
+          HOURS.forEach(h => {
+            if (day.hrs[h] && day.hrs[h].m) {
+              const hd = day.hrs[h];
+              wRunH = Math.max(wRunH, hd.h);
+              wRunL = Math.min(wRunL, hd.l);
+              
+              const wCdrU = Math.round(wRunH - weekOpen);
+              const wCdrD = Math.round(weekOpen - wRunL);
+              const wMxcd = Math.max(wCdrU, wCdrD);
+              
+              hd.m.wCdr = Math.round(hd.c - weekOpen);
+              hd.m.wCdrU = (wCdrU !== wPrevCdrU) ? wCdrU : null;
+              hd.m.wCdrD = (wCdrD !== wPrevCdrD) ? wCdrD : null;
+              hd.m.wMxcd = (wMxcd !== wPrevMxcd) ? wMxcd : null;
+              hd.m.wCdrUActual = wCdrU;
+              hd.m.wCdrDActual = wCdrD;
+              hd.m.wMxcdActual = wMxcd;
+              
+              wPrevCdrU = wCdrU;
+              wPrevCdrD = wCdrD;
+              wPrevMxcd = wMxcd;
+            }
+          });
+        }
+        
+        // Calculate 5PM hourly cumulative metrics for hours after 5PM session starts
+        if (day.d5pmOpen != null) {
+          const pm5Open = day.d5pmOpen;
+          
+          // Get previous day for high/low from 5PM-11PM
+          const prevDateIdx = idx - 1;
+          const prevDateStr = prevDateIdx >= 0 ? sortedDates[prevDateIdx] : null;
+          const prevDay = prevDateStr ? etDays[prevDateStr] : null;
+          
+          // Start with 5PM open as running high/low
+          let p5RunH = pm5Open, p5RunL = pm5Open;
+          let p5PrevCdrU = null, p5PrevCdrD = null, p5PrevMxcd = null;
+          
+          // First accumulate from 5PM-11PM of previous day
+          if (prevDay) {
+            for (let h = 17; h <= 23; h++) {
+              if (prevDay.hrs[h]) {
+                p5RunH = Math.max(p5RunH, prevDay.hrs[h].h);
+                p5RunL = Math.min(p5RunL, prevDay.hrs[h].l);
+              }
+            }
+          }
+          
+          // Now calculate for hours 0-16 of current day (within 5PM session)
+          for (let h = 0; h <= 16; h++) {
+            if (day.hrs[h] && day.hrs[h].m) {
+              const hd = day.hrs[h];
+              p5RunH = Math.max(p5RunH, hd.h);
+              p5RunL = Math.min(p5RunL, hd.l);
+              
+              const p5CdrU = Math.round(p5RunH - pm5Open);
+              const p5CdrD = Math.round(pm5Open - p5RunL);
+              const p5Mxcd = Math.max(p5CdrU, p5CdrD);
+              
+              hd.m.p5Cdr = Math.round(hd.c - pm5Open);
+              hd.m.p5CdrU = (p5CdrU !== p5PrevCdrU) ? p5CdrU : null;
+              hd.m.p5CdrD = (p5CdrD !== p5PrevCdrD) ? p5CdrD : null;
+              hd.m.p5Mxcd = (p5Mxcd !== p5PrevMxcd) ? p5Mxcd : null;
+              hd.m.p5CdrUActual = p5CdrU;
+              hd.m.p5CdrDActual = p5CdrD;
+              hd.m.p5MxcdActual = p5Mxcd;
+              
+              p5PrevCdrU = p5CdrU;
+              p5PrevCdrD = p5CdrD;
+              p5PrevMxcd = p5Mxcd;
+            }
+          }
+        }
       });
       
       allETDates = Object.keys(etDays).sort().reverse();
@@ -1691,6 +2064,31 @@
       return '#0d0d12';
     }
     
+    function getRSIGradient(val) {
+      // RSI gradient: 5-40 orange to transparent, 40-60 transparent, 60-95 transparent to blue
+      if (val == null) return 'transparent';
+      if (val <= 5) {
+        // Full orange at 5
+        return 'rgba(247, 147, 26, 0.7)';
+      } else if (val < 40) {
+        // Orange fading to transparent from 5 to 40
+        const t = (val - 5) / 35; // 0 at 5, 1 at 40
+        const alpha = 0.7 * (1 - t);
+        return `rgba(247, 147, 26, ${alpha.toFixed(2)})`;
+      } else if (val <= 60) {
+        // Transparent in the middle
+        return 'transparent';
+      } else if (val < 95) {
+        // Transparent to blue from 60 to 95
+        const t = (val - 60) / 35; // 0 at 60, 1 at 95
+        const alpha = 0.7 * t;
+        return `rgba(100, 149, 237, ${alpha.toFixed(2)})`;
+      } else {
+        // Full blue at 95+
+        return 'rgba(100, 149, 237, 0.7)';
+      }
+    }
+    
     function calcRowStats(day, hours) {
       const s = { rng: [], urlr: [], mxr: [], mxl: [], rank: [], cl: [], oc: [], cdr: [], cdrRG: [], mxcd: [], rsi: [], sig: [] };
       hours.forEach(h => {
@@ -1721,7 +2119,7 @@
     function calcColStats(data, hours) {
       const s = {};
       hours.forEach(h => {
-        s[h] = { rng: [], urlr: [], mxr: [], mxl: [], rank: [], cl: [], oc: [], cdrRG: [], cdr: [], mxcd: [], rsi: [], sig: [] };
+        s[h] = { rng: [], urlr: [], mxr: [], mxl: [], rank: [], cl: [], oc: [], cdrRG: [], cdr: [], mxcd: [], rsi: [], sig: [], wcdr: [], wcdrRG: [], wmxcd: [], p5cdr: [], p5cdrRG: [], p5mxcd: [] };
         data.forEach(d => {
           const m = d.hrs[h]?.m;
           if (!m) return;
@@ -1739,6 +2137,16 @@
           if (m.mxcdActual != null) s[h].mxcd.push(m.mxcdActual);
           ['rsiMax','rsiMin','rsiAvg'].forEach(r => { if (m[r] != null) s[h].rsi.push(m[r]); });
           ['sigMax','sigMin','sigAvg'].forEach(r => { if (m[r] != null) s[h].sig.push(m[r]); });
+          // Weekly cumulative
+          if (m.wCdr != null) s[h].wcdrRG.push(m.wCdr);
+          if (m.wCdrUActual != null) s[h].wcdr.push(m.wCdrUActual);
+          if (m.wCdrDActual != null) s[h].wcdr.push(m.wCdrDActual);
+          if (m.wMxcdActual != null) s[h].wmxcd.push(m.wMxcdActual);
+          // 5PM cumulative
+          if (m.p5Cdr != null) s[h].p5cdrRG.push(m.p5Cdr);
+          if (m.p5CdrUActual != null) s[h].p5cdr.push(m.p5CdrUActual);
+          if (m.p5CdrDActual != null) s[h].p5cdr.push(m.p5CdrDActual);
+          if (m.p5MxcdActual != null) s[h].p5mxcd.push(m.p5MxcdActual);
         });
       });
       const r = {};
@@ -1752,7 +2160,7 @@
     }
     
     function calcDayTotalsStats(data) {
-      const s = { drng: [], durdlr: [], doc: [], doch: [], ddd: [], drev: [] };
+      const s = { drng: [], durdlr: [], doc: [], doch: [], ddd: [], drev: [], d5pm: [], d5pmoc: [], weekly: [], woc: [] };
       data.forEach(d => {
         if (d.dRng != null) s.drng.push(d.dRng);
         if (d.dUR != null) s.durdlr.push(d.dUR);
@@ -1760,6 +2168,16 @@
         if (d.dOC != null) s.doc.push(d.dOC);
         if (d.dDD != null) s.ddd.push(d.dDD);
         if (d.dRev != null) s.drev.push(d.dRev);
+        // 5PM metrics
+        if (d.d5pmUR != null) s.d5pm.push(d.d5pmUR);
+        if (d.d5pmLR != null) s.d5pm.push(d.d5pmLR);
+        if (d.d5pmMx != null) s.d5pm.push(d.d5pmMx);
+        if (d.d5pmOC != null) s.d5pmoc.push(d.d5pmOC);
+        // Weekly metrics
+        if (d.wUR != null) s.weekly.push(d.wUR);
+        if (d.wLR != null) s.weekly.push(d.wLR);
+        if (d.wMx != null) s.weekly.push(d.wMx);
+        if (d.wOC != null) s.woc.push(d.wOC);
       });
       return {
         drng: s.drng.length ? { min: Math.min(...s.drng), max: Math.max(...s.drng) } : { min: 0, max: 0 },
@@ -1767,6 +2185,10 @@
         doc: s.doc.length ? { min: Math.min(...s.doc), max: Math.max(...s.doc) } : { min: 0, max: 0 },
         ddd: s.ddd.length ? { min: Math.min(...s.ddd), max: Math.max(...s.ddd) } : { min: 0, max: 0 },
         drev: s.drev.length ? { min: Math.min(...s.drev), max: Math.max(...s.drev) } : { min: 0, max: 0 },
+        d5pm: s.d5pm.length ? { min: Math.min(...s.d5pm), max: Math.max(...s.d5pm) } : { min: 0, max: 1000 },
+        d5pmoc: s.d5pmoc.length ? { min: Math.min(...s.d5pmoc), max: Math.max(...s.d5pmoc) } : { min: -500, max: 500 },
+        weekly: s.weekly.length ? { min: Math.min(...s.weekly), max: Math.max(...s.weekly) } : { min: 0, max: 5000 },
+        woc: s.woc.length ? { min: Math.min(...s.woc), max: Math.max(...s.woc) } : { min: -2000, max: 2000 },
       };
     }
     
@@ -1778,9 +2200,9 @@
       if (id === 'cl') return v === 0 ? '0' : (v > 0 ? '+' + v : v);
       if (id === 'v') return v.toFixed(1);
       if (['o','hi','lo','c'].includes(id)) return v.toLocaleString();
-      if (['oc','cdr'].includes(id)) return (v >= 0 ? '+' : '') + v.toLocaleString();
+      if (['oc','cdr','wCdr','p5Cdr'].includes(id)) return (v >= 0 ? '+' : '') + v.toLocaleString();
       if (id.endsWith('Rk')) return v;
-      if (['cdrU','cdrD','mxcd'].includes(id)) return v.toLocaleString();
+      if (['cdrU','cdrD','mxcd','wCdrU','wCdrD','wMxcd','p5CdrU','p5CdrD','p5Mxcd'].includes(id)) return v.toLocaleString();
       if (['rsiMax','rsiMin','rsiAvg','sigMax','sigMin','sigAvg'].includes(id)) return v.toFixed(1);
       if (id === 'obos') return v;
       return v.toLocaleString();
@@ -1864,11 +2286,12 @@
         if (showDayCols && dtCols.length > 0) {
           let pos = 113;
           dtCols.forEach((c, i) => {
-            const w = ['dOpen','dHigh','dLow','dClose'].includes(c.id) ? 52 : ['dOC','dOCH'].includes(c.id) ? 48 : 38;
+            const w = ['dOpen','dHigh','dLow','dClose'].includes(c.id) ? 52 : ['dOC','dOCH','d5pmOC','wOC'].includes(c.id) ? 48 : 38;
             const isLast = i === dtCols.length - 1;
             let val = day[c.id];
             let bg = '#0d0d12';
             let cls = 'day-total-cell';
+            let extraStyle = '';
             
             if (c.id === 'dRng') bg = getOrangeGradient(val, dtStats.drng.min, dtStats.drng.max);
             else if (c.id === 'dUR' || c.id === 'dLR') bg = getOrangeGradient(val, dtStats.durdlr.min, dtStats.durdlr.max);
@@ -1878,14 +2301,32 @@
             }
             else if (c.id === 'dDD') bg = getOrangeGradient(val, dtStats.ddd.min, dtStats.ddd.max);
             else if (c.id === 'dRev') bg = getOrangeGradient(val, dtStats.drev.min, dtStats.drev.max);
-            else if (c.id === 'dHiHr' || c.id === 'dLoHr') val = val != null ? formatHourHeader(val) : '—';
+            else if (c.id === 'dHiHr' || c.id === 'dLoHr' || c.id === 'dRthHiHr' || c.id === 'dRthLoHr') {
+              val = val != null ? formatHourHeader(val) : '—';
+            }
             else if (['dOpen','dHigh','dLow','dClose'].includes(c.id)) {
               val = c.id === 'dOpen' ? day.dO : c.id === 'dHigh' ? day.dH : c.id === 'dLow' ? day.dL : day.dC;
               val = val && val !== -Infinity && val !== Infinity ? Math.round(val).toLocaleString() : '—';
             }
+            // 5PM metrics
+            else if (c.id === 'd5pmUR' || c.id === 'd5pmLR' || c.id === 'd5pmMx') {
+              bg = getOrangeGradient(val, dtStats.d5pm?.min || 0, dtStats.d5pm?.max || 1000);
+            }
+            else if (c.id === 'd5pmOC') {
+              bg = getRGGradient(val, dtStats.d5pmoc?.min || -500, dtStats.d5pmoc?.max || 500);
+              cls += val >= 0 ? ' up' : ' down';
+            }
+            // Weekly metrics
+            else if (c.id === 'wUR' || c.id === 'wLR' || c.id === 'wMx') {
+              bg = getOrangeGradient(val, dtStats.weekly?.min || 0, dtStats.weekly?.max || 5000);
+            }
+            else if (c.id === 'wOC') {
+              bg = getRGGradient(val, dtStats.woc?.min || -2000, dtStats.woc?.max || 2000);
+              cls += val >= 0 ? ' up' : ' down';
+            }
             
-            const fmtVal = typeof val === 'number' ? ((['dOC','dOCH'].includes(c.id) ? (val >= 0 ? '+' : '') : '') + val.toLocaleString()) : val;
-            bd += `<td class="sticky-col ${cls}" style="left:${pos}px;min-width:${w}px;background:${bg}${isLast?';border-right:2px solid rgba(100,149,237,0.3)':''}">${fmtVal ?? '—'}</td>`;
+            const fmtVal = typeof val === 'number' ? ((['dOC','dOCH','d5pmOC','wOC'].includes(c.id) ? (val >= 0 ? '+' : '') : '') + val.toLocaleString()) : val;
+            bd += `<td class="sticky-col ${cls}" style="left:${pos}px;min-width:${w}px;background:${bg}${isLast?';border-right:2px solid rgba(100,149,237,0.3)':''}${extraStyle}">${fmtVal ?? '—'}</td>`;
             pos += w;
           });
         }
@@ -1895,12 +2336,32 @@
           const stats = gMode === 'row' ? rowStats : colStats[h];
           const cStats = colStats[h];
           
+          // Check if this hour made a new day high/low (for hi/lo column borders)
+          let madeNewDayHigh = false, madeNewDayLow = false;
+          if (day.hrs[h]) {
+            let runH = -Infinity, runL = Infinity;
+            for (let prevH = 0; prevH < h; prevH++) {
+              if (day.hrs[prevH]) {
+                runH = Math.max(runH, day.hrs[prevH].h);
+                runL = Math.min(runL, day.hrs[prevH].l);
+              }
+            }
+            madeNewDayHigh = day.hrs[h].h > runH;
+            madeNewDayLow = day.hrs[h].l < runL;
+          }
+          
           cols.forEach((col, ci) => {
             // For Overview tab, always show actual CDU/CDD/MXCD values (not conditional)
             let v;
             if (col.id === 'cdrU') v = m?.cdrUActual;
             else if (col.id === 'cdrD') v = m?.cdrDActual;
             else if (col.id === 'mxcd') v = m?.mxcdActual;
+            else if (col.id === 'wCdrU') v = m?.wCdrUActual;
+            else if (col.id === 'wCdrD') v = m?.wCdrDActual;
+            else if (col.id === 'wMxcd') v = m?.wMxcdActual;
+            else if (col.id === 'p5CdrU') v = m?.p5CdrUActual;
+            else if (col.id === 'p5CdrD') v = m?.p5CdrDActual;
+            else if (col.id === 'p5Mxcd') v = m?.p5MxcdActual;
             else v = m?.[col.id];
             
             let bg = '#0d0d12';
@@ -1913,19 +2374,102 @@
             else if (col.gradient === 'purple' && stats[col.group]) bg = getPurpleGradient(v, stats[col.group].min, stats[col.group].max);
             
             if (col.id === 'mxcd' && cStats?.mxcd) bg = getOrangeGradient(v, cStats.mxcd.min, cStats.mxcd.max);
+            // Weekly cumulative gradients
+            if (col.id === 'wCdrU' && cStats?.wcdr) bg = getOrangeGradient(v, cStats.wcdr.min, cStats.wcdr.max);
+            else if (col.id === 'wCdrD' && cStats?.wcdr) bg = getOrangeGradient(v, cStats.wcdr.min, cStats.wcdr.max);
+            else if (col.id === 'wMxcd' && cStats?.wmxcd) bg = getOrangeGradient(v, cStats.wmxcd.min, cStats.wmxcd.max);
+            else if (col.id === 'wCdr' && cStats?.wcdrRG) bg = getRGGradient(v, cStats.wcdrRG.min, cStats.wcdrRG.max);
+            // 5PM cumulative gradients
+            if (col.id === 'p5CdrU' && cStats?.p5cdr) bg = getOrangeGradient(v, cStats.p5cdr.min, cStats.p5cdr.max);
+            else if (col.id === 'p5CdrD' && cStats?.p5cdr) bg = getOrangeGradient(v, cStats.p5cdr.min, cStats.p5cdr.max);
+            else if (col.id === 'p5Mxcd' && cStats?.p5mxcd) bg = getOrangeGradient(v, cStats.p5mxcd.min, cStats.p5mxcd.max);
+            else if (col.id === 'p5Cdr' && cStats?.p5cdrRG) bg = getRGGradient(v, cStats.p5cdrRG.min, cStats.p5cdrRG.max);
             
             let cls = 'data-cell';
             if (col.id === 'cl') cls += v > 0 ? ' up' : v < 0 ? ' down' : ' neutral';
             else if (col.id === 'up' && v > 0) cls += ' up';
             else if (col.id === 'dn' && v > 0) cls += ' down';
-            else if (['oc','cdr'].includes(col.id)) cls += v > 0 ? ' up' : v < 0 ? ' down' : '';
+            else if (['oc','cdr','wCdr','p5Cdr'].includes(col.id)) cls += v > 0 ? ' up' : v < 0 ? ' down' : '';
             else if (col.id === 'obos') cls += v === 'OB' ? ' ob' : v === 'OS' ? ' os' : '';
             
-            bd += `<td class="${cls}${ci===0?' hour-border-left':''}" style="background:${bg}">${fmt(v, col.id)}</td>`;
+            // Add border for hi/lo columns if new day high/low made
+            let extraStyle = '';
+            if (col.id === 'hi' && madeNewDayHigh) extraStyle = 'border:2px solid #4ade80;';
+            else if (col.id === 'lo' && madeNewDayLow) extraStyle = 'border:2px solid #f87171;';
+            
+            bd += `<td class="${cls}${ci===0?' hour-border-left':''}" style="background:${bg};${extraStyle}">${fmt(v, col.id)}</td>`;
           });
         });
         bd += '</tr>';
       });
+      
+      // Add percentile rows if enabled
+      if (showPercentiles && data.length > 0) {
+        const percentiles = [10, 25, 50, 75, 90];
+        
+        // Calculate percentile values for each hour and column
+        const hourColVals = {};
+        hours.forEach(h => {
+          hourColVals[h] = {};
+          cols.forEach(col => {
+            hourColVals[h][col.id] = [];
+          });
+        });
+        
+        data.forEach(day => {
+          hours.forEach(h => {
+            const m = day.hrs[h]?.m;
+            if (!m) return;
+            cols.forEach(col => {
+              let v;
+              if (col.id === 'cdrU') v = m.cdrUActual;
+              else if (col.id === 'cdrD') v = m.cdrDActual;
+              else if (col.id === 'mxcd') v = m.mxcdActual;
+              else v = m[col.id];
+              if (v != null && typeof v === 'number') hourColVals[h][col.id].push(v);
+            });
+          });
+        });
+        
+        // Calculate percentile function
+        function calcPercentile(arr, p) {
+          if (arr.length === 0) return null;
+          const sorted = [...arr].sort((a, b) => a - b);
+          const idx = (p / 100) * (sorted.length - 1);
+          const lower = Math.floor(idx);
+          const upper = Math.ceil(idx);
+          if (lower === upper) return sorted[lower];
+          return sorted[lower] + (sorted[upper] - sorted[lower]) * (idx - lower);
+        }
+        
+        // Add percentile rows
+        percentiles.forEach(p => {
+          bd += `<tr class="percentile-row" style="background:rgba(247,147,26,0.08);border-top:2px solid rgba(247,147,26,0.3);">`;
+          bd += `<td class="sticky-col" style="left:0;min-width:65px;font-weight:600;color:var(--accent-btc)">P${p}</td>`;
+          bd += `<td class="sticky-col" style="left:65px;min-width:28px"></td>`;
+          bd += `<td class="sticky-col" style="left:93px;min-width:20px"></td>`;
+          
+          if (showDayCols && dtCols.length > 0) {
+            let pos = 113;
+            dtCols.forEach((c, i) => {
+              const w = ['dOpen','dHigh','dLow','dClose'].includes(c.id) ? 52 : ['dOC','dOCH','d5pmOC','wOC'].includes(c.id) ? 48 : 38;
+              const isLast = i === dtCols.length - 1;
+              bd += `<td class="sticky-col" style="left:${pos}px;min-width:${w}px${isLast?';border-right:2px solid rgba(100,149,237,0.3)':''}"></td>`;
+              pos += w;
+            });
+          }
+          
+          hours.forEach((h, hi) => {
+            cols.forEach((col, ci) => {
+              const vals = hourColVals[h][col.id];
+              const pVal = calcPercentile(vals, p);
+              const display = pVal != null ? (Number.isInteger(pVal) ? pVal : pVal.toFixed(1)) : '—';
+              bd += `<td class="data-cell${ci===0?' hour-border-left':''}" style="font-size:9px;color:var(--accent-btc)">${display}</td>`;
+            });
+          });
+          bd += '</tr>';
+        });
+      }
       
       document.getElementById('table-body').innerHTML = bd;
     }
@@ -1933,7 +2477,12 @@
     // ==================== DAY VIEW ====================
     function populateDayViewSelect() {
       const sel = document.getElementById('day-view-date');
-      sel.innerHTML = allETDates.map(d => `<option value="${d}">${d} (${DAYS_SHORT[etDays[d].dow]})</option>`).join('');
+      const sel2 = document.getElementById('day-view-date2');
+      const opts = allETDates.map(d => `<option value="${d}">${d} (${DAYS_SHORT[etDays[d].dow]})</option>`).join('');
+      sel.innerHTML = opts;
+      sel2.innerHTML = opts;
+      // Set second date to previous day if available
+      if (allETDates.length > 1) sel2.value = allETDates[1];
     }
     
     function renderDayView() {
@@ -1946,7 +2495,12 @@
       const day = etDays[date];
       const bars = barsByET[date];
       
-      document.getElementById('day-view-title').textContent = `${date} (${DAYS_SHORT[day.dow]})`;
+      const date2 = compareMode ? document.getElementById('day-view-date2').value : null;
+      let titleText = `${date} (${DAYS_SHORT[day.dow]})`;
+      if (compareMode && date2 && etDays[date2]) {
+        titleText += ` vs ${date2} (${DAYS_SHORT[etDays[date2].dow]})`;
+      }
+      document.getElementById('day-view-title').textContent = titleText;
       
       document.getElementById('day-stats-grid').innerHTML = `
         <div class="day-stat-box"><div class="day-stat-val">${day.dRng?.toLocaleString() ?? '—'}</div><div class="day-stat-lbl">Day Range</div></div>
@@ -2129,7 +2683,7 @@
       document.getElementById('day-table-head').innerHTML = hd;
       
       const hourStats = { rng: [], urlr: [], oc: [], cdr: [], ddrev: [] };
-      const minStats = { ur: [], lr: [], oc: [] };
+      const minStats = { ur: [], lr: [], oc: [], hrOC: [] };
       
       HOURS.forEach(h => {
         const hd = day.hrs[h];
@@ -2143,13 +2697,14 @@
           if (hourlyDDRev[h].hDD != null) hourStats.ddrev.push(hourlyDDRev[h].hDD);
           if (hourlyDDRev[h].hRev != null) hourStats.ddrev.push(hourlyDDRev[h].hRev);
         }
-        if (hourBars[h]) {
+        if (hourBars[h] && day.hrs[h]) {
           MINS.forEach(m => {
             const bar = hourBars[h][m];
             if (bar) {
               minStats.ur.push(Math.round(bar.high - bar.open));
               minStats.lr.push(Math.round(bar.open - bar.low));
               minStats.oc.push(Math.round(bar.close - bar.open));
+              minStats.hrOC.push(Math.round(bar.close - day.hrs[h].o));
             }
           });
         }
@@ -2165,6 +2720,7 @@
       const mStats = {
         urlr: { min: Math.min(...minStats.ur, ...minStats.lr), max: Math.max(...minStats.ur, ...minStats.lr) },
         oc: { min: Math.min(...minStats.oc), max: Math.max(...minStats.oc) },
+        hrOC: minStats.hrOC.length ? { min: Math.min(...minStats.hrOC), max: Math.max(...minStats.hrOC) } : { min: -100, max: 100 },
       };
       
       let bd = '';
@@ -2192,9 +2748,11 @@
           bd += `<td style="background:${ddrev.hDD != null ? getOrangeGradient(ddrev.hDD, hStats.ddrev.min, hStats.ddrev.max) : ''}">${ddrev.hDD ?? ''}</td>`;
           bd += `<td style="background:${ddrev.hRev != null ? getOrangeGradient(ddrev.hRev, hStats.ddrev.min, hStats.ddrev.max) : ''}">${ddrev.hRev ?? ''}</td>`;
           if (showDayOHLC) {
+            const highBorder = cumDD.madeNewHigh ? 'border:2px solid #4ade80;' : '';
+            const lowBorder = cumDD.madeNewLow ? 'border:2px solid #f87171;' : '';
             bd += `<td class="group-border">${hm.o.toLocaleString()}</td>`;
-            bd += `<td>${hm.hi.toLocaleString()}</td>`;
-            bd += `<td>${hm.lo.toLocaleString()}</td>`;
+            bd += `<td style="${highBorder}">${hm.hi.toLocaleString()}</td>`;
+            bd += `<td style="${lowBorder}">${hm.lo.toLocaleString()}</td>`;
             bd += `<td>${hm.c.toLocaleString()}</td>`;
           }
           bd += `<td class="group-border ${hm.cdr >= 0 ? 'up' : 'down'}" style="background:${getRGGradient(hm.cdr, hStats.cdr.min, hStats.cdr.max)}">${hm.cdr >= 0 ? '+' : ''}${hm.cdr}</td>`;
@@ -2240,12 +2798,32 @@
             else if (madeNewDayHigh) ocBorder = 'border:2px solid #4ade80;';
             else if (madeNewDayLow) ocBorder = 'border:2px solid #f87171;';
             
-            bd += `<td class="min-cell${borderCls}" style="min-height:52px;">
-              <div class="min-grid" style="grid-template-rows:1fr 1fr 1fr;">
+            const barRsi = bar.rsi != null ? Math.round(bar.rsi) : null;
+            const rsiDisplay = barRsi != null ? barRsi : '';
+            const rsiBg = getRSIGradient(barRsi);
+            // RSI OB/OS border - now on entire row4, purple for OB, orange for OS
+            let row4BorderCls = '';
+            if (barRsi != null && barRsi >= obLevel) row4BorderCls = ' rsi-ob-border';
+            else if (barRsi != null && barRsi <= osLevel) row4BorderCls = ' rsi-os-border';
+            
+            // Gradient for row4 based on hrOC value
+            const hrOCGradient = getRGGradient(hrOC, mStats.hrOC.min, mStats.hrOC.max);
+            
+            // Build tooltip info
+            const barRng = Math.round(bar.high - bar.low);
+            const barMaxUR = ur;
+            const barMaxLR = lr;
+            const tooltipText = `O: ${Math.round(bar.open).toLocaleString()}\\nH: ${Math.round(bar.high).toLocaleString()}\\nL: ${Math.round(bar.low).toLocaleString()}\\nC: ${Math.round(bar.close).toLocaleString()}\\nRng: ${barRng}\\nUR: ${barMaxUR} / LR: ${barMaxLR}`;
+            
+            bd += `<td class="min-cell${borderCls}" style="min-height:56px;">
+              <div class="min-grid" style="grid-template-rows:1fr 1fr 1fr 1fr;">
                 <div class="min-grid-top left" style="background:${getOrangeGradient(ur, mStats.urlr.min, mStats.urlr.max)};${urBorder}">${ur}<span class="min-lvl">(${lvlUp})</span></div>
                 <div class="min-grid-top" style="background:${getOrangeGradient(lr, mStats.urlr.min, mStats.urlr.max)};${lrBorder}">${lr}<span class="min-lvl">(${lvlDn})</span></div>
-                <div class="min-grid-bottom ${oc >= 0 ? 'up' : 'down'}" style="background:${getRGGradient(oc, mStats.oc.min, mStats.oc.max)};border-bottom:1px solid var(--border-medium);${ocBorder}">${oc >= 0 ? '+' : ''}${oc}<span class="min-lvl">(${lvlCl >= 0 ? '+' : ''}${lvlCl})</span></div>
-                <div class="min-grid-bottom ${hrOC >= 0 ? 'up' : 'down'}" style="background:${getRGGradient(hrOC, hStats.oc.min, hStats.oc.max)};grid-column:1/3;font-size:8px;">${hrOC >= 0 ? '+' : ''}${hrOC}<span class="min-lvl">(${hrLvl >= 0 ? '+' : ''}${hrLvl})</span></div>
+                <div class="min-grid-bottom ${oc >= 0 ? 'up' : 'down'}" style="background:${getRGGradient(oc, mStats.oc.min, mStats.oc.max)};border-bottom:1px solid var(--border-medium);${ocBorder}">${oc >= 0 ? '+' : ''}${oc}<span class="min-lvl">(${lvlCl >= 0 ? '+' : ''}${lvlCl})</span><span class="info-tooltip" data-tooltip="${tooltipText}">ⓘ</span></div>
+                <div class="min-grid-row4${row4BorderCls}" style="grid-column:1/3;background:${hrOCGradient};">
+                  <span class="hr-oc ${hrOC >= 0 ? 'up' : 'down'}">${hrOC >= 0 ? '+' : ''}${hrOC}<span class="min-lvl">(${hrLvl >= 0 ? '+' : ''}${hrLvl})</span></span>
+                  <span class="bar-rsi" style="background:${rsiBg}">${rsiDisplay}</span>
+                </div>
               </div>
             </td>`;
           } else {
@@ -2257,6 +2835,111 @@
       });
       
       document.getElementById('day-table-body').innerHTML = bd;
+      
+      // Render second panel if in compare mode
+      if (compareMode) {
+        const date2 = document.getElementById('day-view-date2').value;
+        if (date2 && barsByET[date2]) {
+          renderDayViewPanel2(date2, lvl, hlFrom, hlTo);
+        }
+      }
+    }
+    
+    function renderDayViewPanel2(date, lvl, hlFrom, hlTo) {
+      const day = etDays[date];
+      const bars = barsByET[date];
+      if (!day || !bars) return;
+      
+      const hourBars = {};
+      bars.forEach(b => {
+        if (!hourBars[b.etHour]) hourBars[b.etHour] = {};
+        hourBars[b.etHour][String(b.etMin).padStart(2, '0')] = b;
+      });
+      
+      // Collect stats for gradients
+      const hStats = { rng: [], urlr: [], oc: [], cdr: [] };
+      const mStats = { urlr: [], oc: [] };
+      
+      HOURS.forEach(h => {
+        const hd = day.hrs[h];
+        if (hd?.m) {
+          hStats.rng.push(hd.m.rng);
+          hStats.urlr.push(hd.m.ur, hd.m.lr);
+          hStats.oc.push(hd.m.oc);
+          hStats.cdr.push(hd.m.cdr);
+        }
+        MINS.forEach(m => {
+          const bar = hourBars[h]?.[m];
+          if (bar) {
+            mStats.urlr.push(Math.round(bar.high - bar.open), Math.round(bar.open - bar.low));
+            mStats.oc.push(Math.round(bar.close - bar.open));
+          }
+        });
+      });
+      
+      const calcStats = arr => arr.length ? { min: Math.min(...arr), max: Math.max(...arr) } : { min: 0, max: 0 };
+      Object.keys(hStats).forEach(k => hStats[k] = calcStats(hStats[k]));
+      Object.keys(mStats).forEach(k => mStats[k] = calcStats(mStats[k]));
+      
+      let hd = `<tr><th rowspan="2" class="hour-cell">Hour</th><th colspan="7" class="group-header">Range</th><th colspan="${MINS.length}" class="group-header">5-Min Bars</th></tr>`;
+      hd += '<tr><th class="group-border">Rng</th><th>UR</th><th>LR</th><th>#Up</th><th>#Dn</th><th>#Cl</th><th>O-C</th>';
+      MINS.forEach((m, i) => { hd += `<th class="${i === 0 ? 'group-border' : ''}">:${m}</th>`; });
+      hd += '</tr>';
+      document.getElementById('day-table-head-2').innerHTML = hd;
+      
+      let bd = '';
+      HOURS.forEach(h => {
+        const hdata = day.hrs[h];
+        const hm = hdata?.m;
+        const isHL = h >= hlFrom && h <= hlTo;
+        bd += `<tr class="${isHL ? 'highlight-row' : ''}">`;
+        bd += `<td class="hour-cell">${formatHourHeader(h)}</td>`;
+        
+        if (hm) {
+          bd += `<td class="group-border" style="background:${getOrangeGradient(hm.rng, hStats.rng.min, hStats.rng.max)}">${hm.rng}</td>`;
+          bd += `<td style="background:${getOrangeGradient(hm.ur, hStats.urlr.min, hStats.urlr.max)}">${hm.ur}</td>`;
+          bd += `<td style="background:${getOrangeGradient(hm.lr, hStats.urlr.min, hStats.urlr.max)}">${hm.lr}</td>`;
+          bd += `<td style="color:${hm.up > 0 ? '#a7f3d0' : ''}">${hm.up}</td>`;
+          bd += `<td style="color:${hm.dn > 0 ? '#fecaca' : ''}">${hm.dn}</td>`;
+          bd += `<td style="color:${hm.cl > 0 ? '#a7f3d0' : hm.cl < 0 ? '#fecaca' : ''}">${hm.cl > 0 ? '+' + hm.cl : hm.cl}</td>`;
+          bd += `<td class="${hm.oc >= 0 ? 'up' : 'down'}" style="background:${getRGGradient(hm.oc, hStats.oc.min, hStats.oc.max)}">${hm.oc >= 0 ? '+' : ''}${hm.oc}</td>`;
+        } else {
+          bd += `<td colspan="7" class="group-border" style="color:var(--text-muted)">No data</td>`;
+        }
+        
+        MINS.forEach((m, mi) => {
+          const bar = hourBars[h]?.[m];
+          const borderCls = mi === 0 ? ' group-border' : '';
+          if (bar && hdata) {
+            const ur = Math.round(bar.high - bar.open);
+            const lr = Math.round(bar.open - bar.low);
+            const oc = Math.round(bar.close - bar.open);
+            const lvlUp = Math.max(0, Math.floor(bar.high / lvl) - Math.floor(bar.open / lvl));
+            const lvlDn = Math.max(0, Math.floor(bar.open / lvl) - Math.floor(bar.low / lvl));
+            const lvlCl = Math.floor(bar.close / lvl) - Math.floor(bar.open / lvl);
+            const hrOC = Math.round(bar.close - hdata.o);
+            const hrLvl = Math.floor(bar.close / lvl) - Math.floor(hdata.o / lvl);
+            const barRsi = bar.rsi != null ? Math.round(bar.rsi) : null;
+            
+            bd += `<td class="min-cell${borderCls}" style="min-height:60px;">
+              <div class="min-grid" style="grid-template-rows:1fr 1fr 1fr 1fr;">
+                <div class="min-grid-top left" style="background:${getOrangeGradient(ur, mStats.urlr.min, mStats.urlr.max)}">${ur}<span class="min-lvl">(${lvlUp})</span></div>
+                <div class="min-grid-top" style="background:${getOrangeGradient(lr, mStats.urlr.min, mStats.urlr.max)}">${lr}<span class="min-lvl">(${lvlDn})</span></div>
+                <div class="min-grid-bottom ${oc >= 0 ? 'up' : 'down'}" style="background:${getRGGradient(oc, mStats.oc.min, mStats.oc.max)};border-bottom:1px solid var(--border-medium);">${oc >= 0 ? '+' : ''}${oc}<span class="min-lvl">(${lvlCl >= 0 ? '+' : ''}${lvlCl})</span></div>
+                <div class="min-grid-row4" style="grid-column:1/3;">
+                  <span class="hr-oc ${hrOC >= 0 ? 'up' : 'down'}">${hrOC >= 0 ? '+' : ''}${hrOC}<span class="min-lvl">(${hrLvl >= 0 ? '+' : ''}${hrLvl})</span></span>
+                  <span class="bar-rsi" style="background:${getRSIGradient(barRsi)}">${barRsi ?? ''}</span>
+                </div>
+              </div>
+            </td>`;
+          } else {
+            bd += `<td class="min-cell${borderCls}" style="color:var(--text-muted)">—</td>`;
+          }
+        });
+        bd += '</tr>';
+      });
+      
+      document.getElementById('day-table-body-2').innerHTML = bd;
     }
     
     // ==================== CALENDAR VIEW ====================
@@ -2286,18 +2969,30 @@
     function toggleHVDay(d) {
       hvSelectedDays.has(d) ? hvSelectedDays.delete(d) : hvSelectedDays.add(d);
       document.querySelector(`[data-hv-day="${d}"]`).classList.toggle('active');
+      // Clear synced dates when manually changing filters
+      window.hvUseSyncedDates = false;
       renderHourView();
     }
     
     function setHVWeekdays() {
       hvSelectedDays = new Set([1,2,3,4,5]);
       document.querySelectorAll('[data-hv-day]').forEach(b => b.classList.toggle('active', hvSelectedDays.has(+b.dataset.hvDay)));
+      // Clear synced dates when manually changing filters
+      window.hvUseSyncedDates = false;
       renderHourView();
     }
     
     function syncHVFromOverview() {
+      // Sync the day of week filter
       hvSelectedDays = new Set(selectedDays);
       document.querySelectorAll('[data-hv-day]').forEach(b => b.classList.toggle('active', hvSelectedDays.has(+b.dataset.hvDay)));
+      
+      // Also store the actual filtered dates from overview to use in hour view filtering
+      // This handles complex filters like specific dates, months, occurrences, column filters, etc.
+      const overviewData = getFilteredData();
+      window.hvSyncedDates = new Set(overviewData.map(d => d.date));
+      window.hvUseSyncedDates = true;
+      
       renderHourView();
     }
     
@@ -2310,6 +3005,11 @@
       
       // Get filtered days that have this hour
       const filteredDays = Object.values(etDays).filter(d => {
+        // If using synced dates from overview, use those exact dates
+        if (window.hvUseSyncedDates && window.hvSyncedDates) {
+          return window.hvSyncedDates.has(d.date) && d.hrs[hour] != null;
+        }
+        // Otherwise use the day-of-week filter along with year/month filters
         if (!hvSelectedDays.has(d.dow)) return false;
         if (!selectedYears.has(d.date.slice(0,4))) return false;
         if (!selectedMonths.has(d.month)) return false;
@@ -2396,28 +3096,44 @@
       `;
       
       // Build header
-      let hd = '<tr>';
-      hd += '<th rowspan="2" class="hour-cell" style="min-width:70px;background:#1a1a24">Date</th>';
-      hd += '<th rowspan="2" class="hour-cell" style="min-width:35px;background:#1a1a24">Day</th>';
-      hd += '<th colspan="11" class="group-header">Range &amp; Levels</th>';
-      hd += '<th colspan="5" class="group-header cum-header">Cumulative</th>';
-      hd += `<th colspan="${MINS.length}" class="group-header section-header">5-Min Bars</th>`;
-      hd += '</tr><tr>';
-      hd += '<th class="group-border">Rng</th><th>UR</th><th>LR</th><th>#Up</th><th>#Dn</th><th>#Cl</th><th>HMin</th><th>LMin</th><th>O-C</th><th>HDD</th><th>HRev</th>';
-      hd += '<th class="group-border">CDR</th><th>CURng</th><th>CDUp</th><th>CDDn</th><th>#Grn</th>';
-      MINS.forEach((m, i) => { hd += `<th class="${i === 0 ? 'group-border section-header' : 'section-header'}">:${m}</th>`; });
-      hd += '</tr>';
-      document.getElementById('hour-table-head').innerHTML = hd;
+      let headerHTML = '<tr>';
+      headerHTML += '<th rowspan="2" class="hour-cell" style="min-width:70px;background:#1a1a24 !important">Date</th>';
+      headerHTML += '<th rowspan="2" class="hour-cell" style="min-width:35px;background:#1a1a24 !important">Day</th>';
+      headerHTML += '<th colspan="11" class="group-header">Range &amp; Levels</th>';
+      headerHTML += '<th colspan="4" class="group-header ohlc-header">OHLC</th>';
+      headerHTML += '<th colspan="5" class="group-header cum-header">Cumulative</th>';
+      headerHTML += `<th colspan="${MINS.length}" class="group-header section-header">5-Min Bars</th>`;
+      headerHTML += '</tr><tr>';
+      headerHTML += '<th class="group-border">Rng</th><th>UR</th><th>LR</th><th>#Up</th><th>#Dn</th><th>#Cl</th><th>HMin</th><th>LMin</th><th>O-C</th><th>HDD</th><th>HRev</th>';
+      headerHTML += '<th class="group-border">Open</th><th>High</th><th>Low</th><th>Close</th>';
+      headerHTML += '<th class="group-border">CDR</th><th>CURng</th><th>CDUp</th><th>CDDn</th><th>#Grn</th>';
+      MINS.forEach((m, i) => { headerHTML += `<th class="${i === 0 ? 'group-border section-header' : 'section-header'}">:${m}</th>`; });
+      headerHTML += '</tr>';
+      document.getElementById('hour-table-head').innerHTML = headerHTML;
       
       // Build body
       let bd = '';
       filteredDays.forEach(day => {
-        const hd = day.hrs[hour];
-        const hm = hd?.m;
+        const hourData = day.hrs[hour];
+        const hm = hourData?.m;
         const bars = barsByET[day.date];
         const hourBars = {};
         if (bars) bars.filter(b => b.etHour === hour).forEach(b => hourBars[String(b.etMin).padStart(2, '0')] = b);
         const ddrev = dayHourlyDDRev[day.date] || {};
+        
+        // Check if this hour made a new day high/low
+        let madeNewDayHigh = false, madeNewDayLow = false;
+        if (hourData) {
+          let runH = -Infinity, runL = Infinity;
+          for (let h = 0; h < hour; h++) {
+            if (day.hrs[h]) {
+              runH = Math.max(runH, day.hrs[h].h);
+              runL = Math.min(runL, day.hrs[h].l);
+            }
+          }
+          madeNewDayHigh = hourData.h > runH;
+          madeNewDayLow = hourData.l < runL;
+        }
         
         bd += `<tr>`;
         bd += `<td class="hour-cell" style="text-align:left">${day.date}</td>`;
@@ -2435,13 +3151,20 @@
           bd += `<td class="${hm.oc >= 0 ? 'up' : 'down'}" style="background:${getRGGradient(hm.oc, hStats.oc.min, hStats.oc.max)}">${hm.oc >= 0 ? '+' : ''}${hm.oc}</td>`;
           bd += `<td style="background:${ddrev.hDD != null ? getOrangeGradient(ddrev.hDD, hStats.ddrev.min, hStats.ddrev.max) : ''}">${ddrev.hDD ?? ''}</td>`;
           bd += `<td style="background:${ddrev.hRev != null ? getOrangeGradient(ddrev.hRev, hStats.ddrev.min, hStats.ddrev.max) : ''}">${ddrev.hRev ?? ''}</td>`;
+          // OHLC with green/red borders for new day high/low
+          const highBorder = madeNewDayHigh ? 'border:2px solid #4ade80;' : '';
+          const lowBorder = madeNewDayLow ? 'border:2px solid #f87171;' : '';
+          bd += `<td class="group-border">${hm.o.toLocaleString()}</td>`;
+          bd += `<td style="${highBorder}">${hm.hi.toLocaleString()}</td>`;
+          bd += `<td style="${lowBorder}">${hm.lo.toLocaleString()}</td>`;
+          bd += `<td>${hm.c.toLocaleString()}</td>`;
           bd += `<td class="group-border ${hm.cdr >= 0 ? 'up' : 'down'}" style="background:${getRGGradient(hm.cdr, hStats.cdr.min, hStats.cdr.max)}">${hm.cdr >= 0 ? '+' : ''}${hm.cdr}</td>`;
-          bd += `<td style="background:${hm.mxcd != null ? getOrangeGradient(hm.mxcdActual, 0, hStats.urlr.max) : ''}">${hm.mxcd != null ? hm.mxcd : ''}</td>`;
-          bd += `<td style="background:${hm.cdrU != null ? getOrangeGradient(hm.cdrUActual, 0, hStats.urlr.max) : ''}">${hm.cdrU != null ? hm.cdrU : ''}</td>`;
-          bd += `<td style="background:${hm.cdrD != null ? getOrangeGradient(hm.cdrDActual, 0, hStats.urlr.max) : ''}">${hm.cdrD != null ? hm.cdrD : ''}</td>`;
+          bd += `<td style="background:${getOrangeGradient(hm.mxcdActual, 0, hStats.urlr.max)}">${hm.mxcdActual ?? ''}</td>`;
+          bd += `<td style="background:${getOrangeGradient(hm.cdrUActual, 0, hStats.urlr.max)}">${hm.cdrUActual ?? ''}</td>`;
+          bd += `<td style="background:${getOrangeGradient(hm.cdrDActual, 0, hStats.urlr.max)}">${hm.cdrDActual ?? ''}</td>`;
           bd += `<td style="background:${getGreenBarGradient(hm.greenBars)}">${hm.greenBars}</td>`;
         } else {
-          bd += `<td colspan="16" class="group-border" style="color:var(--text-muted)">No data</td>`;
+          bd += `<td colspan="20" class="group-border" style="color:var(--text-muted)">No data</td>`;
         }
         
         // Calculate running O-C for each minute
@@ -2449,9 +3172,9 @@
         const minOCs = {};
         MINS.forEach(m => {
           const bar = hourBars[m];
-          if (bar && hd) {
-            runningOC = Math.round(bar.close - hd.o);
-            minOCs[m] = { oc: runningOC, lvl: Math.floor(bar.close / lvl) - Math.floor(hd.o / lvl) };
+          if (bar && hourData) {
+            runningOC = Math.round(bar.close - hourData.o);
+            minOCs[m] = { oc: runningOC, lvl: Math.floor(bar.close / lvl) - Math.floor(hourData.o / lvl) };
           }
         });
         
@@ -2479,7 +3202,7 @@
         MINS.forEach((m, mi) => {
           const bar = hourBars[m];
           const borderCls = mi === 0 ? ' group-border' : '';
-          if (bar && hd) {
+          if (bar && hourData) {
             const ur = Math.round(bar.high - bar.open);
             const lr = Math.round(bar.open - bar.low);
             const oc = Math.round(bar.close - bar.open);
@@ -2494,12 +3217,31 @@
             const urBorder = madeNewHigh ? 'border:2px solid #4ade80;' : '';
             const lrBorder = madeNewLow ? 'border:2px solid #f87171;' : '';
             
-            bd += `<td class="min-cell${borderCls}" style="min-height:52px;">
-              <div class="min-grid" style="grid-template-rows:1fr 1fr 1fr;">
+            const barRsi = bar.rsi != null ? Math.round(bar.rsi) : null;
+            const rsiDisplay = barRsi != null ? barRsi : '';
+            const rsiBg = getRSIGradient(barRsi);
+            
+            // RSI OB/OS border - now on entire row4, purple for OB, orange for OS
+            let row4BorderCls = '';
+            if (barRsi != null && barRsi >= obLevel) row4BorderCls = ' rsi-ob-border';
+            else if (barRsi != null && barRsi <= osLevel) row4BorderCls = ' rsi-os-border';
+            
+            // Gradient for row4 based on hrOC value
+            const hrOCGradient = getRGGradient(hrOC.oc, hStats.oc.min, hStats.oc.max);
+            
+            // Build tooltip info
+            const barRng = Math.round(bar.high - bar.low);
+            const tooltipText = `O: ${Math.round(bar.open).toLocaleString()}\\nH: ${Math.round(bar.high).toLocaleString()}\\nL: ${Math.round(bar.low).toLocaleString()}\\nC: ${Math.round(bar.close).toLocaleString()}\\nRng: ${barRng}\\nUR: ${ur} / LR: ${lr}`;
+            
+            bd += `<td class="min-cell${borderCls}" style="min-height:56px;">
+              <div class="min-grid" style="grid-template-rows:1fr 1fr 1fr 1fr;">
                 <div class="min-grid-top left" style="background:${getOrangeGradient(ur, mStats.urlr.min, mStats.urlr.max)};${urBorder}">${ur}<span class="min-lvl">(${lvlUp})</span></div>
                 <div class="min-grid-top" style="background:${getOrangeGradient(lr, mStats.urlr.min, mStats.urlr.max)};${lrBorder}">${lr}<span class="min-lvl">(${lvlDn})</span></div>
-                <div class="min-grid-bottom ${oc >= 0 ? 'up' : 'down'}" style="background:${getRGGradient(oc, mStats.oc.min, mStats.oc.max)};border-bottom:1px solid var(--border-medium);">${oc >= 0 ? '+' : ''}${oc}<span class="min-lvl">(${lvlCl >= 0 ? '+' : ''}${lvlCl})</span></div>
-                <div class="min-grid-bottom ${hrOC.oc >= 0 ? 'up' : 'down'}" style="background:${getRGGradient(hrOC.oc, hStats.oc.min, hStats.oc.max)};grid-column:1/3;font-size:8px;">${hrOC.oc >= 0 ? '+' : ''}${hrOC.oc}<span class="min-lvl">(${hrOC.lvl >= 0 ? '+' : ''}${hrOC.lvl})</span></div>
+                <div class="min-grid-bottom ${oc >= 0 ? 'up' : 'down'}" style="background:${getRGGradient(oc, mStats.oc.min, mStats.oc.max)};border-bottom:1px solid var(--border-medium);">${oc >= 0 ? '+' : ''}${oc}<span class="min-lvl">(${lvlCl >= 0 ? '+' : ''}${lvlCl})</span><span class="info-tooltip" data-tooltip="${tooltipText}">ⓘ</span></div>
+                <div class="min-grid-row4${row4BorderCls}" style="grid-column:1/3;background:${hrOCGradient};">
+                  <span class="hr-oc ${hrOC.oc >= 0 ? 'up' : 'down'}">${hrOC.oc >= 0 ? '+' : ''}${hrOC.oc}<span class="min-lvl">(${hrOC.lvl >= 0 ? '+' : ''}${hrOC.lvl})</span></span>
+                  <span class="bar-rsi" style="background:${rsiBg}">${rsiDisplay}</span>
+                </div>
               </div>
             </td>`;
           } else {
@@ -2515,24 +3257,74 @@
     
     function renderCalendar() {
       const colorBy = document.getElementById('calendar-color-by').value;
+      const calCloseHour = parseInt(document.getElementById('calendar-close-hour').value) || 16;
+      
+      // Show/hide hour selector based on colorBy selection
+      document.getElementById('cal-hour-group').style.display = colorBy === 'dMxToHr' ? 'flex' : 'none';
+      
+      // Helper to calculate max DUR/DLR to a specific hour
+      function calcMaxToHour(dayData, toHour) {
+        const dayOpen = dayData.dO;
+        if (dayOpen == null) return null;
+        
+        let maxHigh = dayOpen;
+        let minLow = dayOpen;
+        
+        for (let h = 0; h <= toHour; h++) {
+          const hr = dayData.hrs[h];
+          if (hr) {
+            if (hr.h != null && hr.h > maxHigh) maxHigh = hr.h;
+            if (hr.l != null && hr.l < minLow) minLow = hr.l;
+          }
+        }
+        
+        const dur = Math.round(maxHigh - dayOpen);
+        const dlr = Math.round(dayOpen - minLow);
+        return Math.max(dur, dlr);
+      }
       
       const allVals = [];
       Object.values(etDays).forEach(d => {
         if (!calSelectedYears.has(d.date.slice(0,4))) return;
         if (!calColorDays.has(d.dow)) return;
         if (calColorDates && !calColorDates.has(d.date)) return;
-        const v = colorBy === 'dMx' ? d.dMx : d[colorBy];
+        
+        let v;
+        if (colorBy === 'dMx') {
+          v = d.dMx;
+        } else if (colorBy === 'dMxToHr') {
+          v = calcMaxToHour(d, calCloseHour);
+        } else {
+          v = d[colorBy];
+        }
         if (v != null) allVals.push(v);
       });
       
       const stats = allVals.length ? { min: Math.min(...allVals), max: Math.max(...allVals) } : { min: 0, max: 0 };
       const years = availableYears.filter(y => calSelectedYears.has(y));
       
+      // Get current date to filter out future months
+      const today = new Date();
+      const currentYear = today.getFullYear();
+      const currentMonth = today.getMonth(); // 0-indexed
+      
       let html = '';
       years.forEach(year => {
         html += `<div class="calendar-year"><div class="calendar-year-title">${year}</div><div class="calendar-months">`;
         
         for (let m = 0; m < 12; m++) {
+          // Skip future months
+          if (parseInt(year) > currentYear || (parseInt(year) === currentYear && m > currentMonth)) {
+            continue;
+          }
+          
+          // Check if this month has any data in the synced filter (if filter is set)
+          if (calColorDates && calColorDates.size > 0) {
+            const monthPrefix = `${year}-${String(m + 1).padStart(2, '0')}`;
+            const hasDataInMonth = [...calColorDates].some(d => d.startsWith(monthPrefix));
+            if (!hasDataInMonth) continue;
+          }
+          
           html += `<div class="calendar-month"><div class="calendar-month-title">${MONTHS_SHORT[m]}</div>`;
           html += '<div class="calendar-weekdays">';
           ['S','M','T','W','T','F','S'].forEach(d => html += `<div class="calendar-weekday">${d}</div>`);
@@ -2550,23 +3342,41 @@
             const isWeekend = dow === 0 || dow === 6;
             
             if (dayData) {
-              const v = colorBy === 'dMx' ? dayData.dMx : dayData[colorBy];
+              let v;
+              if (colorBy === 'dMx') {
+                v = dayData.dMx;
+              } else if (colorBy === 'dMxToHr') {
+                v = calcMaxToHour(dayData, calCloseHour);
+              } else {
+                v = dayData[colorBy];
+              }
+              
               const shouldColor = calColorDays.has(dow) && (!calColorDates || calColorDates.has(dateStr));
               let bg = '#0d0d12';
               
-              if (shouldColor) {
+              if (shouldColor && v != null) {
                 bg = colorBy === 'dOC' ? getRGGradient(v, stats.min, stats.max) : getOrangeGradient(v, stats.min, stats.max);
               }
               
               const ocClass = dayData.dOC >= 0 ? 'positive' : 'negative';
+              
+              // Calculate max(DUR, DLR) to hour for display
+              const maxToHr = calcMaxToHour(dayData, calCloseHour);
+              const maxToHrDisplay = maxToHr != null ? maxToHr.toLocaleString() : '—';
+              
               const maxURLR = Math.max(dayData.dUR || 0, dayData.dLR || 0);
+              
+              // Weekly O-C
+              const wocDisplay = dayData.wOC != null ? ((dayData.wOC >= 0 ? '+' : '') + dayData.wOC.toLocaleString()) : '—';
+              const wocClass = dayData.wOC >= 0 ? 'positive' : 'negative';
               
               html += `<div class="calendar-day${isWeekend ? ' weekend' : ''}${shouldColor ? '' : ' no-color'}" style="background:${bg}" onclick="goToDate('${dateStr}')">
                 <div class="day-header"><span class="day-num">${d}</span><span class="day-close">${dayData.dC ? Math.round(dayData.dC).toLocaleString() : ''}</span></div>
                 <div class="day-rng" style="color:var(--text-secondary)">Rng: ${dayData.dRng?.toLocaleString() ?? '—'}</div>
                 <div class="day-urlr"><span class="day-ur">↑${dayData.dUR?.toLocaleString() ?? '—'}</span><span class="day-lr">↓${dayData.dLR?.toLocaleString() ?? '—'}</span></div>
-                <div class="day-mx" style="font-size:0.5rem;text-align:center;color:var(--accent-btc);">Mx: ${maxURLR.toLocaleString()}</div>
+                <div class="day-mx" style="font-size:0.5rem;text-align:center;color:var(--accent-btc);">To${calCloseHour > 12 ? calCloseHour - 12 : calCloseHour}${calCloseHour >= 12 ? 'P' : 'A'}: ${maxToHrDisplay}</div>
                 <div class="day-oc ${ocClass}">${dayData.dOC != null ? ((dayData.dOC >= 0 ? '+' : '') + dayData.dOC.toLocaleString()) : '—'}</div>
+                <div class="day-woc ${wocClass}" style="font-size:0.45rem;color:var(--accent-purple);">W: ${wocDisplay}</div>
               </div>`;
             } else {
               html += `<div class="calendar-day empty${isWeekend ? ' weekend' : ''}"><span class="day-num" style="color:var(--text-muted)">${d}</span></div>`;
@@ -2618,6 +3428,226 @@
       switchTab('dayview');
     }
     
+    // ==================== 5PM SESSION ====================
+    function initPm5YearFilters() {
+      pm5SelectedYears = new Set(availableYears);
+      document.getElementById('pm5-year-filters').innerHTML = availableYears.map(y => 
+        `<button class="f-btn active" data-pm5-year="${y}" onclick="togglePm5Year('${y}')">${y}</button>`
+      ).join('');
+    }
+    
+    function togglePm5Year(y) {
+      pm5SelectedYears.has(y) ? pm5SelectedYears.delete(y) : pm5SelectedYears.add(y);
+      document.querySelector(`[data-pm5-year="${y}"]`).classList.toggle('active');
+      render5pmSession();
+    }
+    
+    function togglePm5Day(d) {
+      pm5SelectedDays.has(d) ? pm5SelectedDays.delete(d) : pm5SelectedDays.add(d);
+      document.querySelector(`[data-pm5-day="${d}"]`).classList.toggle('active');
+      render5pmSession();
+    }
+    
+    function setPm5NoDays() {
+      pm5SelectedDays.clear();
+      document.querySelectorAll('[data-pm5-day]').forEach(b => b.classList.remove('active'));
+      render5pmSession();
+    }
+    
+    function setPm5Weekdays() {
+      pm5SelectedDays = new Set([1,2,3,4,5]);
+      document.querySelectorAll('[data-pm5-day]').forEach(b => b.classList.toggle('active', pm5SelectedDays.has(+b.dataset.pm5Day)));
+      render5pmSession();
+    }
+    
+    function togglePm5Filters() {
+      document.getElementById('pm5-filters-panel').style.display = 
+        document.getElementById('pm5-filters-panel').style.display === 'none' ? 'flex' : 'none';
+      document.getElementById('btn-pm5-filters').classList.toggle('active');
+    }
+    
+    function syncPm5FromOverview() {
+      pm5SelectedYears = new Set(selectedYears);
+      pm5SelectedDays = new Set(selectedDays);
+      document.querySelectorAll('[data-pm5-year]').forEach(b => b.classList.toggle('active', pm5SelectedYears.has(b.dataset.pm5Year)));
+      document.querySelectorAll('[data-pm5-day]').forEach(b => b.classList.toggle('active', pm5SelectedDays.has(+b.dataset.pm5Day)));
+      render5pmSession();
+    }
+    
+    function togglePm5Cumulative() {
+      pm5ShowCumulative = !pm5ShowCumulative;
+      document.getElementById('btn-pm5-cum').classList.toggle('active', pm5ShowCumulative);
+      render5pmSession();
+    }
+    
+    function getPm5FilteredData() {
+      return Object.values(etDays).filter(d => {
+        if (!pm5SelectedYears.has(d.date.slice(0,4))) return false;
+        if (!pm5SelectedDays.has(d.dow)) return false;
+        if (d.d5pmOpen == null) return false; // Must have 5PM session data
+        return true;
+      }).sort((a, b) => {
+        if (pm5SortColumn === 'date') {
+          return pm5SortDirection === 'asc' ? a.date.localeCompare(b.date) : b.date.localeCompare(a.date);
+        }
+        return 0;
+      });
+    }
+    
+    function render5pmSession() {
+      const data = getPm5FilteredData();
+      const lvl = parseInt(document.getElementById('pm5-level-size').value) || 250;
+      const gMode = document.getElementById('pm5-gradient-mode').value;
+      
+      document.getElementById('pm5-stat-days').textContent = data.length;
+      
+      // Hours in 5PM session order: 17,18,19,20,21,22,23,0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16
+      const PM5_HOURS = [17,18,19,20,21,22,23,0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16];
+      document.getElementById('pm5-stat-hours').textContent = PM5_HOURS.length;
+      
+      // Calculate stats for gradients
+      const stats5pm = { ur: [], lr: [], oc: [], rng: [], cum: [], cumRG: [] };
+      data.forEach(d => {
+        if (d.d5pmUR != null) stats5pm.ur.push(d.d5pmUR);
+        if (d.d5pmLR != null) stats5pm.lr.push(d.d5pmLR);
+        if (d.d5pmOC != null) stats5pm.oc.push(d.d5pmOC);
+        if (d.d5pmMx != null) stats5pm.rng.push(d.d5pmMx);
+        // Add cumulative stats
+        if (d.d5pmUR != null) stats5pm.cum.push(d.d5pmUR);
+        if (d.d5pmLR != null) stats5pm.cum.push(d.d5pmLR);
+        if (d.d5pmOC != null) stats5pm.cumRG.push(d.d5pmOC);
+      });
+      const pm5Stats = {
+        urlr: stats5pm.ur.length ? { min: Math.min(...stats5pm.ur, ...stats5pm.lr), max: Math.max(...stats5pm.ur, ...stats5pm.lr) } : { min: 0, max: 1000 },
+        oc: stats5pm.oc.length ? { min: Math.min(...stats5pm.oc), max: Math.max(...stats5pm.oc) } : { min: -500, max: 500 },
+        rng: stats5pm.rng.length ? { min: Math.min(...stats5pm.rng), max: Math.max(...stats5pm.rng) } : { min: 0, max: 1000 },
+        cum: stats5pm.cum.length ? { min: Math.min(...stats5pm.cum), max: Math.max(...stats5pm.cum) } : { min: 0, max: 2000 },
+        cumRG: stats5pm.cumRG.length ? { min: Math.min(...stats5pm.cumRG), max: Math.max(...stats5pm.cumRG) } : { min: -1000, max: 1000 },
+      };
+      
+      // Build header - columns depend on cumulative toggle
+      const colsPerHour = pm5ShowCumulative ? 8 : 4;
+      let hd = '<tr class="hour-row">';
+      hd += `<th class="sticky-col sticky-header" style="left:0;min-width:65px" rowspan="2">Date</th>`;
+      hd += `<th class="sticky-col sticky-header" style="left:65px;min-width:28px" rowspan="2">Day</th>`;
+      hd += `<th class="sticky-col sticky-header day-totals-header" style="left:93px;background:rgba(139,92,246,0.15) !important" colspan="4">5PM Session Totals</th>`;
+      PM5_HOURS.forEach((h, i) => {
+        const isNextDay = h < 17;
+        const style = isNextDay ? 'background:rgba(74,222,128,0.1);' : '';
+        hd += `<th class="hour-header${i===0?' hour-border-left':''}" style="${style}" colspan="${colsPerHour}">${formatHourHeader(h)}${isNextDay ? '*' : ''}</th>`;
+      });
+      hd += '</tr><tr class="col-row">';
+      // Day totals sub-headers
+      hd += '<th class="sticky-col sticky-header-sub" style="left:93px;background:rgba(139,92,246,0.1) !important">5pUR</th>';
+      hd += '<th class="sticky-col sticky-header-sub" style="left:131px;background:rgba(139,92,246,0.1) !important">5pLR</th>';
+      hd += '<th class="sticky-col sticky-header-sub" style="left:169px;background:rgba(139,92,246,0.1) !important">5pMx</th>';
+      hd += '<th class="sticky-col sticky-header-sub" style="left:207px;background:rgba(139,92,246,0.1) !important;border-right:2px solid rgba(139,92,246,0.3)">5pOC</th>';
+      // Hour sub-headers (regular + optionally cumulative)
+      PM5_HOURS.forEach((h, hi) => {
+        hd += `<th class="col-header${hi===0?' hour-border-left':''}">Rng</th>`;
+        hd += '<th class="col-header">UR</th>';
+        hd += '<th class="col-header">LR</th>';
+        hd += '<th class="col-header">O-C</th>';
+        if (pm5ShowCumulative) {
+          // Cumulative headers with purple tint
+          hd += '<th class="col-header" style="background:rgba(139,92,246,0.1)">5CU</th>';
+          hd += '<th class="col-header" style="background:rgba(139,92,246,0.1)">5CD</th>';
+          hd += '<th class="col-header" style="background:rgba(139,92,246,0.1)">5MxC</th>';
+          hd += '<th class="col-header" style="background:rgba(139,92,246,0.1)">5CR</th>';
+        }
+      });
+      hd += '</tr>';
+      document.getElementById('pm5-table-head').innerHTML = hd;
+      
+      // Build body
+      let bd = '';
+      data.forEach(day => {
+        bd += '<tr>';
+        bd += `<td class="sticky-col date-cell" style="left:0;min-width:65px">${day.date}</td>`;
+        bd += `<td class="sticky-col day-cell" style="left:65px;min-width:28px">${DAYS_SHORT[day.dow]}</td>`;
+        
+        // 5PM session totals
+        bd += `<td class="sticky-col day-total-cell" style="left:93px;background:${getOrangeGradient(day.d5pmUR, pm5Stats.urlr.min, pm5Stats.urlr.max)}">${day.d5pmUR?.toLocaleString() ?? '—'}</td>`;
+        bd += `<td class="sticky-col day-total-cell" style="left:131px;background:${getOrangeGradient(day.d5pmLR, pm5Stats.urlr.min, pm5Stats.urlr.max)}">${day.d5pmLR?.toLocaleString() ?? '—'}</td>`;
+        bd += `<td class="sticky-col day-total-cell" style="left:169px;background:${getOrangeGradient(day.d5pmMx, pm5Stats.rng.min, pm5Stats.rng.max)}">${day.d5pmMx?.toLocaleString() ?? '—'}</td>`;
+        const oc5cls = day.d5pmOC >= 0 ? 'up' : 'down';
+        bd += `<td class="sticky-col day-total-cell ${oc5cls}" style="left:207px;background:${getRGGradient(day.d5pmOC, pm5Stats.oc.min, pm5Stats.oc.max)};border-right:2px solid rgba(139,92,246,0.3)">${day.d5pmOC != null ? ((day.d5pmOC >= 0 ? '+' : '') + day.d5pmOC.toLocaleString()) : '—'}</td>`;
+        
+        // Get previous day for 5PM-11PM hours
+        const prevDateIdx = allETDates.indexOf(day.date) + 1; // +1 because allETDates is reverse sorted
+        const prevDate = prevDateIdx < allETDates.length ? allETDates[prevDateIdx] : null;
+        const prevDay = prevDate ? etDays[prevDate] : null;
+        
+        // Calculate cumulative metrics for each hour
+        const pm5Open = day.d5pmOpen;
+        let cumHigh = pm5Open, cumLow = pm5Open;
+        
+        // Hour data
+        PM5_HOURS.forEach((h, hi) => {
+          // For hours 17-23, use previous day's data
+          // For hours 0-16, use current day's data
+          const sourceDay = h >= 17 ? prevDay : day;
+          const hourData = sourceDay?.hrs[h];
+          const hm = hourData?.m;
+          
+          if (hm) {
+            // Update cumulative high/low
+            if (hourData) {
+              cumHigh = Math.max(cumHigh, hourData.h);
+              cumLow = Math.min(cumLow, hourData.l);
+            }
+            
+            // Calculate cumulative values for this hour
+            const cumUR = pm5Open ? Math.round(cumHigh - pm5Open) : null;
+            const cumLR = pm5Open ? Math.round(pm5Open - cumLow) : null;
+            const cumMx = cumUR != null && cumLR != null ? Math.max(cumUR, cumLR) : null;
+            const cumRng = pm5Open && hourData ? Math.round(hourData.c - pm5Open) : null;
+            
+            const rngBg = getOrangeGradient(hm.rng, pm5Stats.rng.min, pm5Stats.rng.max);
+            const urBg = getOrangeGradient(hm.ur, pm5Stats.urlr.min, pm5Stats.urlr.max);
+            const lrBg = getOrangeGradient(hm.lr, pm5Stats.urlr.min, pm5Stats.urlr.max);
+            const ocBg = getRGGradient(hm.oc, pm5Stats.oc.min, pm5Stats.oc.max);
+            const ocCls = hm.oc >= 0 ? 'up' : 'down';
+            
+            bd += `<td class="data-cell${hi===0?' hour-border-left':''}" style="background:${rngBg}">${hm.rng}</td>`;
+            bd += `<td class="data-cell" style="background:${urBg}">${hm.ur}</td>`;
+            bd += `<td class="data-cell" style="background:${lrBg}">${hm.lr}</td>`;
+            bd += `<td class="data-cell ${ocCls}" style="background:${ocBg}">${hm.oc >= 0 ? '+' : ''}${hm.oc}</td>`;
+            
+            if (pm5ShowCumulative) {
+              // Cumulative backgrounds
+              const cumURBg = getOrangeGradient(cumUR, pm5Stats.cum.min, pm5Stats.cum.max);
+              const cumLRBg = getOrangeGradient(cumLR, pm5Stats.cum.min, pm5Stats.cum.max);
+              const cumMxBg = getOrangeGradient(cumMx, pm5Stats.cum.min, pm5Stats.cum.max);
+              const cumRngBg = getRGGradient(cumRng, pm5Stats.cumRG.min, pm5Stats.cumRG.max);
+              const cumRngCls = cumRng >= 0 ? 'up' : 'down';
+              
+              // Cumulative cells
+              bd += `<td class="data-cell" style="background:${cumURBg}">${cumUR?.toLocaleString() ?? '—'}</td>`;
+              bd += `<td class="data-cell" style="background:${cumLRBg}">${cumLR?.toLocaleString() ?? '—'}</td>`;
+              bd += `<td class="data-cell" style="background:${cumMxBg}">${cumMx?.toLocaleString() ?? '—'}</td>`;
+              bd += `<td class="data-cell ${cumRngCls}" style="background:${cumRngBg}">${cumRng != null ? ((cumRng >= 0 ? '+' : '') + cumRng.toLocaleString()) : '—'}</td>`;
+            }
+          } else {
+            bd += `<td class="data-cell${hi===0?' hour-border-left':''}" style="color:var(--text-muted)">—</td>`;
+            bd += '<td class="data-cell" style="color:var(--text-muted)">—</td>';
+            bd += '<td class="data-cell" style="color:var(--text-muted)">—</td>';
+            bd += '<td class="data-cell" style="color:var(--text-muted)">—</td>';
+            if (pm5ShowCumulative) {
+              bd += '<td class="data-cell" style="color:var(--text-muted)">—</td>';
+              bd += '<td class="data-cell" style="color:var(--text-muted)">—</td>';
+              bd += '<td class="data-cell" style="color:var(--text-muted)">—</td>';
+              bd += '<td class="data-cell" style="color:var(--text-muted)">—</td>';
+            }
+          }
+        });
+        
+        bd += '</tr>';
+      });
+      
+      document.getElementById('pm5-table-body').innerHTML = bd;
+    }
+    
     // ==================== SORTING ====================
     function sortBy(col, hour) {
       if (sortColumn === col && sortHour === hour) sortDirection = sortDirection === 'desc' ? 'asc' : 'desc';
@@ -2634,9 +3664,27 @@
     
     function toggleFilters() { document.getElementById('filters-panel').classList.toggle('visible'); document.getElementById('btn-filters').classList.toggle('active'); }
     function toggleColumns() { document.getElementById('col-selector').classList.toggle('visible'); document.getElementById('btn-columns').classList.toggle('active'); }
-    function toggleDayColsPanel() { document.getElementById('dt-col-selector').classList.toggle('visible'); document.getElementById('btn-day-cols').classList.toggle('active'); showDayCols = document.getElementById('btn-day-cols').classList.contains('active'); renderTable(); }
+    // DayTotals: Panel visibility is separate from column display
+    function toggleDayColsPanel() { 
+      document.getElementById('dt-col-selector').classList.toggle('visible'); 
+      document.getElementById('btn-day-cols').classList.toggle('active'); 
+      // Don't change showDayCols here - it's controlled by a separate toggle
+    }
+    function toggleShowDayCols() {
+      showDayCols = !showDayCols;
+      document.getElementById('btn-show-dt-cols').classList.toggle('active', showDayCols);
+      renderTable();
+    }
     function togglePercentiles() { showPercentiles = !showPercentiles; document.getElementById('btn-pct').classList.toggle('active', showPercentiles); renderTable(); }
     function toggleDayOHLC() { showDayOHLC = !showDayOHLC; document.getElementById('btn-day-ohlc').classList.toggle('active', showDayOHLC); renderDayView(); }
+    function toggleCompareMode() { 
+      compareMode = !compareMode; 
+      document.getElementById('btn-compare').classList.toggle('active', compareMode); 
+      document.getElementById('compare-group').style.display = compareMode ? 'flex' : 'none';
+      document.getElementById('day-table-panel-2').style.display = compareMode ? 'flex' : 'none';
+      document.getElementById('day-compare-container').classList.toggle('compare-mode', compareMode);
+      renderDayView(); 
+    }
     function toggleColFilterPanel() { document.getElementById('col-filter-panel').classList.toggle('visible'); document.getElementById('btn-col-filter').classList.toggle('active'); }
     function toggleRsiSettings() { document.getElementById('rsi-settings').classList.toggle('visible'); document.getElementById('btn-rsi').classList.toggle('active'); }
     
