@@ -4652,5 +4652,173 @@ button {
 }
 </style>
 
+
+<style>
+/* =========================
+   DAY / HOUR INFO ICON & POPUP POLISH
+   ========================= */
+
+/* Modern info icon */
+.info-tooltip {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: linear-gradient(180deg, #2a2f3a, #1c1f27);
+  border: 1px solid rgba(255,255,255,0.08);
+  color: #9fb6ff;
+}
+.info-tooltip svg {
+  width: 14px;
+  height: 14px;
+}
+
+/* Popup container */
+.info-popup {
+  padding: 12px 14px;
+  border-radius: 10px;
+  min-width: 220px;
+  max-width: 300px;
+}
+
+/* Header */
+.info-popup .popup-title {
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  font-size: 0.9rem;
+  margin-bottom: 8px;
+  color: #f59e0b;
+}
+
+/* Close button (mobile-friendly) */
+.info-popup .popup-close {
+  cursor:pointer;
+  font-size:0.9rem;
+  color:var(--text-secondary);
+}
+
+/* Metric grid */
+.info-popup .popup-body {
+  display:grid;
+  grid-template-columns: repeat(2, minmax(0,1fr));
+  gap:6px 12px;
+  font-size:0.75rem;
+}
+
+.info-popup .metric {
+  display:flex;
+  justify-content:space-between;
+  gap:8px;
+  padding:4px 0;
+  border-bottom:1px dashed rgba(255,255,255,0.04);
+}
+
+.info-popup .metric:last-child {
+  border-bottom:none;
+}
+
+.info-popup .metric .label {
+  color:var(--text-secondary);
+}
+
+.info-popup .metric .value {
+  font-weight:600;
+}
+
+.info-popup .value.pos { color:#4ade80; }
+.info-popup .value.neg { color:#f87171; }
+.info-popup .value.neutral { color:#e5e7eb; }
+
+/* Mobile behavior */
+@media (hover:none) {
+  .info-tooltip:hover .info-popup {
+    display:none;
+  }
+}
+
+/* Fade animation */
+.info-popup {
+  animation: fadeUp 0.15s ease-out;
+}
+
+@keyframes fadeUp {
+  from { opacity:0; transform:translateY(4px); }
+  to   { opacity:1; transform:translateY(0); }
+}
+</style>
+
+<script>
+/* =========================
+   INFO POPUP CONTENT UPGRADE
+   ========================= */
+
+function enhanceInfoPopups(){
+  document.querySelectorAll('.info-popup').forEach(popup => {
+    if (popup.classList.contains('enhanced')) return;
+    popup.classList.add('enhanced');
+
+    const raw = popup.innerText.split(/\n+/).filter(Boolean);
+    popup.innerHTML = '';
+
+    // Header
+    const header = document.createElement('div');
+    header.className = 'popup-title';
+    header.innerHTML = '<span>Interval Details</span><span class="popup-close">✕</span>';
+    popup.appendChild(header);
+
+    // Body grid
+    const body = document.createElement('div');
+    body.className = 'popup-body';
+
+    raw.forEach(line => {
+      const parts = line.split(/:\s*/);
+      if (parts.length < 2) return;
+      const label = parts[0];
+      const val = parts.slice(1).join(':').trim();
+
+      const metric = document.createElement('div');
+      metric.className = 'metric';
+
+      const l = document.createElement('span');
+      l.className = 'label';
+      l.textContent = label;
+
+      const v = document.createElement('span');
+      v.className = 'value neutral';
+      v.textContent = val;
+
+      if (/^[-]/.test(val)) v.classList.replace('neutral','neg');
+      if (/^[+]/.test(val)) v.classList.replace('neutral','pos');
+
+      metric.appendChild(l);
+      metric.appendChild(v);
+      body.appendChild(metric);
+    });
+
+    popup.appendChild(body);
+
+    // Close behavior (mobile)
+    popup.querySelector('.popup-close').onclick = e => {
+      popup.classList.remove('visible');
+      e.stopPropagation();
+    };
+  });
+}
+
+// Run after render hooks if they exist
+['renderDayView','renderTable','renderCalendar'].forEach(fn => {
+  if (typeof window[fn] === 'function') {
+    const orig = window[fn];
+    window[fn] = function(){
+      const r = orig.apply(this, arguments);
+      setTimeout(enhanceInfoPopups, 0);
+      return r;
+    }
+  }
+});
+
+document.addEventListener('DOMContentLoaded', enhanceInfoPopups);
+</script>
+
 </body>
 </html>
