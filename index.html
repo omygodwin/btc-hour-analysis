@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>BTC Hourly Analysis Dashboard v12</title>
+  <title>BTC Hourly Analysis Dashboard</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
   <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Inter:wght@400;500;600&family=Roboto+Mono:wght@400;500;600&family=Fira+Code:wght@400;500;600&display=swap" rel="stylesheet">
   <style>
@@ -32,40 +32,54 @@
     }
     
     /* Tooltip styles */
-    .info-tooltip { 
-      position: relative; 
-      display: inline-flex; 
+    
+    /* Improved Info Tooltip (supports hover on desktop, click-to-toggle on mobile) */
+    .info-tooltip {
+      position: relative;
+      display: inline-flex;
       align-items: center;
       justify-content: center;
-      width: 11px;
-      height: 11px;
-      font-size: 7px;
+      width: 18px;
+      height: 18px;
+      font-size: 11px;
       border-radius: 50%;
-      background: rgba(100,149,237,0.3);
+      background: rgba(100,149,237,0.12);
       color: var(--accent-blue);
-      cursor: help;
-      margin-left: 2px;
+      cursor: pointer;
+      margin-left: 6px;
       flex-shrink: 0;
+      border: 1px solid rgba(100,149,237,0.15);
+      box-shadow: 0 2px 6px rgba(0,0,0,0.35);
     }
-    .info-tooltip:hover::after {
-      content: attr(data-tooltip);
+    .info-tooltip svg { width:12px;height:12px;display:block; }
+    /* Popup content (hidden by default). On hover for pointer devices, show via :hover.
+       On mobile, JS toggles the 'visible' class. */
+    .info-popup {
+      display: none;
       position: absolute;
-      bottom: 100%;
+      bottom: calc(100% + 8px);
       left: 50%;
       transform: translateX(-50%);
-      background: rgba(20,20,30,0.98);
+      background: linear-gradient(180deg, rgba(20,20,30,0.98) 0%, rgba(15,15,20,0.98) 100%);
       border: 1px solid var(--border-medium);
-      padding: 6px 8px;
-      border-radius: 6px;
-      font-size: 9px;
+      padding: 10px 12px;
+      border-radius: 8px;
+      font-size: 12px;
       white-space: pre-line;
-      z-index: 1000;
-      min-width: 120px;
-      max-width: 200px;
+      z-index: 1200;
+      min-width: 180px;
+      max-width: 260px;
       color: var(--text-primary);
-      box-shadow: 0 4px 12px rgba(0,0,0,0.5);
-      pointer-events: none;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.6);
+      pointer-events: auto;
     }
+    .info-tooltip:hover .info-popup { display: block; }
+    .info-popup.visible { display: block; }
+    .info-popup .popup-title { font-weight:700; margin-bottom:6px; color:var(--accent-btc); font-size:13px;}
+    .info-popup .popup-body { color:var(--text-secondary); font-size:12px; line-height:1.2; }
+    /* make sure popup flips above if near top edge */
+    .info-popup.top { bottom: auto; top: calc(100% + 8px); transform: translateX(-50%); }
+
     
     body {
       background: linear-gradient(135deg, var(--bg-primary) 0%, var(--bg-secondary) 50%, var(--bg-primary) 100%);
@@ -3754,5 +3768,889 @@
       useDateFilter = false; selectedDates.clear(); updateDatePickerUI();
     }
   </script>
+
+<!-- Mobile Filters Modal + Floating Button (injected) -->
+<style>
+  /* Mobile Filters Modal */
+  .mobile-filters-modal { display:none; position:fixed; inset:0; z-index:1400; align-items:flex-end; justify-content:center; pointer-events:none; }
+  .mobile-filters-modal.visible { display:flex; pointer-events:auto; }
+  .mobile-filters-backdrop { position:absolute; inset:0; background:linear-gradient(90deg, rgba(0,0,0,0.45), rgba(0,0,0,0.55)); backdrop-filter: blur(4px); }
+  .mobile-filters-panel {
+    position:relative;
+    width:100%;
+    max-width:960px;
+    background:var(--bg-secondary);
+    border-top-left-radius:14px;
+    border-top-right-radius:14px;
+    padding:12px;
+    box-shadow: 0 -12px 30px rgba(0,0,0,0.6);
+    transform: translateY(0);
+    max-height: 78vh;
+    overflow:auto;
+    border: 1px solid rgba(255,255,255,0.04);
+  }
+  .mobile-filters-header { display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:8px; }
+  .mobile-filters-header h3 { margin:0; color:var(--accent-btc); font-size:1rem; font-family:var(--font-family); }
+  .mobile-filters-close { background:transparent;border:1px solid rgba(255,255,255,0.04);padding:6px 8px;border-radius:8px;color:var(--text-primary);cursor:pointer; }
+  .mobile-filters-content { padding-bottom:12px; }
+  .mobile-filters-actions { display:flex; gap:8px; justify-content:flex-end; padding-top:8px; border-top:1px dashed rgba(255,255,255,0.03); }
+  .mobile-filters-actions button { padding:8px 12px;border-radius:8px;border:none;cursor:pointer;font-weight:600; }
+  .mobile-filters-actions .apply { background:linear-gradient(90deg,var(--accent-btc),#e8820e); color:white; }
+  .mobile-filters-actions .reset { background:transparent;border:1px solid rgba(255,255,255,0.06); color:var(--text-primary); }
+
+  /* Make date-picker dropdown static inside modal */
+  .mobile-filters-modal .date-picker-dropdown { position:static; max-height:260px; margin-top:8px; border-radius:6px; box-shadow:none; }
+
+  /* Modern multi-select visual for cloned filter groups */
+  .mobile-filters-modal .filter-btns { display:flex; flex-wrap:wrap; gap:6px; }
+  .mobile-filters-modal .f-btn { padding:8px 10px; font-size:0.9rem; border-radius:10px; border:1px solid rgba(255,255,255,0.06); background:rgba(255,255,255,0.02); }
+  .mobile-filters-modal .f-btn.none-btn { background:rgba(248,113,113,0.12); border-color:rgba(248,113,113,0.22);}
+  .mobile-filters-modal .f-btn.quick { background:rgba(100,149,237,0.12); border-color:rgba(100,149,237,0.18);}
+
+  /* Floating mobile menu button (improved) */
+  .mobile-menu-btn { display:none; }
+  @media (max-width: 768px) {
+    .mobile-menu-btn {
+      display:flex;
+      position:fixed;
+      bottom:20px;
+      right:18px;
+      z-index:1500;
+      width:56px;
+      height:56px;
+      border-radius:50%;
+      background:var(--accent-btc);
+      color:white;
+      border:none;
+      align-items:center;
+      justify-content:center;
+      font-size:1.25rem;
+      box-shadow: 0 10px 30px rgba(247,147,26,0.35);
+      cursor:pointer;
+    }
+  }
+
+  /* Mobile tab nav: make it fixed to bottom and full-width for a modern look */
+  @media (max-width: 768px) {
+    .tab-nav {
+      position:fixed;
+      left:0;
+      right:0;
+      bottom:0;
+      display:flex;
+      justify-content:space-around;
+      gap:6px;
+      padding:8px;
+      background: linear-gradient(180deg, rgba(10,10,12,0.98), rgba(18,18,26,0.98));
+      border-top:1px solid rgba(255,255,255,0.04);
+      z-index:1400;
+      box-shadow: 0 -6px 20px rgba(0,0,0,0.6);
+    }
+    /* Ensure content above bottom nav */
+    .tab-content { padding-bottom: 78px; }
+    .tab-btn { flex:1 1 auto; min-width:0; padding:10px 6px; border-radius:8px; margin:0 4px; text-align:center; }
+  }
+
+  /* Slightly larger touch target for mobile day table cells */
+  @media (max-width: 480px) {
+    .day-table .min-cell { min-height:56px!important; }
+  }
+</style>
+
+<!-- Floating mobile menu button -->
+<button id="mobile-menu-btn" class="mobile-menu-btn" aria-label="Open Filters" title="Open Filters">
+  <!-- funnel icon (SVG) -->
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg">
+    <path d="M3 5h18M6 12h12M10 19h4" stroke="white" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+  </svg>
+</button>
+
+<!-- Mobile modal container -->
+<div id="mobile-filters-modal" class="mobile-filters-modal" aria-hidden="true">
+  <div class="mobile-filters-backdrop" onclick="toggleMobileFilters()"></div>
+  <div class="mobile-filters-panel" role="dialog" aria-modal="true" aria-labelledby="mobile-filters-title">
+    <div class="mobile-filters-header">
+      <h3 id="mobile-filters-title">Filters & Columns</h3>
+      <div style="display:flex;gap:6px;">
+        <button class="mobile-filters-close" onclick="toggleMobileFilters()">Close</button>
+      </div>
+    </div>
+    <div id="mobile-filters-content" class="mobile-filters-content"></div>
+    <div class="mobile-filters-actions">
+      <button class="reset" onclick="resetMobileFilters()">Reset</button>
+      <button class="apply" onclick="applyMobileFilters()">Apply</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  // Toggle mobile filters modal, and clone the existing filters (.filters, .col-selector, .col-filter-panel, .dt-col-selector)
+  function toggleMobileFilters() {
+    const modal = document.getElementById('mobile-filters-modal');
+    if (!modal) return;
+    const isVisible = modal.classList.contains('visible');
+    if (isVisible) {
+      modal.classList.remove('visible');
+      modal.setAttribute('aria-hidden','true');
+      // close any open date pickers inside modal
+      modal.querySelectorAll('.date-picker-dropdown.visible').forEach(d=>d.classList.remove('visible'));
+      return;
+    }
+    // populate content by cloning existing panels
+    const content = document.getElementById('mobile-filters-content');
+    content.innerHTML = '';
+    const selectors = ['#filters-panel', '#col-selector', '#col-filter-panel', '#dt-col-selector'];
+    selectors.forEach(sel=>{
+      const el = document.querySelector(sel);
+      if (el) {
+        const clone = el.cloneNode(true);
+        clone.style.display = 'block';
+        // Ensure dropdowns are visible inside modal
+        clone.querySelectorAll('.date-picker-dropdown').forEach(dd=>{ dd.classList.add('visible'); dd.style.position='static'; });
+        // Tidy up widths for cloned selects
+        clone.querySelectorAll('select').forEach(s=>s.style.width='100%');
+        content.appendChild(clone);
+      }
+    });
+    modal.classList.add('visible');
+    modal.setAttribute('aria-hidden','false');
+  }
+
+  function applyMobileFilters(){
+    // Basic approach: when the user clicks Apply we try to copy selected states from the cloned DOM back to the original panels.
+    // We'll implement a gentle sync for month/day buttons and date selection as a best-effort — complex logic can be extended later.
+    const modal = document.getElementById('mobile-filters-modal');
+    if(!modal) return;
+    // Example: sync month buttons
+    try {
+      const clonedMonths = modal.querySelector('#month-filters');
+      const origMonths = document.querySelector('#month-filters');
+      if(clonedMonths && origMonths){
+        const clonedBtns = clonedMonths.querySelectorAll('button[data-month]');
+        clonedBtns.forEach(cb=>{
+          const m = cb.getAttribute('data-month');
+          const orig = origMonths.querySelector(`button[data-month="${m}"]`);
+          if(orig){
+            if(cb.classList.contains('active')) orig.classList.add('active'); else orig.classList.remove('active');
+          }
+        });
+      }
+      // Additional syncing hooks can be added here for dates, days, etc.
+    } catch(e){
+      console.warn('applyMobileFilters: sync partial', e);
+    }
+    toggleMobileFilters();
+    // Re-render main table if a render function exists
+    if(typeof renderTable === 'function') renderTable();
+    if(typeof renderCalendar === 'function') renderCalendar();
+    if(typeof renderDayView === 'function') renderDayView();
+  }
+
+  function resetMobileFilters(){
+    // Call existing resetAll or similar if exists
+    if(typeof resetAll === 'function') resetAll();
+    else {
+      // fallback: remove 'active' class from cloned filter buttons
+      document.querySelectorAll('#mobile-filters-content .f-btn').forEach(b=>b.classList.remove('active'));
+    }
+  }
+
+  // Improved info tooltip behavior: click toggles popup on mobile; clicking outside closes any open popups
+  document.addEventListener('click', function(e){
+    // if clicked on an .info-tooltip or inside one, toggle its popup
+    const tt = e.target.closest && e.target.closest('.info-tooltip');
+    if(tt){
+      const popup = tt.querySelector('.info-popup');
+      if(popup) {
+        popup.classList.toggle('visible');
+      }
+      // prevent the global handler from immediately closing it
+      e.stopPropagation();
+      return;
+    }
+    // else close all visible info popups
+    document.querySelectorAll('.info-popup.visible').forEach(p=>p.classList.remove('visible'));
+  });
+
+  // Accessibility: close modal on Escape
+  document.addEventListener('keydown', function(e){
+    if(e.key === 'Escape'){
+      const modal = document.getElementById('mobile-filters-modal');
+      if(modal && modal.classList.contains('visible')) toggleMobileFilters();
+      // also close info popups
+      document.querySelectorAll('.info-popup.visible').forEach(p=>p.classList.remove('visible'));
+    }
+  });
+
+  // Ensure floating mobile button opens modal
+  document.getElementById('mobile-menu-btn')?.addEventListener('click', toggleMobileFilters);
+</script>
+
+
+<script>
+  // Convert existing elements with data-tooltip into structured .info-tooltip markup for consistent behavior
+  document.addEventListener('DOMContentLoaded', function(){
+    document.querySelectorAll('[data-tooltip]').forEach(function(orig){
+      // Avoid double-wrapping
+      if(orig.classList.contains('converted-tooltip')) return;
+      orig.classList.add('converted-tooltip');
+      const text = orig.getAttribute('data-tooltip') || '';
+      // create wrapper
+      const wrapper = document.createElement('span');
+      wrapper.className = 'info-tooltip';
+      // simple 'i' icon as SVG
+      wrapper.innerHTML = '<svg viewBox=\"0 0 24 24\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\"><circle cx=\"12\" cy=\"12\" r=\"10\" stroke=\"currentColor\" stroke-opacity=\"0.08\" stroke-width=\"1\"/><path d=\"M12 8h.01M11 12h1v4\" stroke=\"currentColor\" stroke-width=\"1.6\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/></svg>';
+      // create popup
+      const popup = document.createElement('div');
+      popup.className = 'info-popup';
+      popup.innerHTML = '<div class=\"popup-title\">Info</div><div class=\"popup-body\">' + text.replace(/\n/g,'<br/>') + '</div>';
+      wrapper.appendChild(popup);
+      // insert after the original element
+      orig.parentNode.insertBefore(wrapper, orig.nextSibling);
+      // remove native title to prevent native tooltip
+      orig.removeAttribute('title');
+    });
+  });
+</script>
+
+
+<script>
+/* =========================
+   GLOBAL FILTER STATE LAYER
+   ========================= */
+window.FilterState = {
+  years: new Set(),
+  months: new Set(),
+  daysOfWeek: new Set(),
+  dayNumbers: new Set(),
+  hours: { from: null, to: null },
+  specificDates: new Set(),
+  columns: new Set(),
+  dayTotals: new Set(),
+  colFilters: {},
+
+  reset() {
+    Object.keys(this).forEach(k => {
+      if (this[k] instanceof Set) this[k].clear();
+      if (typeof this[k] === 'object' && this[k] !== null && !Array.isArray(this[k])) {
+        Object.keys(this[k]).forEach(x => this[k][x] = null);
+      }
+    });
+  }
+};
+
+function setFilter(key, value, mode='toggle') {
+  const state = FilterState[key];
+  if (state instanceof Set) {
+    if (mode === 'set') {
+      state.clear();
+      value.forEach(v => state.add(v));
+    } else {
+      state.has(value) ? state.delete(value) : state.add(value);
+    }
+  } else if (typeof state === 'object') {
+    Object.assign(state, value);
+  }
+  syncUIFromState();
+  if (typeof renderTable === 'function') renderTable();
+  if (typeof renderCalendar === 'function') renderCalendar();
+  if (typeof renderDayView === 'function') renderDayView();
+}
+
+function syncUIFromState(root=document) {
+  // Months
+  root.querySelectorAll('[data-month]').forEach(btn => {
+    const m = btn.getAttribute('data-month');
+    btn.classList.toggle('active', FilterState.months.has(m));
+  });
+
+  // Days of week
+  root.querySelectorAll('[data-day]').forEach(btn => {
+    const d = btn.getAttribute('data-day');
+    btn.classList.toggle('active', FilterState.daysOfWeek.has(d));
+  });
+
+  // Day numbers
+  root.querySelectorAll('[data-daynum]').forEach(btn => {
+    const n = btn.getAttribute('data-daynum');
+    btn.classList.toggle('active', FilterState.dayNumbers.has(n));
+  });
+
+  // Columns
+  root.querySelectorAll('[data-col]').forEach(btn => {
+    const c = btn.getAttribute('data-col');
+    btn.classList.toggle('active', FilterState.columns.has(c));
+  });
+
+  // Day totals
+  root.querySelectorAll('[data-daytotal]').forEach(btn => {
+    const d = btn.getAttribute('data-daytotal');
+    btn.classList.toggle('active', FilterState.dayTotals.has(d));
+  });
+
+  // Hours
+  const hf = root.querySelector('#hour-from');
+  const ht = root.querySelector('#hour-to');
+  if (hf) hf.value = FilterState.hours.from ?? '';
+  if (ht) ht.value = FilterState.hours.to ?? '';
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  // Wire generic buttons
+  document.body.addEventListener('click', e => {
+    const btn = e.target.closest('button');
+    if (!btn) return;
+
+    if (btn.dataset.month) setFilter('months', btn.dataset.month);
+    if (btn.dataset.day) setFilter('daysOfWeek', btn.dataset.day);
+    if (btn.dataset.daynum) setFilter('dayNumbers', btn.dataset.daynum);
+    if (btn.dataset.col) setFilter('columns', btn.dataset.col);
+    if (btn.dataset.daytotal) setFilter('dayTotals', btn.dataset.daytotal);
+  });
+
+  // Wire hour selectors
+  const hf = document.querySelector('#hour-from');
+  const ht = document.querySelector('#hour-to');
+  hf?.addEventListener('change', e => setFilter('hours', { from: e.target.value }, 'merge'));
+  ht?.addEventListener('change', e => setFilter('hours', { to: e.target.value }, 'merge'));
+
+  syncUIFromState();
+});
+</script>
+
+
+<style>
+/* =========================
+   MOBILE COLLAPSIBLE SECTIONS
+   ========================= */
+.mobile-section {
+  border: 1px solid rgba(255,255,255,0.05);
+  border-radius: 10px;
+  margin-bottom: 10px;
+  overflow: hidden;
+}
+.mobile-section-header {
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  padding:10px 12px;
+  cursor:pointer;
+  background: rgba(255,255,255,0.03);
+}
+.mobile-section-header span {
+  font-weight:600;
+  color: var(--accent-btc);
+}
+.mobile-section-content {
+  padding:10px 12px;
+  display:none;
+}
+.mobile-section.open .mobile-section-content {
+  display:block;
+}
+
+/* =========================
+   MOBILE HOUR RANGE SLIDER
+   ========================= */
+.hour-range {
+  display:flex;
+  flex-direction:column;
+  gap:6px;
+}
+.hour-range input[type=range] {
+  width:100%;
+}
+.hour-range-label {
+  font-size:0.8rem;
+  color:var(--text-secondary);
+  display:flex;
+  justify-content:space-between;
+}
+
+/* =========================
+   DATE CHIP UI
+   ========================= */
+.date-chips {
+  display:flex;
+  flex-wrap:wrap;
+  gap:6px;
+  margin-top:6px;
+}
+.date-chip {
+  background: rgba(247,147,26,0.18);
+  border:1px solid rgba(247,147,26,0.35);
+  border-radius:999px;
+  padding:4px 10px;
+  font-size:0.75rem;
+  display:flex;
+  align-items:center;
+  gap:6px;
+}
+.date-chip button {
+  background:none;
+  border:none;
+  color:white;
+  cursor:pointer;
+  font-size:0.8rem;
+}
+</style>
+
+<script>
+/* =========================
+   SPECIFIC DATE WIRING
+   ========================= */
+function addSpecificDate(dateStr){
+  FilterState.specificDates.add(dateStr);
+  syncUIFromState();
+  updateDateChips();
+  pushStateToURL();
+  if (typeof renderTable === 'function') renderTable();
+}
+function removeSpecificDate(dateStr){
+  FilterState.specificDates.delete(dateStr);
+  syncUIFromState();
+  updateDateChips();
+  pushStateToURL();
+  if (typeof renderTable === 'function') renderTable();
+}
+
+function updateDateChips(root=document){
+  root.querySelectorAll('.date-chips').forEach(c => c.innerHTML = '');
+  FilterState.specificDates.forEach(d => {
+    root.querySelectorAll('.date-chips').forEach(container => {
+      const chip = document.createElement('div');
+      chip.className = 'date-chip';
+      chip.innerHTML = d + '<button aria-label="Remove date">✕</button>';
+      chip.querySelector('button').onclick = () => removeSpecificDate(d);
+      container.appendChild(chip);
+    });
+  });
+}
+
+/* =========================
+   MOBILE MODAL SECTION WRAPPER
+   ========================= */
+function wrapMobileSections(){
+  const modal = document.getElementById('mobile-filters-content');
+  if(!modal) return;
+  const sections = [
+    {id:'filters-panel', label:'Filters'},
+    {id:'col-selector', label:'Columns'},
+    {id:'dt-col-selector', label:'Day Totals'},
+    {id:'col-filter-panel', label:'Column Filters'}
+  ];
+  modal.innerHTML = '';
+  sections.forEach(s => {
+    const orig = document.getElementById(s.id);
+    if(!orig) return;
+    const wrapper = document.createElement('div');
+    wrapper.className = 'mobile-section open';
+    wrapper.innerHTML = `
+      <div class="mobile-section-header">
+        <span>${s.label}</span>
+        <span>▾</span>
+      </div>
+      <div class="mobile-section-content"></div>
+    `;
+    wrapper.querySelector('.mobile-section-header').onclick = () =>
+      wrapper.classList.toggle('open');
+    const content = wrapper.querySelector('.mobile-section-content');
+    const clone = orig.cloneNode(true);
+    clone.style.display = 'block';
+    content.appendChild(clone);
+
+    // Inject date chips under date picker
+    if (s.id === 'filters-panel') {
+      const dc = document.createElement('div');
+      dc.className = 'date-chips';
+      content.appendChild(dc);
+    }
+    modal.appendChild(wrapper);
+  });
+  syncUIFromState(modal);
+  updateDateChips(modal);
+}
+
+/* =========================
+   MOBILE HOUR SLIDER
+   ========================= */
+function injectHourSlider(root=document){
+  const hf = root.querySelector('#hour-from');
+  const ht = root.querySelector('#hour-to');
+  if(!hf || !ht) return;
+  const parent = hf.parentElement;
+  if(parent.querySelector('.hour-range')) return;
+
+  const wrap = document.createElement('div');
+  wrap.className = 'hour-range';
+  wrap.innerHTML = `
+    <div class="hour-range-label">
+      <span>From: <b id="hr-from">${FilterState.hours.from ?? 0}</b></span>
+      <span>To: <b id="hr-to">${FilterState.hours.to ?? 23}</b></span>
+    </div>
+    <input type="range" min="0" max="23" value="${FilterState.hours.from ?? 0}" id="hr-range-from">
+    <input type="range" min="0" max="23" value="${FilterState.hours.to ?? 23}" id="hr-range-to">
+  `;
+  parent.appendChild(wrap);
+
+  wrap.querySelector('#hr-range-from').oninput = e => {
+    FilterState.hours.from = e.target.value;
+    wrap.querySelector('#hr-from').textContent = e.target.value;
+    pushStateToURL();
+    if (typeof renderTable === 'function') renderTable();
+  };
+  wrap.querySelector('#hr-range-to').oninput = e => {
+    FilterState.hours.to = e.target.value;
+    wrap.querySelector('#hr-to').textContent = e.target.value;
+    pushStateToURL();
+    if (typeof renderTable === 'function') renderTable();
+  };
+}
+
+/* =========================
+   URL DEEP LINKING
+   ========================= */
+function pushStateToURL(){
+  const params = new URLSearchParams();
+  Object.entries(FilterState).forEach(([k,v]) => {
+    if (v instanceof Set && v.size) params.set(k, [...v].join(','));
+    if (typeof v === 'object' && v?.from !== undefined) {
+      if (v.from !== null) params.set(k+'From', v.from);
+      if (v.to !== null) params.set(k+'To', v.to);
+    }
+  });
+  history.replaceState(null,'','?'+params.toString());
+}
+
+function hydrateStateFromURL(){
+  const p = new URLSearchParams(location.search);
+  p.forEach((val,key)=>{
+    if(FilterState[key] instanceof Set){
+      val.split(',').forEach(v=>FilterState[key].add(v));
+    }
+    if(key.endsWith('From')) FilterState.hours.from = val;
+    if(key.endsWith('To')) FilterState.hours.to = val;
+  });
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  hydrateStateFromURL();
+  syncUIFromState();
+  updateDateChips();
+});
+</script>
+
+
+<style>
+/* =========================
+   PRESET UI
+   ========================= */
+.preset-list {
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+  margin-top:8px;
+}
+.preset-item {
+  border:1px solid rgba(255,255,255,0.05);
+  border-radius:8px;
+  padding:8px;
+  background:rgba(255,255,255,0.03);
+}
+.preset-item h4 {
+  margin:0 0 4px 0;
+  font-size:0.9rem;
+  color:var(--accent-btc);
+}
+.preset-item p {
+  margin:0 0 6px 0;
+  font-size:0.75rem;
+  color:var(--text-secondary);
+}
+.preset-actions {
+  display:flex;
+  gap:6px;
+}
+.preset-actions button {
+  font-size:0.7rem;
+  padding:4px 8px;
+  border-radius:6px;
+  border:none;
+  cursor:pointer;
+}
+.preset-actions .load { background:rgba(100,149,237,0.18); color:white; }
+.preset-actions .delete { background:rgba(248,113,113,0.25); color:white; }
+
+/* Save preset dialog */
+#preset-dialog {
+  position:fixed;
+  inset:0;
+  display:none;
+  align-items:center;
+  justify-content:center;
+  z-index:1600;
+}
+#preset-dialog.visible { display:flex; }
+#preset-dialog .backdrop {
+  position:absolute;
+  inset:0;
+  background:rgba(0,0,0,0.55);
+}
+#preset-dialog .dialog {
+  position:relative;
+  background:var(--bg-secondary);
+  padding:14px;
+  border-radius:12px;
+  width:90%;
+  max-width:420px;
+  z-index:1;
+}
+#preset-dialog label {
+  font-size:0.8rem;
+  display:block;
+  margin-top:8px;
+}
+#preset-dialog input,
+#preset-dialog textarea {
+  width:100%;
+  margin-top:4px;
+  padding:6px 8px;
+  border-radius:6px;
+  border:1px solid rgba(255,255,255,0.06);
+  background:rgba(255,255,255,0.04);
+  color:white;
+}
+#preset-dialog textarea { resize:vertical; min-height:60px; }
+#preset-dialog .dialog-actions {
+  display:flex;
+  justify-content:flex-end;
+  gap:8px;
+  margin-top:12px;
+}
+</style>
+
+<!-- Preset Save Dialog -->
+<div id="preset-dialog">
+  <div class="backdrop" onclick="closePresetDialog()"></div>
+  <div class="dialog">
+    <h3 style="margin-top:0;color:var(--accent-btc);">Save Filter Preset</h3>
+    <label>Name</label>
+    <input id="preset-name" placeholder="e.g. Market Hours – Weekdays"/>
+    <label>Description (optional)</label>
+    <textarea id="preset-desc" placeholder="Notes about what this filter is used for"></textarea>
+    <div class="dialog-actions">
+      <button onclick="closePresetDialog()">Cancel</button>
+      <button class="apply" onclick="savePreset()">Save</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* =========================
+   PRESET LOGIC
+   ========================= */
+function getPresets(){
+  return JSON.parse(localStorage.getItem('filterPresets') || '[]');
+}
+function setPresets(p){
+  localStorage.setItem('filterPresets', JSON.stringify(p));
+}
+
+function snapshotState(){
+  const snap = {};
+  Object.entries(FilterState).forEach(([k,v])=>{
+    if(v instanceof Set) snap[k] = [...v];
+    else snap[k] = v;
+  });
+  return snap;
+}
+
+function restoreState(snap){
+  Object.entries(FilterState).forEach(([k,v])=>{
+    if(v instanceof Set) v.clear();
+  });
+  Object.entries(snap).forEach(([k,v])=>{
+    if(FilterState[k] instanceof Set){
+      v.forEach(x=>FilterState[k].add(x));
+    } else {
+      FilterState[k] = v;
+    }
+  });
+  syncUIFromState();
+  updateDateChips();
+  pushStateToURL();
+  if (typeof renderTable === 'function') renderTable();
+  if (typeof renderCalendar === 'function') renderCalendar();
+  if (typeof renderDayView === 'function') renderDayView();
+}
+
+function openPresetDialog(){
+  document.getElementById('preset-dialog').classList.add('visible');
+}
+function closePresetDialog(){
+  document.getElementById('preset-dialog').classList.remove('visible');
+  document.getElementById('preset-name').value = '';
+  document.getElementById('preset-desc').value = '';
+}
+
+function savePreset(){
+  const name = document.getElementById('preset-name').value.trim();
+  if(!name){ alert('Preset name required'); return; }
+  const desc = document.getElementById('preset-desc').value.trim();
+  const presets = getPresets();
+  presets.push({
+    id: Date.now(),
+    name,
+    desc,
+    state: snapshotState()
+  });
+  setPresets(presets);
+  closePresetDialog();
+  renderPresetList();
+}
+
+function deletePreset(id){
+  setPresets(getPresets().filter(p=>p.id!==id));
+  renderPresetList();
+}
+
+function renderPresetList(root=document){
+  root.querySelectorAll('.preset-list').forEach(list=>list.innerHTML='');
+  const presets = getPresets();
+  presets.forEach(p=>{
+    root.querySelectorAll('.preset-list').forEach(list=>{
+      const item = document.createElement('div');
+      item.className='preset-item';
+      item.innerHTML = `
+        <h4>${p.name}</h4>
+        ${p.desc ? `<p>${p.desc}</p>`:''}
+        <div class="preset-actions">
+          <button class="load">Load</button>
+          <button class="delete">Delete</button>
+        </div>
+      `;
+      item.querySelector('.load').onclick = ()=>restoreState(p.state);
+      item.querySelector('.delete').onclick = ()=>deletePreset(p.id);
+      list.appendChild(item);
+    });
+  });
+}
+
+/* Hook into mobile modal */
+document.addEventListener('DOMContentLoaded',()=>{
+  const header = document.querySelector('.mobile-filters-header');
+  if(header){
+    const btn = document.createElement('button');
+    btn.textContent = 'Save Preset';
+    btn.className = 'mobile-filters-close';
+    btn.onclick = openPresetDialog;
+    header.appendChild(btn);
+  }
+
+  // Add preset list section
+  const modal = document.getElementById('mobile-filters-content');
+  if(modal){
+    const sec = document.createElement('div');
+    sec.className='mobile-section open';
+    sec.innerHTML = `
+      <div class="mobile-section-header"><span>Presets</span><span>▾</span></div>
+      <div class="mobile-section-content"><div class="preset-list"></div></div>
+    `;
+    sec.querySelector('.mobile-section-header').onclick = ()=>sec.classList.toggle('open');
+    modal.prepend(sec);
+  }
+
+  renderPresetList();
+});
+</script>
+
+
+<style>
+/* =========================
+   FINAL POLISH PASS
+   ========================= */
+
+/* Smooth transitions everywhere */
+button, .f-btn, .tab-btn, .preset-item, .mobile-section, .date-chip {
+  transition: all 0.18s ease;
+}
+
+/* Better active feedback */
+.f-btn.active,
+.tab-btn.active {
+  box-shadow: 0 0 0 1px rgba(247,147,26,0.4) inset,
+              0 4px 12px rgba(247,147,26,0.25);
+}
+
+/* Hover polish (desktop) */
+@media (hover:hover) {
+  button:hover {
+    transform: translateY(-1px);
+  }
+}
+
+/* Mobile modal entrance polish */
+.mobile-filters-panel {
+  animation: slideUp 0.22s ease-out;
+}
+@keyframes slideUp {
+  from { transform: translateY(24px); opacity:0; }
+  to   { transform: translateY(0); opacity:1; }
+}
+
+/* Collapsible arrow rotation */
+.mobile-section-header span:last-child {
+  transition: transform 0.2s ease;
+}
+.mobile-section.open .mobile-section-header span:last-child {
+  transform: rotate(180deg);
+}
+
+/* Preset item hover */
+@media (hover:hover) {
+  .preset-item:hover {
+    background: rgba(255,255,255,0.06);
+  }
+}
+
+/* Date chip hover */
+@media (hover:hover) {
+  .date-chip:hover {
+    background: rgba(247,147,26,0.28);
+  }
+}
+
+/* Info tooltip polish */
+.info-tooltip {
+  transition: background 0.15s ease, box-shadow 0.15s ease;
+}
+.info-tooltip:hover {
+  background: rgba(100,149,237,0.2);
+  box-shadow: 0 6px 14px rgba(0,0,0,0.45);
+}
+
+/* Improve focus visibility for accessibility */
+button:focus-visible,
+input:focus-visible,
+textarea:focus-visible {
+  outline: 2px solid rgba(247,147,26,0.65);
+  outline-offset: 2px;
+}
+
+/* Bottom tab nav icon/text spacing */
+.tab-btn {
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:4px;
+  font-size:0.85rem;
+}
+
+/* Prevent accidental double-tap zoom on buttons */
+button {
+  touch-action: manipulation;
+}
+</style>
+
 </body>
 </html>
