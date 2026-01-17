@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -4802,27 +4802,4 @@ function enhanceInfoPopups(){
     popup.appendChild(body);
 
     // Close behavior (mobile)
-    popup.querySelector('.popup-close').onclick = e => {
-      popup.classList.remove('visible');
-      e.stopPropagation();
-    };
-  });
-}
-
-// Run after render hooks if they exist
-['renderDayView','renderTable','renderCalendar'].forEach(fn => {
-  if (typeof window[fn] === 'function') {
-    const orig = window[fn];
-    window[fn] = function(){
-      const r = orig.apply(this, arguments);
-      setTimeout(enhanceInfoPopups, 0);
-      return r;
-    }
-  }
-});
-
-document.addEventListener('DOMContentLoaded', enhanceInfoPopups);
-</script>
-
-</body>
-</html>
+    popup.querySelector('.popup-
