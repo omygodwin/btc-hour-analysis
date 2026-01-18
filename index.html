@@ -558,13 +558,44 @@
     }
   </style>
 <style>
-/* UI FIXES */
-.info-btn{cursor:pointer;border-radius:50%;width:18px;height:18px;display:inline-flex;align-items:center;justify-content:center;
-background:rgba(255,255,255,.08);color:#9fd3ff;font-weight:700}
-.info-popup{position:absolute;background:#0f1320;border:1px solid #243046;
-padding:10px;border-radius:10px}
-.info-popup.hidden{display:none}
-@media(max-width:768px){.desktop-filters{display:none!important}}
+/* ===== INFO ICON FIX ===== */
+.info, .info-icon, .infoBtn {
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  width:18px;height:18px;
+  border-radius:50%;
+  background:rgba(120,160,255,.15);
+  color:#9fbaff;
+  font-weight:700;
+  cursor:pointer;
+}
+.info:hover, .info-icon:hover, .infoBtn:hover {
+  background:rgba(120,160,255,.35);
+  color:#fff;
+}
+.info-popup, .infoPanel {
+  position:absolute;
+  z-index:999;
+  background:#0f1422;
+  border:1px solid #24314d;
+  border-radius:10px;
+  padding:10px 12px;
+  font-size:12px;
+  line-height:1.4;
+  box-shadow:0 12px 30px rgba(0,0,0,.45);
+}
+.info-hidden { display:none !important; }
+
+@media(max-width:768px){
+  .info-popup, .infoPanel{
+    position:fixed;
+    left:50%;
+    bottom:90px;
+    transform:translateX(-50%);
+    max-width:calc(100vw - 24px);
+  }
+}
 </style></head>
 <body>
 
@@ -4829,10 +4860,21 @@ document.addEventListener('DOMContentLoaded', enhanceInfoPopups);
 </script>
 
 <script>
-document.addEventListener("click",e=>{
- if(e.target.classList.contains("info-btn")){
-   e.target.nextElementSibling.classList.toggle("hidden")
- }
+// ===== INFO ICON CLICK FIX (GLOBAL, NON-DESTRUCTIVE) =====
+document.addEventListener("click", e => {
+  const icon = e.target.closest(".info, .info-icon, .infoBtn");
+  const open = document.querySelectorAll(".info-popup:not(.info-hidden), .infoPanel:not(.info-hidden)");
+
+  if (!icon) {
+    open.forEach(p => p.classList.add("info-hidden"));
+    return;
+  }
+
+  let panel = icon.nextElementSibling;
+  if (!panel || (!panel.classList.contains("info-popup") && !panel.classList.contains("infoPanel"))) return;
+
+  open.forEach(p => p !== panel && p.classList.add("info-hidden"));
+  panel.classList.toggle("info-hidden");
 });
 </script></body>
 </html>
