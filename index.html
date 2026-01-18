@@ -1,4 +1,4 @@
-!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -132,10 +132,10 @@
     .tab-nav { display: flex; background: var(--bg-secondary); border-bottom: 1px solid var(--border-medium); flex-shrink: 0; }
     .tab-btn { padding: 10px 24px; background: transparent; border: none; border-bottom: 2px solid transparent; color: var(--text-muted); font-size: 0.8rem; font-family: 'Inter', sans-serif; cursor: pointer; transition: all 0.2s; }
     .tab-btn:hover { color: var(--text-secondary); background: rgba(255,255,255,0.03); }
-    .tab-btn.selected { color: var(--accent-btc); border-bottom-color: var(--accent-btc); background: rgba(247,147,26,0.08); }
+    .tab-btn.active { color: var(--accent-btc); border-bottom-color: var(--accent-btc); background: rgba(247,147,26,0.08); }
     
     .tab-content { display: none; flex: 1; flex-direction: column; overflow: hidden; min-height: 0; }
-    .tab-content.selected { display: flex; }
+    .tab-content.active { display: flex; }
     
     .header { display: flex; justify-content: space-between; align-items: center; padding: 6px 16px; background: linear-gradient(180deg, rgba(247,147,26,0.12) 0%, var(--bg-primary) 100%); border-bottom: 1px solid rgba(247,147,26,0.25); flex-shrink: 0; }
     .header h1 { font-family: 'JetBrains Mono', monospace; font-size: 1rem; color: var(--accent-btc); display: flex; align-items: center; gap: 6px; }
@@ -151,7 +151,7 @@
     
     .tb-btn { display: flex; align-items: center; gap: 3px; padding: 3px 7px; background: rgba(255,255,255,0.04); border: 1px solid var(--border-medium); border-radius: 3px; color: var(--text-secondary); font-size: 0.6rem; font-family: 'Inter', sans-serif; cursor: pointer; transition: all 0.15s; }
     .tb-btn:hover { background: rgba(255,255,255,0.08); color: var(--text-primary); }
-    .tb-btn.selected { background: var(--accent-btc-dim); border-color: rgba(247,147,26,0.4); color: var(--accent-btc); }
+    .tb-btn.active { background: var(--accent-btc-dim); border-color: rgba(247,147,26,0.4); color: var(--accent-btc); }
     .tb-btn.preset { background: rgba(100,149,237,0.1); border-color: rgba(100,149,237,0.25); color: var(--accent-blue); }
     .tb-btn.new-file { background: rgba(139,92,246,0.12); border-color: rgba(139,92,246,0.3); color: #a78bfa; }
     .tb-btn.filter-btn { background: rgba(74,222,128,0.1); border-color: rgba(74,222,128,0.25); color: var(--accent-green); }
@@ -172,7 +172,7 @@
     
     .f-btn { padding: 2px 5px; background: rgba(255,255,255,0.04); border: 1px solid var(--border-medium); border-radius: 2px; color: var(--text-muted); font-size: 0.55rem; font-family: 'JetBrains Mono', monospace; cursor: pointer; transition: all 0.15s; }
     .f-btn:hover { background: rgba(255,255,255,0.08); }
-    .f-btn.selected { background: var(--accent-btc-dim); border-color: rgba(247,147,26,0.4); color: var(--accent-btc); }
+    .f-btn.active { background: var(--accent-btc-dim); border-color: rgba(247,147,26,0.4); color: var(--accent-btc); }
     .f-btn.quick { background: rgba(100,149,237,0.1); border-color: rgba(100,149,237,0.2); color: var(--accent-blue); }
     .f-btn.none-btn { background: rgba(248,113,113,0.1); border-color: rgba(248,113,113,0.25); color: var(--accent-red); }
     
@@ -200,7 +200,7 @@
     .col-filter-panel.visible { display: block; }
     .col-filter-panel h3 { font-size: 0.55rem; text-transform: uppercase; color: var(--accent-green); margin-bottom: 8px; }
     
-    .selected-filters { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 8px; }
+    .active-filters { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 8px; }
     .filter-tag { display: flex; align-items: center; gap: 4px; padding: 3px 8px; background: rgba(74,222,128,0.15); border: 1px solid rgba(74,222,128,0.3); border-radius: 3px; font-size: 0.55rem; color: var(--accent-green); }
     .filter-tag .remove-filter { cursor: pointer; color: var(--accent-red); font-weight: bold; }
     
@@ -400,7 +400,7 @@
     @media (max-width: 768px) {
       .tab-nav { flex-wrap: wrap; justify-content: center; gap: 2px; padding: 5px; }
       .tab-btn { padding: 8px 12px; font-size: 0.7rem; flex: 1 1 auto; min-width: 70px; text-align: center; }
-      .tab-btn.selected { background: var(--accent-btc-dim); }
+      .tab-btn.active { background: var(--accent-btc-dim); }
       
       /* Mobile Header */
       .header { flex-direction: column; padding: 8px 12px; gap: 8px; }
@@ -559,10 +559,6 @@
   </style>
 </head>
 <body>
-<div class='mobile-toggle-handle' onclick='toggleMobileChrome()'>▲</div>
-<script>
-function toggleMobileChrome(){document.body.classList.toggle('mobile-chrome-hidden');}
-</script>
 
   <input type="file" id="file-input" accept=".csv">
 
@@ -4580,8 +4576,8 @@ button, .f-btn, .tab-btn, .preset-item, .mobile-section, .date-chip {
 }
 
 /* Better active feedback */
-.f-btn.selected,
-.tab-btn.selected {
+.f-btn.active,
+.tab-btn.active {
   box-shadow: 0 0 0 1px rgba(247,147,26,0.4) inset,
               0 4px 12px rgba(247,147,26,0.25);
 }
@@ -4802,4 +4798,27 @@ function enhanceInfoPopups(){
     popup.appendChild(body);
 
     // Close behavior (mobile)
-    popup.querySelector('.popup-
+    popup.querySelector('.popup-close').onclick = e => {
+      popup.classList.remove('visible');
+      e.stopPropagation();
+    };
+  });
+}
+
+// Run after render hooks if they exist
+['renderDayView','renderTable','renderCalendar'].forEach(fn => {
+  if (typeof window[fn] === 'function') {
+    const orig = window[fn];
+    window[fn] = function(){
+      const r = orig.apply(this, arguments);
+      setTimeout(enhanceInfoPopups, 0);
+      return r;
+    }
+  }
+});
+
+document.addEventListener('DOMContentLoaded', enhanceInfoPopups);
+</script>
+
+</body>
+</html>
