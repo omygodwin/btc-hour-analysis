@@ -557,7 +557,15 @@
       .table-container, .day-table-container { overflow: visible; height: auto; }
     }
   </style>
-</head>
+<style>
+/* UI FIXES */
+.info-btn{cursor:pointer;border-radius:50%;width:18px;height:18px;display:inline-flex;align-items:center;justify-content:center;
+background:rgba(255,255,255,.08);color:#9fd3ff;font-weight:700}
+.info-popup{position:absolute;background:#0f1320;border:1px solid #243046;
+padding:10px;border-radius:10px}
+.info-popup.hidden{display:none}
+@media(max-width:768px){.desktop-filters{display:none!important}}
+</style></head>
 <body>
 
   <input type="file" id="file-input" accept=".csv">
@@ -4820,5 +4828,11 @@ function enhanceInfoPopups(){
 document.addEventListener('DOMContentLoaded', enhanceInfoPopups);
 </script>
 
-</body>
+<script>
+document.addEventListener("click",e=>{
+ if(e.target.classList.contains("info-btn")){
+   e.target.nextElementSibling.classList.toggle("hidden")
+ }
+});
+</script></body>
 </html>
