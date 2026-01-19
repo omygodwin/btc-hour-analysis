@@ -763,7 +763,8 @@
           <button id="btn-show-dt-cols" class="f-btn active" onclick="toggleShowDayCols()" style="font-size:0.55rem;padding:2px 8px;">Show in Table</button>
           <div style="display:flex;align-items:center;gap:8px;">
             <label style="font-size:0.55rem;color:var(--text-muted);margin-left:8px">Established %:</label>
-            <input id="est-pct" type="number" value="85" min="1" max="100" style="width:64px;padding:4px;border-radius:4px;background:rgba(255,255,255,0.03);border:1px solid var(--border-medium);color:var(--text-primary);font-size:0.55rem;" onchange="computeEstablishedHours(); renderTable();" />
+            <input id="est-pct" type="number" value="85" min="1" max="100" style="width:64px;padding:4px;border-radius:4px;background:rgba(255,255,255,0.03);border:1px solid var(--border-medium);color:var(--text-primary);font-size:0.55rem;" onchange="computeEstablishedHours();
+      computeRelativeVolume(); renderTable();" />
           </div>
         </div>
         <div class="dt-col-grid" id="dt-col-grid"></div>
@@ -1942,6 +1943,7 @@
       
       populateDatePicker();
       computeEstablishedHours();
+      computeRelativeVolume();
     }
     
     function updateLevel() {
@@ -2063,7 +2065,58 @@
     
     // ==================== DATE PICKER ====================
     
+
+function computeRelativeVolume(){
+  try {
+    const days = getFilteredDays ? getFilteredDays() : Object.values(etDays);
+    const byHour = {};
+    const byHourDow = {};
+
+    days.forEach(d=>{
+      HOURS.forEach(h=>{
+        const v=d.hrs[h]?.m?.vol;
+        if(v==null)return;
+        (byHour[h]=byHour[h]||[]).push(v);
+        const k=`${h}_${d.dow}`;
+        (byHourDow[k]=byHourDow[k]||[]).push(v);
+      });
+    });
+
+    days.forEach(d=>{
+      let cum=0;
+      HOURS.forEach(h=>{
+        const m=d.hrs[h]?.m; if(!m||m.vol==null)return;
+        cum+=m.vol;
+
+        const a=byHour[h]||[];
+        const avg=a.reduce((x,y)=>x+y,0)/Math.max(1,a.length);
+        m.rVol=avg?m.vol/avg:null;
+
+        const prev=days.filter(x=>x.date<d.date).slice(-RELVOL_LOOKBACK_DAY);
+        const cAvg=prev.reduce((s,x)=>{
+          let t=0; for(let i=0;i<=h;i++)t+=x.hrs[i]?.m?.vol||0; return s+t;
+        },0)/Math.max(1,prev.length);
+        m.rVolC=cAvg?cum/cAvg:null;
+
+        const k=`${h}_${d.dow}`;
+        const da=byHourDow[k]||[];
+        const dAvg=da.reduce((x,y)=>x+y,0)/Math.max(1,da.length);
+        m.rVolDOW=dAvg?m.vol/dAvg:null;
+      });
+
+      const pd=days.filter(x=>x.date<d.date).slice(-RELVOL_LOOKBACK_DAY);
+      const dAvg=pd.reduce((s,x)=>s+(x.dayVol||0),0)/Math.max(1,pd.length);
+      d.dRelVol=dAvg?d.dayVol/dAvg:null;
+
+      const dow=pd.filter(x=>x.dow===d.dow);
+      const dowAvg=dow.reduce((s,x)=>s+(x.dayVol||0),0)/Math.max(1,dow.length);
+      d.dRelVolDOW=dowAvg?d.dayVol/dowAvg:null;
+    });
+  }catch(e){console.warn(e);}
+}
+
 function computeEstablishedHours(){
+
   try {
     const pct = parseFloat(document.getElementById('est-pct')?.value) || 85;
     const P = Math.max(1, Math.min(100, pct)) / 100;
