@@ -761,6 +761,10 @@
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
           <h3 style="margin-bottom:0;">Day Total Columns</h3>
           <button id="btn-show-dt-cols" class="f-btn active" onclick="toggleShowDayCols()" style="font-size:0.55rem;padding:2px 8px;">Show in Table</button>
+          <div style="display:flex;align-items:center;gap:8px;">
+            <label style="font-size:0.55rem;color:var(--text-muted);margin-left:8px">Established %:</label>
+            <input id="est-pct" type="number" value="85" min="1" max="100" style="width:64px;padding:4px;border-radius:4px;background:rgba(255,255,255,0.03);border:1px solid var(--border-medium);color:var(--text-primary);font-size:0.55rem;" onchange="computeEstablishedHours(); renderTable();" />
+          </div>
         </div>
         <div class="dt-col-grid" id="dt-col-grid"></div>
         <div style="margin-top:6px;display:flex;gap:4px;">
@@ -1168,6 +1172,13 @@
       { id: 'wLR', label: 'WLR', desc: 'Weekly Low Range', default: false },
       { id: 'wMx', label: 'WMx', desc: 'Weekly Max Range', default: false },
       { id: 'wOC', label: 'WOC', desc: 'Weekly Open-Close', default: false },
+      // Extra day-level helpers
+      { id: 'dOW', label: 'Day', desc: 'Day of Week (0=Sun)', default: false },
+      { id: 'dDayNum', label: 'Day#', desc: 'Day number in month', default: false },
+      { id: 'dUpEstHr', label: 'UpEst', desc: 'Hour Up % Established', default: false },
+      { id: 'dDnEstHr', label: 'DnEst', desc: 'Hour Down % Established', default: false },
+      { id: 'dRangeEstHr', label: 'RngEst', desc: 'Hour Range % Established', default: false },
+      { id: 'dHourlyMaxRng', label: 'HMaxR', desc: 'Hourly Max Range', default: false },
     ];
     
     // ==================== STATE ====================
@@ -1221,6 +1232,10 @@
     // 5PM Session tab state
     let pm5SelectedYears = new Set();
     let pm5SelectedDays = new Set([0,1,2,3,4,5,6]);
+    let pm5SelectedMonths = new Set([1,2,3,4,5,6,7,8,9,10,11,12]);
+    let pm5SelectedOccs = new Set([1,2,3,4,5]);
+    let pm5SelectedDates = new Set();
+    let pm5UseDateFilter = false;
     let pm5SortColumn = 'date';
     let pm5SortDirection = 'desc';
     let pm5SortHour = null;
@@ -1926,6 +1941,7 @@
       ).join('');
       
       populateDatePicker();
+      computeEstablishedHours();
     }
     
     function updateLevel() {
@@ -2046,7 +2062,59 @@
     }
     
     // ==================== DATE PICKER ====================
-    function populateDatePicker() {
+    
+function computeEstablishedHours(){
+  try {
+    const pct = parseFloat(document.getElementById('est-pct')?.value) || 85;
+    const P = Math.max(1, Math.min(100, pct)) / 100;
+    Object.values(etDays).forEach(day => {
+      // Day metadata
+      day.dOW = day.dow;
+      day.dDayNum = (new Date(day.date + 'T12:00:00Z')).getUTCDate();
+      // Find maximum actual cumulative up/down and range across hours
+      const hours = HOURS.slice();
+      // Up (cdrUActual)
+      const upVals = hours.map(h => (day.hrs[h] && day.hrs[h].m && typeof day.hrs[h].m.cdrUActual !== 'undefined') ? day.hrs[h].m.cdrUActual : null).filter(v=>v!=null);
+      const maxUp = upVals.length ? Math.max(...upVals) : null;
+      day.dUpEstablishedHour = null;
+      if (maxUp != null && maxUp > 0) {
+        const thr = Math.round(maxUp * P);
+        for (let h=0; h<=23; h++) {
+          const v = day.hrs[h]?.m?.cdrUActual;
+          if (typeof v !== 'undefined' && v != null && v >= thr) { day.dUpEstablishedHour = h; break; }
+        }
+      }
+      // Down (cdrDActual)
+      const dnVals = hours.map(h => (day.hrs[h] && day.hrs[h].m && typeof day.hrs[h].m.cdrDActual !== 'undefined') ? day.hrs[h].m.cdrDActual : null).filter(v=>v!=null);
+      const maxDn = dnVals.length ? Math.max(...dnVals) : null;
+      day.dDnEstablishedHour = null;
+      if (maxDn != null && maxDn > 0) {
+        const thr = Math.round(maxDn * P);
+        for (let h=0; h<=23; h++) {
+          const v = day.hrs[h]?.m?.cdrDActual;
+          if (typeof v !== 'undefined' && v != null && v >= thr) { day.dDnEstablishedHour = h; break; }
+        }
+      }
+      // Range (mxcdActual)
+      const mxVals = hours.map(h => (day.hrs[h] && day.hrs[h].m && typeof day.hrs[h].m.mxcdActual !== 'undefined') ? day.hrs[h].m.mxcdActual : null).filter(v=>v!=null);
+      const maxMx = mxVals.length ? Math.max(...mxVals) : null;
+      day.dRangeEstablishedHour = null;
+      if (maxMx != null && maxMx > 0) {
+        const thr = Math.round(maxMx * P);
+        for (let h=0; h<=23; h++) {
+          const v = day.hrs[h]?.m?.mxcdActual;
+          if (typeof v !== 'undefined' && v != null && v >= thr) { day.dRangeEstablishedHour = h; break; }
+        }
+      }
+      // Hourly max range (max of hd.m.rng across hours)
+      const hourlyRngs = hours.map(h => (day.hrs[h] && day.hrs[h].m && typeof day.hrs[h].m.rng !== 'undefined') ? day.hrs[h].m.rng : null).filter(v=>v!=null);
+      day.dHourlyMaxRng = hourlyRngs.length ? Math.max(...hourlyRngs) : null;
+    });
+  } catch (e) { console.warn('computeEstablishedHours error', e); }
+}
+
+
+function populateDatePicker() {
       document.getElementById('date-list').innerHTML = allETDates.map(d => 
         `<div class="date-item ${selectedDates.has(d) ? 'selected' : ''}" data-date="${d}" onclick="toggleDate('${d}')">${d}</div>`
       ).join('');
@@ -3552,10 +3620,18 @@
     }
     
     function syncPm5FromOverview() {
+      // Copy overview-selected filters to 5PM session view (years, days, months, occs, selectedDates)
       pm5SelectedYears = new Set(selectedYears);
       pm5SelectedDays = new Set(selectedDays);
+      pm5SelectedMonths = new Set(selectedMonths);
+      pm5SelectedOccs = new Set(selectedOccs);
+      pm5UseDateFilter = !!useDateFilter;
+      pm5SelectedDates = new Set(selectedDates);
+      // Update UI active classes where possible (best-effort)
       document.querySelectorAll('[data-pm5-year]').forEach(b => b.classList.toggle('active', pm5SelectedYears.has(b.dataset.pm5Year)));
       document.querySelectorAll('[data-pm5-day]').forEach(b => b.classList.toggle('active', pm5SelectedDays.has(+b.dataset.pm5Day)));
+      document.querySelectorAll('[data-pm5-month]').forEach(b => b.classList.toggle('active', pm5SelectedMonths.has(+b.dataset.pm5Month)));
+      document.querySelectorAll('[data-pm5-occ]').forEach(b => b.classList.toggle('active', pm5SelectedOccs.has(+b.dataset.pm5Occ)));
       render5pmSession();
     }
     
@@ -3568,7 +3644,12 @@
     function getPm5FilteredData() {
       return Object.values(etDays).filter(d => {
         if (!pm5SelectedYears.has(d.date.slice(0,4))) return false;
+        if (!pm5SelectedMonths.has(d.month)) return false;
         if (!pm5SelectedDays.has(d.dow)) return false;
+        if (!pm5SelectedOccs.has(d.occ)) return false;
+        if (pm5UseDateFilter && pm5SelectedDates.size > 0) {
+          if (!pm5SelectedDates.has(d.date)) return false;
+        }
         if (d.d5pmOpen == null) return false; // Must have 5PM session data
         return true;
       }).sort((a, b) => {
@@ -3578,7 +3659,7 @@
         return 0;
       });
     }
-    
+
     function render5pmSession() {
       const data = getPm5FilteredData();
       const lvl = parseInt(document.getElementById('pm5-level-size').value) || 250;
