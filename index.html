@@ -598,18 +598,8 @@
 }
 </style>
 <style>
-.info,.infoBtn,.info-icon{display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;border-radius:50%;background:rgba(120,160,255,.18);color:#bcd2ff;font-weight:700;cursor:pointer;transition:.15s}
-.info:hover,.infoBtn:hover,.info-icon:hover{background:rgba(120,160,255,.4);color:#fff}
-.info-panel{position:absolute;z-index:9999;background:#0e1424;border:1px solid #273556;border-radius:12px;padding:10px 12px;font-size:12px;line-height:1.4;box-shadow:0 18px 40px rgba(0,0,0,.45)}
-.info-hidden{display:none!important}
-@media(max-width:768px){
-.desktop-filters{display:none!important}
-.info-panel{position:fixed;left:50%;bottom:96px;transform:translateX(-50%);max-width:calc(100vw - 24px)}
-}
-.filter-btn{opacity:.5}
-.filter-btn.active{opacity:1;box-shadow:0 0 0 2px #4da3ff inset}
-.collapsible{transition:max-height .25s ease,opacity .25s ease;overflow:hidden}
-.collapsed{max-height:0;opacity:0}
+[data-filter]{opacity:.45;transition:.15s}
+[data-filter].active{opacity:1;background:#ff9f1a;color:#000}
 </style>
 </head>
 <body>
@@ -4893,23 +4883,28 @@ document.addEventListener("click", e => {
 });
 </script>
 <script>
-document.addEventListener("click",e=>{
-const icon=e.target.closest(".info,.infoBtn,.info-icon");
-const open=document.querySelectorAll(".info-panel:not(.info-hidden)");
-if(!icon){open.forEach(p=>p.classList.add("info-hidden"));return;}
-const panel=icon.nextElementSibling;
-if(!panel||!panel.classList.contains("info-panel"))return;
-open.forEach(p=>p!==panel&&p.classList.add("info-hidden"));
-panel.classList.toggle("info-hidden");
+const FilterState={years:new Set(),months:new Set(),days:new Set(),hours:new Set()};
+
+function syncFilterUI(){
+ document.querySelectorAll('[data-filter]').forEach(b=>{
+  const t=b.dataset.filter,v=b.dataset.value;
+  FilterState[t]&&FilterState[t].has(v)?b.classList.add('active'):b.classList.remove('active');
+ });
+}
+
+function toggleFilter(t,v){
+ if(!FilterState[t])return;
+ FilterState[t].has(v)?FilterState[t].delete(v):FilterState[t].add(v);
+ syncFilterUI();
+ if(typeof applyFilters==='function')applyFilters();
+}
+
+document.addEventListener('click',e=>{
+ const b=e.target.closest('[data-filter]');
+ if(b)toggleFilter(b.dataset.filter,b.dataset.value);
 });
-document.addEventListener("click",e=>{
-const b=e.target.closest(".filter-btn");
-if(b)b.classList.toggle("active");
-});
-window.toggleCollapse=id=>{
-const el=document.getElementById(id);
-if(el)el.classList.toggle("collapsed");
-};
+
+document.addEventListener('DOMContentLoaded',syncFilterUI);
 </script>
 </body>
 </html>
