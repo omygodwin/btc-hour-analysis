@@ -598,46 +598,30 @@
 }
 </style>
 <style>
-/* ===== INFO BUTTON (FINAL) ===== */
-.info-btn {
-  display:inline-flex;
-  align-items:center;
-  justify-content:center;
-  width:20px;height:20px;
-  border-radius:50%;
-  border:1px solid var(--border,#2a2f44);
-  color:#8fa8ff;
-  font-weight:600;
-  cursor:pointer;
-  background:rgba(143,168,255,.12);
+/* FORCE TAB SIZE FIX */
+.bottom-tabs button, .tab-btn {
+  padding:6px 8px !important;
+  font-size:11px !important;
 }
-.info-btn:hover{background:rgba(143,168,255,.28);color:#fff}
+.bottom-tabs { height:44px !important; }
+
+/* HIDE TOP FILTERS ON MOBILE */
+@media(max-width:768px){
+  .top-filters, .filters, #filters { display:none !important; }
+}
 
 /* INFO MODAL */
-#infoOverlay{
-  position:fixed;inset:0;
-  background:rgba(0,0,0,.55);
-  display:none;
-  align-items:center;
-  justify-content:center;
-  z-index:9999;
+#GLOBAL_INFO_MODAL{
+  position:fixed;inset:0;display:none;
+  background:rgba(0,0,0,.6);
+  align-items:center;justify-content:center;
+  z-index:99999;
 }
-#infoCard{
-  background:#0f1424;
-  border:1px solid #273556;
-  border-radius:14px;
-  padding:14px;
-  width:92%;
-  max-width:340px;
-  box-shadow:0 20px 50px rgba(0,0,0,.6);
+#GLOBAL_INFO_MODAL .card{
+  background:#101522;border-radius:14px;
+  padding:14px;width:90%;max-width:320px;
+  color:#fff;
 }
-#infoCard h3{margin:0 0 6px;font-size:14px}
-#infoCard p{margin:0;font-size:12px;color:#cdd4ff}
-</style>
-
-<style>
-[data-filter]{opacity:.4}
-[data-filter].active{opacity:1;background:#ff9f1a;color:#000}
 </style>
 </head>
 <body>
@@ -4920,56 +4904,34 @@ document.addEventListener("click", e => {
   panel.classList.toggle("info-hidden");
 });
 </script>
-<div id="infoOverlay">
-  <div id="infoCard">
-    <h3>Interval Info</h3>
-    <p id="infoContent"></p>
+<div id="GLOBAL_INFO_MODAL">
+  <div class="card">
+    <strong>Interval Info</strong>
+    <p>Detailed metrics will appear here.</p>
   </div>
 </div>
 
 <script>
-/* ===== INFO BUTTON LOGIC ===== */
-document.addEventListener("click",e=>{
-  const btn=e.target.closest(".info-btn");
-  const overlay=document.getElementById("infoOverlay");
-  if(btn){
-    const content=btn.dataset.info||"No details available.";
-    document.getElementById("infoContent").innerText=content;
-    overlay.style.display="flex";
-    return;
+/* GLOBAL INFO HANDLER - CATCH ALL */
+document.addEventListener('click',e=>{
+  if(e.target.textContent.trim()==='i'){
+    const modal=document.getElementById('GLOBAL_INFO_MODAL');
+    modal.style.display='flex';
   }
-  if(e.target.id==="infoOverlay"){
-    overlay.style.display="none";
+  if(e.target.id==='GLOBAL_INFO_MODAL'){
+    e.target.style.display='none';
   }
 });
-</script>
 
-<script>
-/* ===== FILTER STATE ===== */
-const FilterState={};
-
-function toggleFilter(btn){
-  const group=btn.dataset.filter;
-  const val=btn.dataset.value;
-  if(!FilterState[group])FilterState[group]=new Set();
-  FilterState[group].has(val)?FilterState[group].delete(val):FilterState[group].add(val);
-  syncFilters();
-  if(typeof applyFilters==="function")applyFilters();
-}
-
-function syncFilters(){
-  document.querySelectorAll("[data-filter]").forEach(b=>{
-    const g=b.dataset.filter,v=b.dataset.value;
-    FilterState[g]&&FilterState[g].has(v)?b.classList.add("active"):b.classList.remove("active");
-  });
-}
-
-document.addEventListener("click",e=>{
-  const btn=e.target.closest("[data-filter]");
-  if(btn)toggleFilter(btn);
+/* AUTO HIDE BOTTOM TABS ON SCROLL */
+let lastY=0;
+window.addEventListener('scroll',()=>{
+  const tabs=document.querySelector('.bottom-tabs');
+  if(!tabs) return;
+  if(window.scrollY>lastY) tabs.style.transform='translateY(60%)';
+  else tabs.style.transform='translateY(0)';
+  lastY=window.scrollY;
 });
-
-document.addEventListener("DOMContentLoaded",syncFilters);
 </script>
 </body>
 </html>
