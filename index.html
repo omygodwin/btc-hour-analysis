@@ -1921,16 +1921,47 @@
         // Calculate 5PM hourly cumulative metrics for hours after 5PM session starts
         if (day.d5pmOpen != null) {
           const pm5Open = day.d5pmOpen;
-          
+
+          // Calculate for hours 17-23 of the current day (5PM session start)
+          let p5RunH = pm5Open, p5RunL = pm5Open;
+          let p5PrevCdrU = null, p5PrevCdrD = null, p5PrevMxcd = null;
+
+          for (let h = 17; h <= 23; h++) {
+            if (day.hrs[h] && day.hrs[h].m) {
+              const hd = day.hrs[h];
+              p5RunH = Math.max(p5RunH, hd.h);
+              p5RunL = Math.min(p5RunL, hd.l);
+
+              const p5CdrU = Math.round(p5RunH - pm5Open);
+              const p5CdrD = Math.round(pm5Open - p5RunL);
+              const p5Mxcd = Math.max(p5CdrU, p5CdrD);
+
+              hd.m.p5Cdr = Math.round(hd.c - pm5Open);
+              hd.m.p5CdrU = (p5CdrU !== p5PrevCdrU) ? p5CdrU : null;
+              hd.m.p5CdrD = (p5CdrD !== p5PrevCdrD) ? p5CdrD : null;
+              hd.m.p5Mxcd = (p5Mxcd !== p5PrevMxcd) ? p5Mxcd : null;
+              hd.m.p5CdrUActual = p5CdrU;
+              hd.m.p5CdrDActual = p5CdrD;
+              hd.m.p5MxcdActual = p5Mxcd;
+
+              p5PrevCdrU = p5CdrU;
+              p5PrevCdrD = p5CdrD;
+              p5PrevMxcd = p5Mxcd;
+            }
+          }
+
           // Get previous day for high/low from 5PM-11PM
           const prevDateIdx = idx - 1;
           const prevDateStr = prevDateIdx >= 0 ? sortedDates[prevDateIdx] : null;
           const prevDay = prevDateStr ? etDays[prevDateStr] : null;
-          
-          // Start with 5PM open as running high/low
-          let p5RunH = pm5Open, p5RunL = pm5Open;
-          let p5PrevCdrU = null, p5PrevCdrD = null, p5PrevMxcd = null;
-          
+
+          // Reset for continuation into next day (hours 0-16)
+          p5RunH = pm5Open;
+          p5RunL = pm5Open;
+          p5PrevCdrU = null;
+          p5PrevCdrD = null;
+          p5PrevMxcd = null;
+
           // First accumulate from 5PM-11PM of previous day
           if (prevDay) {
             for (let h = 17; h <= 23; h++) {
@@ -1940,18 +1971,18 @@
               }
             }
           }
-          
-          // Now calculate for hours 0-16 of current day (within 5PM session)
+
+          // Now calculate for hours 0-16 of current day (continuation of 5PM session)
           for (let h = 0; h <= 16; h++) {
             if (day.hrs[h] && day.hrs[h].m) {
               const hd = day.hrs[h];
               p5RunH = Math.max(p5RunH, hd.h);
               p5RunL = Math.min(p5RunL, hd.l);
-              
+
               const p5CdrU = Math.round(p5RunH - pm5Open);
               const p5CdrD = Math.round(pm5Open - p5RunL);
               const p5Mxcd = Math.max(p5CdrU, p5CdrD);
-              
+
               hd.m.p5Cdr = Math.round(hd.c - pm5Open);
               hd.m.p5CdrU = (p5CdrU !== p5PrevCdrU) ? p5CdrU : null;
               hd.m.p5CdrD = (p5CdrD !== p5PrevCdrD) ? p5CdrD : null;
@@ -1959,7 +1990,7 @@
               hd.m.p5CdrUActual = p5CdrU;
               hd.m.p5CdrDActual = p5CdrD;
               hd.m.p5MxcdActual = p5Mxcd;
-              
+
               p5PrevCdrU = p5CdrU;
               p5PrevCdrD = p5CdrD;
               p5PrevMxcd = p5Mxcd;
@@ -2208,34 +2239,34 @@ function computeEstablishedHours(){
       // Up (cdrUActual)
       const upVals = hours.map(h => (day.hrs[h] && day.hrs[h].m && typeof day.hrs[h].m.cdrUActual !== 'undefined') ? day.hrs[h].m.cdrUActual : null).filter(v=>v!=null);
       const maxUp = upVals.length ? Math.max(...upVals) : null;
-      day.dUpEstablishedHour = null;
+      day.dUpEstHr = null;
       if (maxUp != null && maxUp > 0) {
-        const thr = Math.round(maxUp * P);
+        const thr = maxUp * P;
         for (let h=0; h<=23; h++) {
           const v = day.hrs[h]?.m?.cdrUActual;
-          if (typeof v !== 'undefined' && v != null && v >= thr) { day.dUpEstablishedHour = h; break; }
+          if (typeof v !== 'undefined' && v != null && v > thr) { day.dUpEstHr = h; break; }
         }
       }
       // Down (cdrDActual)
       const dnVals = hours.map(h => (day.hrs[h] && day.hrs[h].m && typeof day.hrs[h].m.cdrDActual !== 'undefined') ? day.hrs[h].m.cdrDActual : null).filter(v=>v!=null);
       const maxDn = dnVals.length ? Math.max(...dnVals) : null;
-      day.dDnEstablishedHour = null;
+      day.dDnEstHr = null;
       if (maxDn != null && maxDn > 0) {
-        const thr = Math.round(maxDn * P);
+        const thr = maxDn * P;
         for (let h=0; h<=23; h++) {
           const v = day.hrs[h]?.m?.cdrDActual;
-          if (typeof v !== 'undefined' && v != null && v >= thr) { day.dDnEstablishedHour = h; break; }
+          if (typeof v !== 'undefined' && v != null && v > thr) { day.dDnEstHr = h; break; }
         }
       }
       // Range (mxcdActual)
       const mxVals = hours.map(h => (day.hrs[h] && day.hrs[h].m && typeof day.hrs[h].m.mxcdActual !== 'undefined') ? day.hrs[h].m.mxcdActual : null).filter(v=>v!=null);
       const maxMx = mxVals.length ? Math.max(...mxVals) : null;
-      day.dRangeEstablishedHour = null;
+      day.dRangeEstHr = null;
       if (maxMx != null && maxMx > 0) {
-        const thr = Math.round(maxMx * P);
+        const thr = maxMx * P;
         for (let h=0; h<=23; h++) {
           const v = day.hrs[h]?.m?.mxcdActual;
-          if (typeof v !== 'undefined' && v != null && v >= thr) { day.dRangeEstablishedHour = h; break; }
+          if (typeof v !== 'undefined' && v != null && v > thr) { day.dRangeEstHr = h; break; }
         }
       }
       // Hourly max range (max of hd.m.rng across hours)
@@ -2337,6 +2368,21 @@ function populateDatePicker() {
       }
     }
     
+    function getEstablishedHourGradient(hour) {
+      if (hour == null) return '#0d0d12';
+      // 12am-11am (hours 0-11): cyan gradient (transparent to cyan)
+      if (hour >= 0 && hour <= 11) {
+        const t = hour / 11; // 0 at 12am, 1 at 11am
+        return `rgba(${Math.round(13 + t * 47)}, ${Math.round(13 + t * 198)}, ${Math.round(18 + t * 200)}, ${0.2 + t * 0.8})`;
+      }
+      // 12pm-11pm (hours 12-23): orange gradient (transparent to orange)
+      else if (hour >= 12 && hour <= 23) {
+        const t = (hour - 12) / 11; // 0 at 12pm, 1 at 11pm
+        return `rgba(${Math.round(13 + t * 238)}, ${Math.round(13 + t * 133)}, ${Math.round(18 + t * 42)}, ${0.2 + t * 0.8})`;
+      }
+      return '#0d0d12';
+    }
+
     function getGreenBarGradient(val) {
       if (val == null) return '#0d0d12';
       if (val < 6) {
@@ -2375,37 +2421,42 @@ function populateDatePicker() {
     }
     
     function calcRowStats(day, hours) {
-      const s = { rng: [], urlr: [], mxr: [], mxl: [], rank: [], cl: [], oc: [], cdr: [], cdrRG: [], mxcd: [], rsi: [], sig: [] };
+      const s = { rng: [], urlr: [], mxr: [], mxl: [], rank: [], cl: [], oc: [], cdr: [], cdrRG: [], mxcd: [], rsi: [], sig: [], vol: [] };
       getSortedHourKeys(day).forEach(h => {
         const m = day.hrs[h].m;
         if (!m) return;
-      
+
         if (m.rng != null) s.rng.push(m.rng);
         if (m.ur != null) s.urlr.push(m.ur);
         if (m.lr != null) s.urlr.push(m.lr);
         if (m.mxr != null) s.mxr.push(m.mxr);
         if (m.mxl != null) s.mxl.push(m.mxl);
-      
+
         ['mxrRk','mxlRk','ocRk','rngRk'].forEach(r => {
           if (m[r] != null) s.rank.push(m[r]);
         });
-      
+
         if (m.cl != null) s.cl.push(m.cl);
         if (m.oc != null) s.oc.push(m.oc);
-      
+
         if (m.cdrUActual != null) s.cdr.push(m.cdrUActual);
         if (m.cdrDActual != null) s.cdr.push(m.cdrDActual);
         if (m.cdr != null) s.cdrRG.push(m.cdr);
-      
+
         if (m.mxcdActual != null) s.mxcd.push(m.mxcdActual);
-      
+
         ['rsiMax','rsiMin','rsiAvg'].forEach(r => {
           if (m[r] != null) s.rsi.push(m[r]);
         });
-      
+
         ['sigMax','sigMin','sigAvg'].forEach(r => {
           if (m[r] != null) s.sig.push(m[r]);
         });
+
+        // Relative volume metrics
+        if (m.rVol != null) s.vol.push(m.rVol);
+        if (m.rVolC != null) s.vol.push(m.rVolC);
+        if (m.rVolDOW != null) s.vol.push(m.rVolDOW);
       });
       const r = {};
       Object.keys(s).forEach(k => {
@@ -2424,48 +2475,53 @@ function populateDatePicker() {
       realHours.forEach(h => {
         s[h] = {
           rng: [], urlr: [], mxr: [], mxl: [], rank: [], cl: [], oc: [],
-          cdrRG: [], cdr: [], mxcd: [], rsi: [], sig: [],
+          cdrRG: [], cdr: [], mxcd: [], rsi: [], sig: [], vol: [],
           wcdr: [], wcdrRG: [], wmxcd: [],
           p5cdr: [], p5cdrRG: [], p5mxcd: []
         };
-      
+
         data.forEach(d => {
           const m = d.hrs[h]?.m;
           if (!m) return;
-      
+
           if (m.rng != null) s[h].rng.push(m.rng);
           if (m.ur != null) s[h].urlr.push(m.ur);
           if (m.lr != null) s[h].urlr.push(m.lr);
           if (m.mxr != null) s[h].mxr.push(m.mxr);
           if (m.mxl != null) s[h].mxl.push(m.mxl);
-      
+
           ['mxrRk','mxlRk','ocRk','rngRk'].forEach(r => {
             if (m[r] != null) s[h].rank.push(m[r]);
           });
-      
+
           if (m.cl != null) s[h].cl.push(m.cl);
           if (m.oc != null) s[h].oc.push(m.oc);
-      
+
           if (m.cdr != null) s[h].cdrRG.push(m.cdr);
           if (m.cdrUActual != null) s[h].cdr.push(m.cdrUActual);
           if (m.cdrDActual != null) s[h].cdr.push(m.cdrDActual);
-      
+
           if (m.mxcdActual != null) s[h].mxcd.push(m.mxcdActual);
-      
+
           ['rsiMax','rsiMin','rsiAvg'].forEach(r => {
             if (m[r] != null) s[h].rsi.push(m[r]);
           });
-      
+
           ['sigMax','sigMin','sigAvg'].forEach(r => {
             if (m[r] != null) s[h].sig.push(m[r]);
           });
-      
+
+          // Relative volume metrics
+          if (m.rVol != null) s[h].vol.push(m.rVol);
+          if (m.rVolC != null) s[h].vol.push(m.rVolC);
+          if (m.rVolDOW != null) s[h].vol.push(m.rVolDOW);
+
           // Weekly cumulative
           if (m.wCdr != null) s[h].wcdrRG.push(m.wCdr);
           if (m.wCdrUActual != null) s[h].wcdr.push(m.wCdrUActual);
           if (m.wCdrDActual != null) s[h].wcdr.push(m.wCdrDActual);
           if (m.wMxcdActual != null) s[h].wmxcd.push(m.wMxcdActual);
-      
+
           // 5PM cumulative
           if (m.p5Cdr != null) s[h].p5cdrRG.push(m.p5Cdr);
           if (m.p5CdrUActual != null) s[h].p5cdr.push(m.p5CdrUActual);
@@ -2486,7 +2542,7 @@ function populateDatePicker() {
     }
     
     function calcDayTotalsStats(data) {
-      const s = { drng: [], durdlr: [], doc: [], doch: [], ddd: [], drev: [], d5pm: [], d5pmoc: [], weekly: [], woc: [] };
+      const s = { drng: [], durdlr: [], doc: [], doch: [], ddd: [], drev: [], d5pm: [], d5pmoc: [], weekly: [], woc: [], dRelVol: [] };
       data.forEach(d => {
         if (d.dRng != null) s.drng.push(d.dRng);
         if (d.dUR != null) s.durdlr.push(d.dUR);
@@ -2504,6 +2560,9 @@ function populateDatePicker() {
         if (d.wLR != null) s.weekly.push(d.wLR);
         if (d.wMx != null) s.weekly.push(d.wMx);
         if (d.wOC != null) s.woc.push(d.wOC);
+        // Relative volume metrics
+        if (d.dRelVol != null) s.dRelVol.push(d.dRelVol);
+        if (d.dRelVolDOW != null) s.dRelVol.push(d.dRelVolDOW);
       });
       return {
         drng: s.drng.length ? { min: Math.min(...s.drng), max: Math.max(...s.drng) } : { min: 0, max: 0 },
@@ -2515,6 +2574,7 @@ function populateDatePicker() {
         d5pmoc: s.d5pmoc.length ? { min: Math.min(...s.d5pmoc), max: Math.max(...s.d5pmoc) } : { min: -500, max: 500 },
         weekly: s.weekly.length ? { min: Math.min(...s.weekly), max: Math.max(...s.weekly) } : { min: 0, max: 5000 },
         woc: s.woc.length ? { min: Math.min(...s.woc), max: Math.max(...s.woc) } : { min: -2000, max: 2000 },
+        dRelVol: s.dRelVol.length ? { min: Math.min(...s.dRelVol), max: Math.max(...s.dRelVol) } : { min: 0, max: 2 },
       };
     }
     
@@ -2666,7 +2726,16 @@ function populateDatePicker() {
               bg = getRGGradient(val, dtStats.woc?.min || -2000, dtStats.woc?.max || 2000);
               cls += val >= 0 ? ' up' : ' down';
             }
-            
+            // Established hour metrics (color by hour column)
+            else if (c.id === 'dUpEstHr' || c.id === 'dDnEstHr' || c.id === 'dRangeEstHr') {
+              bg = getEstablishedHourGradient(val);
+              val = val != null ? formatHourHeader(val) : '—';
+            }
+            // Relative volume metrics (color by column)
+            else if (c.id === 'dRelVol' || c.id === 'dRelVolDOW') {
+              bg = getPurpleGradient(val, dtStats.dRelVol?.min || 0, dtStats.dRelVol?.max || 2);
+            }
+
             const fmtVal = typeof val === 'number' ? ((['dOC','dOCH','d5pmOC','wOC'].includes(c.id) ? (val >= 0 ? '+' : '') : '') + val.toLocaleString()) : val;
             bd += `<td class="sticky-col ${cls}" style="left:${pos}px;min-width:${w}px;background:${bg}${isLast?';border-right:2px solid rgba(100,149,237,0.3)':''}${extraStyle}">${fmtVal ?? '—'}</td>`;
             pos += w;
@@ -2831,20 +2900,20 @@ function populateDatePicker() {
     function renderDayView() {
       const date = document.getElementById('day-view-date').value;
       if (!date || !barsByET[date]) return;
-      
+
       const lvl = parseInt(document.getElementById('day-level-size').value) || 250;
       const hlFrom = parseInt(document.getElementById('day-hl-from').value);
       const hlTo = parseInt(document.getElementById('day-hl-to').value);
       const day = etDays[date];
       const bars = barsByET[date];
-      
+
       const date2 = compareMode ? document.getElementById('day-view-date2').value : null;
       let titleText = `${date} (${DAYS_SHORT[day.dow]})`;
       if (compareMode && date2 && etDays[date2]) {
         titleText += ` vs ${date2} (${DAYS_SHORT[etDays[date2].dow]})`;
       }
       document.getElementById('day-view-title').textContent = titleText;
-      
+
       document.getElementById('day-stats-grid').innerHTML = `
         <div class="day-stat-box"><div class="day-stat-val">${day.dRng?.toLocaleString() ?? '—'}</div><div class="day-stat-lbl">Day Range</div></div>
         <div class="day-stat-box"><div class="day-stat-val">${day.dUR?.toLocaleString() ?? '—'}</div><div class="day-stat-lbl">Day UR</div></div>
@@ -2855,16 +2924,19 @@ function populateDatePicker() {
         <div class="day-stat-box"><div class="day-stat-val">${day.dDD?.toLocaleString() ?? '—'}</div><div class="day-stat-lbl">Drawdown</div></div>
         <div class="day-stat-box"><div class="day-stat-val">${day.dRev?.toLocaleString() ?? '—'}</div><div class="day-stat-lbl">Reversal</div></div>
       `;
-      
+
       const hourBars = {};
       bars.forEach(b => {
         if (!hourBars[b.etHour]) hourBars[b.etHour] = {};
         hourBars[b.etHour][String(b.etMin).padStart(2, '0')] = b;
       });
-      
+
+      // Get hours specific to this day
+      const dayHours = Object.keys(day.hrs).map(Number).sort((a, b) => a - b);
+
       // Pre-calculate which minutes made new highs/lows for each hour
       const hourHighLowMins = {};
-      Object.keys(hourBars).map(Number).sort((a,b)=>a-b).forEach(h => {
+      dayHours.forEach(h => {
         hourHighLowMins[h] = { highMins: new Set(), lowMins: new Set() };
         let runningHigh = -Infinity;
         let runningLow = Infinity;
@@ -2959,7 +3031,7 @@ function populateDatePicker() {
       let currentRev = 0;
       let prevDD = null, prevRev = null;
       
-      realHours.forEach(h => {
+      dayHours.forEach(h => {
         const hd = day.hrs[h];
         if (!hd) return;
       
@@ -3809,12 +3881,45 @@ function populateDatePicker() {
       pm5SelectedOccs = new Set(selectedOccs);
       pm5UseDateFilter = !!useDateFilter;
       pm5SelectedDates = new Set(selectedDates);
-      // Update UI active classes where possible (best-effort)
-      document.querySelectorAll('[data-pm5-year]').forEach(b => b.classList.toggle('active', pm5SelectedYears.has(b.dataset.pm5Year)));
-      document.querySelectorAll('[data-pm5-day]').forEach(b => b.classList.toggle('active', pm5SelectedDays.has(+b.dataset.pm5Day)));
-      document.querySelectorAll('[data-pm5-month]').forEach(b => b.classList.toggle('active', pm5SelectedMonths.has(+b.dataset.pm5Month)));
-      document.querySelectorAll('[data-pm5-occ]').forEach(b => b.classList.toggle('active', pm5SelectedOccs.has(+b.dataset.pm5Occ)));
+      // Update UI active classes for elements that exist in PM5 tab
+      document.querySelectorAll('[data-pm5-year]').forEach(b => {
+        const isActive = pm5SelectedYears.has(b.dataset.pm5Year);
+        b.classList.toggle('active', isActive);
+      });
+      document.querySelectorAll('[data-pm5-day]').forEach(b => {
+        const isActive = pm5SelectedDays.has(+b.dataset.pm5Day);
+        b.classList.toggle('active', isActive);
+      });
       render5pmSession();
+    }
+
+    function syncOverviewFromPm5() {
+      // Copy 5PM session filters back to overview
+      selectedYears = new Set(pm5SelectedYears);
+      selectedDays = new Set(pm5SelectedDays);
+      selectedMonths = new Set(pm5SelectedMonths);
+      selectedOccs = new Set(pm5SelectedOccs);
+      useDateFilter = pm5UseDateFilter;
+      selectedDates = new Set(pm5SelectedDates);
+      // Update UI active classes in overview
+      document.querySelectorAll('[data-year]').forEach(b => {
+        const isActive = selectedYears.has(b.dataset.year);
+        b.classList.toggle('active', isActive);
+      });
+      document.querySelectorAll('[data-day]').forEach(b => {
+        const isActive = selectedDays.has(+b.dataset.day);
+        b.classList.toggle('active', isActive);
+      });
+      document.querySelectorAll('[data-month]').forEach(b => {
+        const isActive = selectedMonths.has(+b.dataset.month);
+        b.classList.toggle('active', isActive);
+      });
+      document.querySelectorAll('[data-occ]').forEach(b => {
+        const isActive = selectedOccs.has(+b.dataset.occ);
+        b.classList.toggle('active', isActive);
+      });
+      updateDatePickerUI();
+      renderTable();
     }
     
     function togglePm5Cumulative() {
