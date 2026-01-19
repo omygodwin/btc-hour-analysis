@@ -1921,16 +1921,47 @@
         // Calculate 5PM hourly cumulative metrics for hours after 5PM session starts
         if (day.d5pmOpen != null) {
           const pm5Open = day.d5pmOpen;
-          
+
+          // Calculate for hours 17-23 of the current day (5PM session start)
+          let p5RunH = pm5Open, p5RunL = pm5Open;
+          let p5PrevCdrU = null, p5PrevCdrD = null, p5PrevMxcd = null;
+
+          for (let h = 17; h <= 23; h++) {
+            if (day.hrs[h] && day.hrs[h].m) {
+              const hd = day.hrs[h];
+              p5RunH = Math.max(p5RunH, hd.h);
+              p5RunL = Math.min(p5RunL, hd.l);
+
+              const p5CdrU = Math.round(p5RunH - pm5Open);
+              const p5CdrD = Math.round(pm5Open - p5RunL);
+              const p5Mxcd = Math.max(p5CdrU, p5CdrD);
+
+              hd.m.p5Cdr = Math.round(hd.c - pm5Open);
+              hd.m.p5CdrU = (p5CdrU !== p5PrevCdrU) ? p5CdrU : null;
+              hd.m.p5CdrD = (p5CdrD !== p5PrevCdrD) ? p5CdrD : null;
+              hd.m.p5Mxcd = (p5Mxcd !== p5PrevMxcd) ? p5Mxcd : null;
+              hd.m.p5CdrUActual = p5CdrU;
+              hd.m.p5CdrDActual = p5CdrD;
+              hd.m.p5MxcdActual = p5Mxcd;
+
+              p5PrevCdrU = p5CdrU;
+              p5PrevCdrD = p5CdrD;
+              p5PrevMxcd = p5Mxcd;
+            }
+          }
+
           // Get previous day for high/low from 5PM-11PM
           const prevDateIdx = idx - 1;
           const prevDateStr = prevDateIdx >= 0 ? sortedDates[prevDateIdx] : null;
           const prevDay = prevDateStr ? etDays[prevDateStr] : null;
-          
-          // Start with 5PM open as running high/low
-          let p5RunH = pm5Open, p5RunL = pm5Open;
-          let p5PrevCdrU = null, p5PrevCdrD = null, p5PrevMxcd = null;
-          
+
+          // Reset for continuation into next day (hours 0-16)
+          p5RunH = pm5Open;
+          p5RunL = pm5Open;
+          p5PrevCdrU = null;
+          p5PrevCdrD = null;
+          p5PrevMxcd = null;
+
           // First accumulate from 5PM-11PM of previous day
           if (prevDay) {
             for (let h = 17; h <= 23; h++) {
@@ -1940,18 +1971,18 @@
               }
             }
           }
-          
-          // Now calculate for hours 0-16 of current day (within 5PM session)
+
+          // Now calculate for hours 0-16 of current day (continuation of 5PM session)
           for (let h = 0; h <= 16; h++) {
             if (day.hrs[h] && day.hrs[h].m) {
               const hd = day.hrs[h];
               p5RunH = Math.max(p5RunH, hd.h);
               p5RunL = Math.min(p5RunL, hd.l);
-              
+
               const p5CdrU = Math.round(p5RunH - pm5Open);
               const p5CdrD = Math.round(pm5Open - p5RunL);
               const p5Mxcd = Math.max(p5CdrU, p5CdrD);
-              
+
               hd.m.p5Cdr = Math.round(hd.c - pm5Open);
               hd.m.p5CdrU = (p5CdrU !== p5PrevCdrU) ? p5CdrU : null;
               hd.m.p5CdrD = (p5CdrD !== p5PrevCdrD) ? p5CdrD : null;
@@ -1959,7 +1990,7 @@
               hd.m.p5CdrUActual = p5CdrU;
               hd.m.p5CdrDActual = p5CdrD;
               hd.m.p5MxcdActual = p5Mxcd;
-              
+
               p5PrevCdrU = p5CdrU;
               p5PrevCdrD = p5CdrD;
               p5PrevMxcd = p5Mxcd;
@@ -2869,20 +2900,20 @@ function populateDatePicker() {
     function renderDayView() {
       const date = document.getElementById('day-view-date').value;
       if (!date || !barsByET[date]) return;
-      
+
       const lvl = parseInt(document.getElementById('day-level-size').value) || 250;
       const hlFrom = parseInt(document.getElementById('day-hl-from').value);
       const hlTo = parseInt(document.getElementById('day-hl-to').value);
       const day = etDays[date];
       const bars = barsByET[date];
-      
+
       const date2 = compareMode ? document.getElementById('day-view-date2').value : null;
       let titleText = `${date} (${DAYS_SHORT[day.dow]})`;
       if (compareMode && date2 && etDays[date2]) {
         titleText += ` vs ${date2} (${DAYS_SHORT[etDays[date2].dow]})`;
       }
       document.getElementById('day-view-title').textContent = titleText;
-      
+
       document.getElementById('day-stats-grid').innerHTML = `
         <div class="day-stat-box"><div class="day-stat-val">${day.dRng?.toLocaleString() ?? '—'}</div><div class="day-stat-lbl">Day Range</div></div>
         <div class="day-stat-box"><div class="day-stat-val">${day.dUR?.toLocaleString() ?? '—'}</div><div class="day-stat-lbl">Day UR</div></div>
@@ -2893,16 +2924,19 @@ function populateDatePicker() {
         <div class="day-stat-box"><div class="day-stat-val">${day.dDD?.toLocaleString() ?? '—'}</div><div class="day-stat-lbl">Drawdown</div></div>
         <div class="day-stat-box"><div class="day-stat-val">${day.dRev?.toLocaleString() ?? '—'}</div><div class="day-stat-lbl">Reversal</div></div>
       `;
-      
+
       const hourBars = {};
       bars.forEach(b => {
         if (!hourBars[b.etHour]) hourBars[b.etHour] = {};
         hourBars[b.etHour][String(b.etMin).padStart(2, '0')] = b;
       });
-      
+
+      // Get hours specific to this day
+      const dayHours = Object.keys(day.hrs).map(Number).sort((a, b) => a - b);
+
       // Pre-calculate which minutes made new highs/lows for each hour
       const hourHighLowMins = {};
-      Object.keys(hourBars).map(Number).sort((a,b)=>a-b).forEach(h => {
+      dayHours.forEach(h => {
         hourHighLowMins[h] = { highMins: new Set(), lowMins: new Set() };
         let runningHigh = -Infinity;
         let runningLow = Infinity;
@@ -2997,7 +3031,7 @@ function populateDatePicker() {
       let currentRev = 0;
       let prevDD = null, prevRev = null;
       
-      realHours.forEach(h => {
+      dayHours.forEach(h => {
         const hd = day.hrs[h];
         if (!hd) return;
       
@@ -3847,12 +3881,45 @@ function populateDatePicker() {
       pm5SelectedOccs = new Set(selectedOccs);
       pm5UseDateFilter = !!useDateFilter;
       pm5SelectedDates = new Set(selectedDates);
-      // Update UI active classes where possible (best-effort)
-      document.querySelectorAll('[data-pm5-year]').forEach(b => b.classList.toggle('active', pm5SelectedYears.has(b.dataset.pm5Year)));
-      document.querySelectorAll('[data-pm5-day]').forEach(b => b.classList.toggle('active', pm5SelectedDays.has(+b.dataset.pm5Day)));
-      document.querySelectorAll('[data-pm5-month]').forEach(b => b.classList.toggle('active', pm5SelectedMonths.has(+b.dataset.pm5Month)));
-      document.querySelectorAll('[data-pm5-occ]').forEach(b => b.classList.toggle('active', pm5SelectedOccs.has(+b.dataset.pm5Occ)));
+      // Update UI active classes for elements that exist in PM5 tab
+      document.querySelectorAll('[data-pm5-year]').forEach(b => {
+        const isActive = pm5SelectedYears.has(b.dataset.pm5Year);
+        b.classList.toggle('active', isActive);
+      });
+      document.querySelectorAll('[data-pm5-day]').forEach(b => {
+        const isActive = pm5SelectedDays.has(+b.dataset.pm5Day);
+        b.classList.toggle('active', isActive);
+      });
       render5pmSession();
+    }
+
+    function syncOverviewFromPm5() {
+      // Copy 5PM session filters back to overview
+      selectedYears = new Set(pm5SelectedYears);
+      selectedDays = new Set(pm5SelectedDays);
+      selectedMonths = new Set(pm5SelectedMonths);
+      selectedOccs = new Set(pm5SelectedOccs);
+      useDateFilter = pm5UseDateFilter;
+      selectedDates = new Set(pm5SelectedDates);
+      // Update UI active classes in overview
+      document.querySelectorAll('[data-year]').forEach(b => {
+        const isActive = selectedYears.has(b.dataset.year);
+        b.classList.toggle('active', isActive);
+      });
+      document.querySelectorAll('[data-day]').forEach(b => {
+        const isActive = selectedDays.has(+b.dataset.day);
+        b.classList.toggle('active', isActive);
+      });
+      document.querySelectorAll('[data-month]').forEach(b => {
+        const isActive = selectedMonths.has(+b.dataset.month);
+        b.classList.toggle('active', isActive);
+      });
+      document.querySelectorAll('[data-occ]').forEach(b => {
+        const isActive = selectedOccs.has(+b.dataset.occ);
+        b.classList.toggle('active', isActive);
+      });
+      updateDatePickerUI();
+      renderTable();
     }
     
     function togglePm5Cumulative() {
