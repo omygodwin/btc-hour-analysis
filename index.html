@@ -1096,6 +1096,10 @@
   <script>
     // ==================== CONSTANTS ====================
     const HOURS = Array.from({ length: 24 }, (_, i) => i);
+    // ================= RELATIVE VOLUME SETTINGS =================
+    const RELVOL_LOOKBACK_HOUR = 2500; // per-hour history
+    const RELVOL_LOOKBACK_DAY  = 30;   // cumulative day comparison
+    const RELVOL_LOOKBACK_DOW  = 10;   // same hour + same DOW
     const DAYS_SHORT = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
     const MONTHS_SHORT = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
     const MINS = ['00', '05', '10', '15', '20', '25', '30', '35', '40', '45', '50', '55'];
