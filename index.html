@@ -5270,48 +5270,6 @@ document.getElementById('interval-info-close').onclick=()=>{
 <!-- === END HARD FIX === -->
 
 
-<!-- Quick UI Toggles -->
-<style>
-#quick-ui-toggles{position:fixed;right:18px;top:80px;z-index:1600;display:flex;flex-direction:column;gap:8px}
-#quick-ui-toggles button{background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.06);color:var(--text-primary);padding:8px 10px;border-radius:8px;cursor:pointer;font-size:0.85rem}
-#quick-ui-toggles button.active{background:var(--accent-btc);color:#fff}
-@media(max-width:768px){#quick-ui-toggles{right:16px;top:auto;bottom:120px;flex-direction:row}}</style>
-<div id="quick-ui-toggles" aria-hidden="false">
-  <button id="toggle-tabs-btn" title="Hide/Show top/bottom tabs">Toggle Tabs</button>
-  <button id="toggle-day-stats-btn" title="Hide/Show Day View top stats">Toggle Day Stats</button>
-</div>
-<script>
-(function(){
-  const tabsBtn=document.getElementById('toggle-tabs-btn');
-  const dayStatsBtn=document.getElementById('toggle-day-stats-btn');
-  function setTabsHidden(h){
-    document.body.classList.toggle('hidden-tabs',!!h);
-    localStorage.setItem('hiddenTabs', !!h);
-    tabsBtn.classList.toggle('active', !!h);
-  }
-  function setDayStatsHidden(h){
-    document.body.classList.toggle('hidden-day-stats',!!h);
-    localStorage.setItem('hiddenDayStats', !!h);
-    dayStatsBtn.classList.toggle('active', !!h);
-  }
-  tabsBtn.addEventListener('click', ()=> setTabsHidden(!document.body.classList.contains('hidden-tabs')));
-  dayStatsBtn.addEventListener('click', ()=> setDayStatsHidden(!document.body.classList.contains('hidden-day-stats')));
-  // init from storage
-  setTabsHidden(localStorage.getItem('hiddenTabs')==='true');
-  setDayStatsHidden(localStorage.getItem('hiddenDayStats')==='true');
-  // expose functions
-  window.toggleTabsVisibility = ()=> setTabsHidden(!document.body.classList.contains('hidden-tabs'));
-  window.toggleDayStatsVisibility = ()=> setDayStatsHidden(!document.body.classList.contains('hidden-day-stats'));
-})();
-</script>
-<style>
-/* Hidden classes controlled by quick toggles */
-.hidden-tabs .tab-nav{display:none !important}
-.hidden-tabs .tab-btn{display:none !important}
-.hidden-day-stats .day-view-header{display:none !important}
-</style>
-
-
 <script>
 // Robust info-btn handler
 document.addEventListener('click', function(e){
