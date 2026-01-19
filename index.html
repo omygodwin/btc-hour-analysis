@@ -1197,6 +1197,7 @@
     
     // ==================== STATE ====================
     let rawBars = [];
+    let realHours = [];
     let barsByET = {};
     let etDays = {};
     let allETDates = [];
@@ -1302,49 +1303,6 @@
         .map(h => h.toString());
     }
 
-    realHours.forEach(h => {
-      const ampm = h >= 12 ? 'PM' : 'AM';
-      const disp = h === 0 ? 12 : h > 12 ? h - 12 : h;
-      ['hour-from', 'hour-to', 'day-hl-from', 'day-hl-to', 'oc-close-hour', 'calendar-close-hour'].forEach(id => {
-        const el = document.getElementById(id);
-        if (el) el.innerHTML += `<option value="${h}" ${(id==='day-hl-from'&&h===9)||(id==='day-hl-to'&&h===15)||(id==='oc-close-hour'&&h===16)||(id==='calendar-close-hour'&&h===16)?'selected':''}>${disp}${ampm}</option>`;
-      });
-    });
-    document.getElementById('hour-to').value = 23;
-    
-    const colGrid = document.getElementById('col-grid');
-    ALL_COLUMNS.forEach(col => {
-      colGrid.innerHTML += `<label class="col-item" title="${col.desc}"><input type="checkbox" ${col.default ? 'checked' : ''} onchange="toggleColumn('${col.id}')"><span class="col-label">${col.label}</span><span class="col-desc">${col.desc}</span></label>`;
-    });
-    
-    const dtColGrid = document.getElementById('dt-col-grid');
-    DAY_TOTAL_COLS.forEach(col => {
-      dtColGrid.innerHTML += `<label class="dt-col-item"><input type="checkbox" ${col.default ? 'checked' : ''} data-dtcol="${col.id}" onchange="toggleDTCol('${col.id}')"><span>${col.label}</span></label>`;
-    });
-    
-    document.addEventListener('click', (e) => {
-      const dd = document.getElementById('date-picker-dropdown');
-      const btn = document.querySelector('.date-picker-btn');
-      if (dd && btn && !dd.contains(e.target) && !btn.contains(e.target)) dd.classList.remove('visible');
-    });
-    
-    // Auto-load data on page load (for GitHub Pages)
-    window.addEventListener('DOMContentLoaded', () => {
-      setTimeout(() => autoLoadData(), 100);
-    });
-    
-    // ==================== TAB SWITCHING ====================
-    function switchTab(tab) {
-      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-      document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
-      document.querySelector(`[onclick="switchTab('${tab}')"]`).classList.add('active');
-      document.getElementById('tab-' + tab).classList.add('active');
-      if (tab === 'dayview' && allETDates.length > 0) renderDayView();
-      if (tab === 'hourview' && allETDates.length > 0) renderHourView();
-      if (tab === 'calendar' && allETDates.length > 0) renderCalendar();
-      if (tab === 'pm5session' && allETDates.length > 0) render5pmSession();
-    }
-    
     // ==================== FILE ====================
     
     // Auto-load data from GitHub Pages
@@ -1390,6 +1348,47 @@
       document.getElementById('loading-screen').style.display = 'none';
       document.getElementById('upload-screen').style.display = 'flex';
       return false;
+    }
+
+    function buildRealHours(data) {
+      const hourSet = new Set();
+      data.forEach(d => {
+        Object.keys(d.hrs || {}).forEach(h => hourSet.add(Number(h)));
+      });
+      return [...hourSet].sort((a, b) => a - b);
+    }
+    
+    const colGrid = document.getElementById('col-grid');
+    ALL_COLUMNS.forEach(col => {
+      colGrid.innerHTML += `<label class="col-item" title="${col.desc}"><input type="checkbox" ${col.default ? 'checked' : ''} onchange="toggleColumn('${col.id}')"><span class="col-label">${col.label}</span><span class="col-desc">${col.desc}</span></label>`;
+    });
+    
+    const dtColGrid = document.getElementById('dt-col-grid');
+    DAY_TOTAL_COLS.forEach(col => {
+      dtColGrid.innerHTML += `<label class="dt-col-item"><input type="checkbox" ${col.default ? 'checked' : ''} data-dtcol="${col.id}" onchange="toggleDTCol('${col.id}')"><span>${col.label}</span></label>`;
+    });
+    
+    document.addEventListener('click', (e) => {
+      const dd = document.getElementById('date-picker-dropdown');
+      const btn = document.querySelector('.date-picker-btn');
+      if (dd && btn && !dd.contains(e.target) && !btn.contains(e.target)) dd.classList.remove('visible');
+    });
+    
+    // Auto-load data on page load (for GitHub Pages)
+    window.addEventListener('DOMContentLoaded', () => {
+      setTimeout(() => autoLoadData(), 100);
+    });
+    
+    // ==================== TAB SWITCHING ====================
+    function switchTab(tab) {
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+      document.querySelector(`[onclick="switchTab('${tab}')"]`).classList.add('active');
+      document.getElementById('tab-' + tab).classList.add('active');
+      if (tab === 'dayview' && allETDates.length > 0) renderDayView();
+      if (tab === 'hourview' && allETDates.length > 0) renderHourView();
+      if (tab === 'calendar' && allETDates.length > 0) renderCalendar();
+      if (tab === 'pm5session' && allETDates.length > 0) render5pmSession();
     }
     
     function processCSVText(csvText) {
@@ -1981,6 +1980,18 @@
       computeEstablishedHours();
       computeRelativeVolume();
     }
+
+    realHours = buildRealHours(Object.values(etDays));
+
+    realHours.forEach(h => {
+      const ampm = h >= 12 ? 'PM' : 'AM';
+      const disp = h === 0 ? 12 : h > 12 ? h - 12 : h;
+      ['hour-from', 'hour-to', 'day-hl-from', 'day-hl-to', 'oc-close-hour', 'calendar-close-hour'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.innerHTML += `<option value="${h}" ${(id==='day-hl-from'&&h===9)||(id==='day-hl-to'&&h===15)||(id==='oc-close-hour'&&h===16)||(id==='calendar-close-hour'&&h===16)?'selected':''}>${disp}${ampm}</option>`;
+      });
+    });
+    document.getElementById('hour-to').value = 23;
     
     function updateLevel() {
       levelSize = parseInt(document.getElementById('level-size').value) || 250;
