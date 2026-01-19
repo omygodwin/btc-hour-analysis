@@ -1294,7 +1294,14 @@
     
     // ==================== INIT ====================
     document.getElementById('file-input').addEventListener('change', handleFileSelect);
-    
+
+    function getSortedHourKeys(day) {
+      return Object.keys(day.hrs || {})
+        .map(Number)
+        .sort((a, b) => a - b)
+        .map(h => h.toString());
+    }
+
     HOURS.forEach(h => {
       const ampm = h >= 12 ? 'PM' : 'AM';
       const disp = h === 0 ? 12 : h > 12 ? h - 12 : h;
@@ -2086,53 +2093,77 @@ function getFilteredDays() {
   return Object.values(etDays);
 }
 
-function computeRelativeVolume(){
+function computeRelativeVolume() {
   try {
     const days = getFilteredDays ? getFilteredDays() : Object.values(etDays);
-    const byHour = {};
-    const byHourDow = {};
 
-    days.forEach(d=>{
-      HOURS.forEach(h=>{
-        const v=d.hrs[h]?.m?.vol;
-        if(v==null)return;
-        (byHour[h]=byHour[h]||[]).push(v);
-        const k=`${h}_${d.dow}`;
-        (byHourDow[k]=byHourDow[k]||[]).push(v);
+    days.forEach((day, idx) => {
+      if (!day.hrs) return;
+
+      const hourKeys = Object.keys(day.hrs)
+        .map(Number)
+        .sort((a, b) => a - b)
+        .map(String);
+
+      let cumVol = 0;
+
+      hourKeys.forEach(h => {
+        const m = day.hrs[h]?.m;
+        if (!m || m.vol == null) return;
+
+        // cumulative
+        cumVol += m.vol;
+        m.cumVol = cumVol;
+
+        /* ======================
+           Hourly Relative Volume
+        ====================== */
+        const hourHist = days
+          .filter(d => d.hrs?.[h]?.m?.vol != null)
+          .map(d => d.hrs[h].m.vol)
+          .slice(-RELVOL_LOOKBACK_HOUR);
+
+        const hAvg = hourHist.reduce((a,b)=>a+b,0) / Math.max(1, hourHist.length);
+        m.rVol = hAvg ? m.vol / hAvg : null;
+
+        /* ======================
+           Cumulative Relative Vol
+        ====================== */
+        const prevDays = days.slice(0, idx).slice(-RELVOL_LOOKBACK_DAY);
+        const cumHist = prevDays
+          .map(d => d.hrs?.[h]?.m?.cumVol)
+          .filter(v => v != null);
+
+        const cAvg = cumHist.reduce((a,b)=>a+b,0) / Math.max(1, cumHist.length);
+        m.rVolC = cAvg ? cumVol / cAvg : null;
+
+        /* ======================
+           Same Hour + Same DOW
+        ====================== */
+        const dowHist = days
+          .filter(d => d.dow === day.dow && d.hrs?.[h]?.m?.vol != null)
+          .map(d => d.hrs[h].m.vol)
+          .slice(-RELVOL_LOOKBACK_DOW);
+
+        const dAvg = dowHist.reduce((a,b)=>a+b,0) / Math.max(1, dowHist.length);
+        m.rVolDOW = dAvg ? m.vol / dAvg : null;
       });
+
+      /* ======================
+         Day Total RV
+      ====================== */
+      const prev = days.slice(0, idx).slice(-RELVOL_LOOKBACK_DAY);
+      const dayAvg = prev.reduce((s,d)=>s+(d.dayVol||0),0) / Math.max(1, prev.length);
+      day.dRelVol = dayAvg ? day.dayVol / dayAvg : null;
+
+      const dow = prev.filter(d=>d.dow===day.dow);
+      const dowAvg = dow.reduce((s,d)=>s+(d.dayVol||0),0) / Math.max(1, dow.length);
+      day.dRelVolDOW = dowAvg ? day.dayVol / dowAvg : null;
     });
 
-    days.forEach(d=>{
-      let cum=0;
-      HOURS.forEach(h=>{
-        const m=d.hrs[h]?.m; if(!m||m.vol==null)return;
-        cum+=m.vol;
-
-        const a=byHour[h]||[];
-        const avg=a.reduce((x,y)=>x+y,0)/Math.max(1,a.length);
-        m.rVol=avg?m.vol/avg:null;
-
-        const prev=days.filter(x=>x.date<d.date).slice(-RELVOL_LOOKBACK_DAY);
-        const cAvg=prev.reduce((s,x)=>{
-          let t=0; for(let i=0;i<=h;i++)t+=x.hrs[i]?.m?.vol||0; return s+t;
-        },0)/Math.max(1,prev.length);
-        m.rVolC=cAvg?cum/cAvg:null;
-
-        const k=`${h}_${d.dow}`;
-        const da=byHourDow[k]||[];
-        const dAvg=da.reduce((x,y)=>x+y,0)/Math.max(1,da.length);
-        m.rVolDOW=dAvg?m.vol/dAvg:null;
-      });
-
-      const pd=days.filter(x=>x.date<d.date).slice(-RELVOL_LOOKBACK_DAY);
-      const dAvg=pd.reduce((s,x)=>s+(x.dayVol||0),0)/Math.max(1,pd.length);
-      d.dRelVol=dAvg?d.dayVol/dAvg:null;
-
-      const dow=pd.filter(x=>x.dow===d.dow);
-      const dowAvg=dow.reduce((s,x)=>s+(x.dayVol||0),0)/Math.max(1,dow.length);
-      d.dRelVolDOW=dowAvg?d.dayVol/dowAvg:null;
-    });
-  }catch(e){console.warn(e);}
+  } catch (e) {
+    console.warn('Relative Volume error:', e);
+  }
 }
 
 function computeEstablishedHours(){
@@ -5305,38 +5336,6 @@ body.hide-top-tabs .main-content {
   padding-top: 12px !important;
 }
 </style>
-
-<script>
-(function(){
-  // Create toggle UI
-  const container = document.createElement('div');
-  container.className = 'ui-toggles';
-  container.innerHTML = `
-    <button id="toggleTopTabs">Toggle Tabs</button>
-    <button id="toggleDayStats">Toggle Day Stats</button>
-    <button id="toggleBottomTabs">Toggle Bottom Bar</button>
-  `;
-  document.body.appendChild(container);
-
-  const toggle = (cls) => document.body.classList.toggle(cls);
-
-  document.getElementById('toggleTopTabs').onclick = () => toggle('hide-top-tabs');
-  document.getElementById('toggleDayStats').onclick = () => toggle('hide-day-stats');
-  document.getElementById('toggleBottomTabs').onclick = () => toggle('hide-bottom-tabs');
-
-  // Auto-hide bottom tabs on scroll (mobile + desktop)
-  let lastY = window.scrollY;
-  window.addEventListener('scroll', () => {
-    const currentY = window.scrollY;
-    if (currentY > lastY + 10) {
-      document.body.classList.add('bottom-tabs-hidden');
-    } else if (currentY < lastY - 10) {
-      document.body.classList.remove('bottom-tabs-hidden');
-    }
-    lastY = currentY;
-  }, { passive: true });
-})();
-</script>
 
 </body>
 </html>
