@@ -5101,5 +5101,88 @@ function refreshFilterUI(){
 document.addEventListener('DOMContentLoaded', function(){ setTimeout(refreshFilterUI,300); });
 </script>
 
+
+<!-- === FIX: Proper toggle placement + auto-hide bars === -->
+<style>
+/* Toggle control container */
+.ui-toggles {
+  position: fixed;
+  top: 64px;
+  right: 12px;
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.ui-toggles button {
+  background: #222;
+  color: #fff;
+  border: none;
+  padding: 6px 10px;
+  font-size: 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  opacity: 0.85;
+}
+.ui-toggles button:hover { opacity: 1; }
+
+/* Hideable sections */
+body.hide-top-tabs #top-tabs,
+body.hide-bottom-tabs #bottom-tabs,
+body.hide-day-stats #day-stats {
+  display: none !important;
+}
+
+/* Auto-hide bottom tabs */
+#bottom-tabs {
+  transition: transform 0.25s ease, opacity 0.25s ease;
+}
+body.bottom-tabs-hidden #bottom-tabs {
+  transform: translateY(100%);
+  opacity: 0;
+}
+
+/* Ensure content fills space when bars hidden */
+body.hide-bottom-tabs .main-content {
+  padding-bottom: 12px !important;
+}
+body.hide-top-tabs .main-content {
+  padding-top: 12px !important;
+}
+</style>
+
+<script>
+(function(){
+  // Create toggle UI
+  const container = document.createElement('div');
+  container.className = 'ui-toggles';
+  container.innerHTML = `
+    <button id="toggleTopTabs">Toggle Tabs</button>
+    <button id="toggleDayStats">Toggle Day Stats</button>
+    <button id="toggleBottomTabs">Toggle Bottom Bar</button>
+  `;
+  document.body.appendChild(container);
+
+  const toggle = (cls) => document.body.classList.toggle(cls);
+
+  document.getElementById('toggleTopTabs').onclick = () => toggle('hide-top-tabs');
+  document.getElementById('toggleDayStats').onclick = () => toggle('hide-day-stats');
+  document.getElementById('toggleBottomTabs').onclick = () => toggle('hide-bottom-tabs');
+
+  // Auto-hide bottom tabs on scroll (mobile + desktop)
+  let lastY = window.scrollY;
+  window.addEventListener('scroll', () => {
+    const currentY = window.scrollY;
+    if (currentY > lastY + 10) {
+      document.body.classList.add('bottom-tabs-hidden');
+    } else if (currentY < lastY - 10) {
+      document.body.classList.remove('bottom-tabs-hidden');
+    }
+    lastY = currentY;
+  }, { passive: true });
+})();
+</script>
+
 </body>
 </html>
