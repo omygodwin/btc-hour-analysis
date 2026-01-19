@@ -1302,7 +1302,7 @@
         .map(h => h.toString());
     }
 
-    HOURS.forEach(h => {
+    realHours.forEach(h => {
       const ampm = h >= 12 ? 'PM' : 'AM';
       const disp = h === 0 ? 12 : h > 12 ? h - 12 : h;
       ['hour-from', 'hour-to', 'day-hl-from', 'day-hl-to', 'oc-close-hour', 'calendar-close-hour'].forEach(id => {
@@ -1668,13 +1668,13 @@
         // Calculate total volume and collect RSI values
         let totalVol = 0;
         const dayRsiVals = [];
-        HOURS.forEach(h => {
-          if (day.hrs[h]) {
-            totalVol += day.hrs[h].v || 0;
-            if (day.hrs[h].rsiVals) dayRsiVals.push(...day.hrs[h].rsiVals);
-          }
+        getSortedHourKeys(day).forEach(h => {
+          const hr = day.hrs[h];
+          totalVol += hr.v || 0;
+          if (hr.rsiVals) dayRsiVals.push(...hr.rsiVals);
         });
         day.dVol = totalVol;
+        day.dayVol = day.dVol;
         
         // Calculate median RSI
         if (dayRsiVals.length > 0) {
@@ -1691,16 +1691,18 @@
         let postHiLow = Infinity, postLoHigh = -Infinity;
         let foundHi = false, foundLo = false;
         
-        HOURS.forEach(h => {
-          if (day.hrs[h]) {
-            if (day.dHiHr !== null && h >= day.dHiHr) {
-              foundHi = true;
-              postHiLow = Math.min(postHiLow, day.hrs[h].l);
-            }
-            if (day.dLoHr !== null && h >= day.dLoHr) {
-              foundLo = true;
-              postLoHigh = Math.max(postLoHigh, day.hrs[h].h);
-            }
+        getSortedHourKeys(day).forEach(h => {
+          const hrNum = Number(h);
+          const hr = day.hrs[h];
+        
+          if (day.dHiHr !== null && hrNum >= day.dHiHr) {
+            foundHi = true;
+            postHiLow = Math.min(postHiLow, hr.l);
+          }
+        
+          if (day.dLoHr !== null && hrNum >= day.dLoHr) {
+            foundLo = true;
+            postLoHigh = Math.max(postLoHigh, hr.h);
           }
         });
         
@@ -1722,55 +1724,69 @@
         let runH = -Infinity, runL = Infinity;
         let prevCdrU = null, prevCdrD = null, prevMxcd = null;
         
-        HOURS.forEach(h => {
-          if (day.hrs[h]) {
-            const hd = day.hrs[h];
-            runH = Math.max(runH, hd.h);
-            runL = Math.min(runL, hd.l);
-            
-            const cdrU = day.dO ? Math.round(runH - day.dO) : null;
-            const cdrD = day.dO ? Math.round(day.dO - runL) : null;
-            const mxcd = Math.max(cdrU || 0, cdrD || 0);
-            
-            // RSI metrics
-            const rsiMax = hd.rsiVals.length ? Math.max(...hd.rsiVals) : null;
-            const rsiMin = hd.rsiVals.length ? Math.min(...hd.rsiVals) : null;
-            const rsiAvg = hd.rsiVals.length ? hd.rsiVals.reduce((a,b) => a+b, 0) / hd.rsiVals.length : null;
-            const sigMax = hd.sigVals.length ? Math.max(...hd.sigVals) : null;
-            const sigMin = hd.sigVals.length ? Math.min(...hd.sigVals) : null;
-            const sigAvg = hd.sigVals.length ? hd.sigVals.reduce((a,b) => a+b, 0) / hd.sigVals.length : null;
-            const obos = hd.rsiVals.some(r => r >= obLevel) ? 'OB' : hd.rsiVals.some(r => r <= osLevel) ? 'OS' : null;
-            
-            hd.m = {
-              rng: Math.round(hd.h - hd.l),
-              ur: Math.round(hd.h - hd.o),
-              lr: Math.round(hd.o - hd.l),
-              up: calcLvlUp(hd.o, hd.h),
-              dn: calcLvlDn(hd.o, hd.l),
-              cl: calcLvlCl(hd.o, hd.c),
-              oc: Math.round(hd.c - hd.o),
-              hm: hd.hm, lm: hd.lm,
-              o: Math.round(hd.o), hi: Math.round(hd.h), lo: Math.round(hd.l), c: Math.round(hd.c),
-              v: Math.round(hd.v * 100) / 100,
-              cdr: day.dO ? Math.round(hd.c - day.dO) : null,
-              greenBars: hd.greenBars,
-              cdrU: (cdrU !== prevCdrU) ? cdrU : null,
-              cdrD: (cdrD !== prevCdrD) ? cdrD : null,
-              mxcd: (mxcd !== prevMxcd) ? mxcd : null,
-              cdrUActual: cdrU,
-              cdrDActual: cdrD,
-              mxcdActual: mxcd,
-              rsiMax, rsiMin, rsiAvg: rsiAvg ? Math.round(rsiAvg * 10) / 10 : null,
-              sigMax, sigMin, sigAvg: sigAvg ? Math.round(sigAvg * 10) / 10 : null,
-              obos,
-            };
-            hd.m.mxr = Math.max(hd.m.ur, hd.m.lr);
-            hd.m.mxl = Math.max(hd.m.up, hd.m.dn);
-            
-            prevCdrU = cdrU;
-            prevCdrD = cdrD;
-            prevMxcd = mxcd;
-          }
+        getSortedHourKeys(day).forEach(h => {
+          const hd = day.hrs[h];
+          const hrNum = Number(h);
+        
+          runH = Math.max(runH, hd.h);
+          runL = Math.min(runL, hd.l);
+          
+          const cdrU = day.dO ? Math.round(runH - day.dO) : null;
+          const cdrD = day.dO ? Math.round(day.dO - runL) : null;
+          const mxcd = Math.max(cdrU || 0, cdrD || 0);
+          
+          // RSI metrics
+          const rsiMax = hd.rsiVals.length ? Math.max(...hd.rsiVals) : null;
+          const rsiMin = hd.rsiVals.length ? Math.min(...hd.rsiVals) : null;
+          const rsiAvg = hd.rsiVals.length
+            ? hd.rsiVals.reduce((a,b) => a+b, 0) / hd.rsiVals.length
+            : null;
+        
+          const sigMax = hd.sigVals.length ? Math.max(...hd.sigVals) : null;
+          const sigMin = hd.sigVals.length ? Math.min(...hd.sigVals) : null;
+          const sigAvg = hd.sigVals.length
+            ? hd.sigVals.reduce((a,b) => a+b, 0) / hd.sigVals.length
+            : null;
+        
+          const obos =
+            hd.rsiVals.some(r => r >= obLevel) ? 'OB'
+            : hd.rsiVals.some(r => r <= osLevel) ? 'OS'
+            : null;
+          
+          hd.m = {
+            rng: Math.round(hd.h - hd.l),
+            ur: Math.round(hd.h - hd.o),
+            lr: Math.round(hd.o - hd.l),
+            up: calcLvlUp(hd.o, hd.h),
+            dn: calcLvlDn(hd.o, hd.l),
+            cl: calcLvlCl(hd.o, hd.c),
+            oc: Math.round(hd.c - hd.o),
+            hm: hd.hm, lm: hd.lm,
+            o: Math.round(hd.o), hi: Math.round(hd.h), lo: Math.round(hd.l), c: Math.round(hd.c),
+            v: Math.round(hd.v * 100) / 100,
+            cdr: day.dO ? Math.round(hd.c - day.dO) : null,
+            greenBars: hd.greenBars,
+            cdrU: (cdrU !== prevCdrU) ? cdrU : null,
+            cdrD: (cdrD !== prevCdrD) ? cdrD : null,
+            mxcd: (mxcd !== prevMxcd) ? mxcd : null,
+            cdrUActual: cdrU,
+            cdrDActual: cdrD,
+            mxcdActual: mxcd,
+            rsiMax,
+            rsiMin,
+            rsiAvg: rsiAvg ? Math.round(rsiAvg * 10) / 10 : null,
+            sigMax,
+            sigMin,
+            sigAvg: sigAvg ? Math.round(sigAvg * 10) / 10 : null,
+            obos,
+          };
+        
+          hd.m.mxr = Math.max(hd.m.ur, hd.m.lr);
+          hd.m.mxl = Math.max(hd.m.up, hd.m.dn);
+        
+          prevCdrU = cdrU;
+          prevCdrD = cdrD;
+          prevMxcd = mxcd;
         });
       });
       
@@ -1878,28 +1894,28 @@
           }
           
           // Now calculate for each hour today
-          HOURS.forEach(h => {
-            if (day.hrs[h] && day.hrs[h].m) {
-              const hd = day.hrs[h];
-              wRunH = Math.max(wRunH, hd.h);
-              wRunL = Math.min(wRunL, hd.l);
-              
-              const wCdrU = Math.round(wRunH - weekOpen);
-              const wCdrD = Math.round(weekOpen - wRunL);
-              const wMxcd = Math.max(wCdrU, wCdrD);
-              
-              hd.m.wCdr = Math.round(hd.c - weekOpen);
-              hd.m.wCdrU = (wCdrU !== wPrevCdrU) ? wCdrU : null;
-              hd.m.wCdrD = (wCdrD !== wPrevCdrD) ? wCdrD : null;
-              hd.m.wMxcd = (wMxcd !== wPrevMxcd) ? wMxcd : null;
-              hd.m.wCdrUActual = wCdrU;
-              hd.m.wCdrDActual = wCdrD;
-              hd.m.wMxcdActual = wMxcd;
-              
-              wPrevCdrU = wCdrU;
-              wPrevCdrD = wCdrD;
-              wPrevMxcd = wMxcd;
-            }
+          getSortedHourKeys(day).forEach(h => {
+            const hd = day.hrs[h];
+            if (!hd.m) return;
+          
+            wRunH = Math.max(wRunH, hd.h);
+            wRunL = Math.min(wRunL, hd.l);
+            
+            const wCdrU = Math.round(wRunH - weekOpen);
+            const wCdrD = Math.round(weekOpen - wRunL);
+            const wMxcd = Math.max(wCdrU, wCdrD);
+            
+            hd.m.wCdr = Math.round(hd.c - weekOpen);
+            hd.m.wCdrU = (wCdrU !== wPrevCdrU) ? wCdrU : null;
+            hd.m.wCdrD = (wCdrD !== wPrevCdrD) ? wCdrD : null;
+            hd.m.wMxcd = (wMxcd !== wPrevMxcd) ? wMxcd : null;
+            hd.m.wCdrUActual = wCdrU;
+            hd.m.wCdrDActual = wCdrD;
+            hd.m.wMxcdActual = wMxcd;
+            
+            wPrevCdrU = wCdrU;
+            wPrevCdrD = wCdrD;
+            wPrevMxcd = wMxcd;
           });
         }
         
@@ -1969,14 +1985,14 @@
     function updateLevel() {
       levelSize = parseInt(document.getElementById('level-size').value) || 250;
       Object.values(etDays).forEach(day => {
-        HOURS.forEach(h => {
-          if (day.hrs[h]) {
-            const hd = day.hrs[h];
-            hd.m.up = calcLvlUp(hd.o, hd.h);
-            hd.m.dn = calcLvlDn(hd.o, hd.l);
-            hd.m.cl = calcLvlCl(hd.o, hd.c);
-            hd.m.mxl = Math.max(hd.m.up, hd.m.dn);
-          }
+        getSortedHourKeys(day).forEach(h => {
+          const hd = day.hrs[h];
+          if (!hd.m) return;
+        
+          hd.m.up = calcLvlUp(hd.o, hd.h);
+          hd.m.dn = calcLvlDn(hd.o, hd.l);
+          hd.m.cl = calcLvlCl(hd.o, hd.c);
+          hd.m.mxl = Math.max(hd.m.up, hd.m.dn);
         });
       });
       renderTable();
@@ -1986,11 +2002,11 @@
     function populateFilterSelects() {
       const hourSel = document.getElementById('filter-hour');
       hourSel.innerHTML = '<option value="day">Day Total</option>';
-      HOURS.forEach(h => {
+      for (let h = 0; h < 24; h++) {
         const ampm = h >= 12 ? 'PM' : 'AM';
         const disp = h === 0 ? 12 : h > 12 ? h - 12 : h;
         hourSel.innerHTML += `<option value="${h}">${disp}${ampm}</option>`;
-      });
+      }
       
       updateFilterColumnSelect();
     }
@@ -2110,22 +2126,22 @@ function computeRelativeVolume() {
 
       hourKeys.forEach(h => {
         const m = day.hrs[h]?.m;
-        if (!m || m.vol == null) return;
+        if (!m || m.v == null) return;
 
         // cumulative
-        cumVol += m.vol;
+        cumVol += m.v;
         m.cumVol = cumVol;
 
         /* ======================
            Hourly Relative Volume
         ====================== */
         const hourHist = days
-          .filter(d => d.hrs?.[h]?.m?.vol != null)
-          .map(d => d.hrs[h].m.vol)
+          .filter(d => d.hrs?.[h]?.m?.v != null)
+          .map(d => d.hrs[h].m.v)
           .slice(-RELVOL_LOOKBACK_HOUR);
 
         const hAvg = hourHist.reduce((a,b)=>a+b,0) / Math.max(1, hourHist.length);
-        m.rVol = hAvg ? m.vol / hAvg : null;
+        m.rVol = hAvg ? m.v / hAvg : null;
 
         /* ======================
            Cumulative Relative Vol
@@ -2142,12 +2158,12 @@ function computeRelativeVolume() {
            Same Hour + Same DOW
         ====================== */
         const dowHist = days
-          .filter(d => d.dow === day.dow && d.hrs?.[h]?.m?.vol != null)
-          .map(d => d.hrs[h].m.vol)
+          .filter(d => d.dow === day.dow && d.hrs?.[h]?.m?.v != null)
+          .map(d => d.hrs[h].m.v)
           .slice(-RELVOL_LOOKBACK_DOW);
 
         const dAvg = dowHist.reduce((a,b)=>a+b,0) / Math.max(1, dowHist.length);
-        m.rVolDOW = dAvg ? m.vol / dAvg : null;
+        m.rVolDOW = dAvg ? m.v / dAvg : null;
       });
 
       /* ======================
@@ -2349,23 +2365,36 @@ function populateDatePicker() {
     
     function calcRowStats(day, hours) {
       const s = { rng: [], urlr: [], mxr: [], mxl: [], rank: [], cl: [], oc: [], cdr: [], cdrRG: [], mxcd: [], rsi: [], sig: [] };
-      hours.forEach(h => {
-        const m = day.hrs[h]?.m;
+      getSortedHourKeys(day).forEach(h => {
+        const m = day.hrs[h].m;
         if (!m) return;
+      
         if (m.rng != null) s.rng.push(m.rng);
         if (m.ur != null) s.urlr.push(m.ur);
         if (m.lr != null) s.urlr.push(m.lr);
         if (m.mxr != null) s.mxr.push(m.mxr);
         if (m.mxl != null) s.mxl.push(m.mxl);
-        ['mxrRk','mxlRk','ocRk','rngRk'].forEach(r => { if (m[r] != null) s.rank.push(m[r]); });
+      
+        ['mxrRk','mxlRk','ocRk','rngRk'].forEach(r => {
+          if (m[r] != null) s.rank.push(m[r]);
+        });
+      
         if (m.cl != null) s.cl.push(m.cl);
         if (m.oc != null) s.oc.push(m.oc);
+      
         if (m.cdrUActual != null) s.cdr.push(m.cdrUActual);
         if (m.cdrDActual != null) s.cdr.push(m.cdrDActual);
         if (m.cdr != null) s.cdrRG.push(m.cdr);
+      
         if (m.mxcdActual != null) s.mxcd.push(m.mxcdActual);
-        ['rsiMax','rsiMin','rsiAvg'].forEach(r => { if (m[r] != null) s.rsi.push(m[r]); });
-        ['sigMax','sigMin','sigAvg'].forEach(r => { if (m[r] != null) s.sig.push(m[r]); });
+      
+        ['rsiMax','rsiMin','rsiAvg'].forEach(r => {
+          if (m[r] != null) s.rsi.push(m[r]);
+        });
+      
+        ['sigMax','sigMin','sigAvg'].forEach(r => {
+          if (m[r] != null) s.sig.push(m[r]);
+        });
       });
       const r = {};
       Object.keys(s).forEach(k => {
@@ -2376,30 +2405,56 @@ function populateDatePicker() {
     
     function calcColStats(data, hours) {
       const s = {};
-      hours.forEach(h => {
-        s[h] = { rng: [], urlr: [], mxr: [], mxl: [], rank: [], cl: [], oc: [], cdrRG: [], cdr: [], mxcd: [], rsi: [], sig: [], wcdr: [], wcdrRG: [], wmxcd: [], p5cdr: [], p5cdrRG: [], p5mxcd: [] };
+      const hourSet = new Set();
+      data.forEach(d => {
+        getSortedHourKeys(d).forEach(h => hourSet.add(h));
+      });
+      const realHours = [...hourSet].map(Number).sort((a,b) => a-b);
+      realHours.forEach(h => {
+        s[h] = {
+          rng: [], urlr: [], mxr: [], mxl: [], rank: [], cl: [], oc: [],
+          cdrRG: [], cdr: [], mxcd: [], rsi: [], sig: [],
+          wcdr: [], wcdrRG: [], wmxcd: [],
+          p5cdr: [], p5cdrRG: [], p5mxcd: []
+        };
+      
         data.forEach(d => {
           const m = d.hrs[h]?.m;
           if (!m) return;
+      
           if (m.rng != null) s[h].rng.push(m.rng);
           if (m.ur != null) s[h].urlr.push(m.ur);
           if (m.lr != null) s[h].urlr.push(m.lr);
           if (m.mxr != null) s[h].mxr.push(m.mxr);
           if (m.mxl != null) s[h].mxl.push(m.mxl);
-          ['mxrRk','mxlRk','ocRk','rngRk'].forEach(r => { if (m[r] != null) s[h].rank.push(m[r]); });
+      
+          ['mxrRk','mxlRk','ocRk','rngRk'].forEach(r => {
+            if (m[r] != null) s[h].rank.push(m[r]);
+          });
+      
           if (m.cl != null) s[h].cl.push(m.cl);
           if (m.oc != null) s[h].oc.push(m.oc);
+      
           if (m.cdr != null) s[h].cdrRG.push(m.cdr);
           if (m.cdrUActual != null) s[h].cdr.push(m.cdrUActual);
           if (m.cdrDActual != null) s[h].cdr.push(m.cdrDActual);
+      
           if (m.mxcdActual != null) s[h].mxcd.push(m.mxcdActual);
-          ['rsiMax','rsiMin','rsiAvg'].forEach(r => { if (m[r] != null) s[h].rsi.push(m[r]); });
-          ['sigMax','sigMin','sigAvg'].forEach(r => { if (m[r] != null) s[h].sig.push(m[r]); });
+      
+          ['rsiMax','rsiMin','rsiAvg'].forEach(r => {
+            if (m[r] != null) s[h].rsi.push(m[r]);
+          });
+      
+          ['sigMax','sigMin','sigAvg'].forEach(r => {
+            if (m[r] != null) s[h].sig.push(m[r]);
+          });
+      
           // Weekly cumulative
           if (m.wCdr != null) s[h].wcdrRG.push(m.wCdr);
           if (m.wCdrUActual != null) s[h].wcdr.push(m.wCdrUActual);
           if (m.wCdrDActual != null) s[h].wcdr.push(m.wCdrDActual);
           if (m.wMxcdActual != null) s[h].wmxcd.push(m.wMxcdActual);
+      
           // 5PM cumulative
           if (m.p5Cdr != null) s[h].p5cdrRG.push(m.p5Cdr);
           if (m.p5CdrUActual != null) s[h].p5cdr.push(m.p5CdrUActual);
@@ -2408,10 +2463,12 @@ function populateDatePicker() {
         });
       });
       const r = {};
-      hours.forEach(h => {
+      realHours.forEach(h => {
         r[h] = {};
         Object.keys(s[h]).forEach(k => {
-          r[h][k] = s[h][k].length ? { min: Math.min(...s[h][k]), max: Math.max(...s[h][k]) } : { min: 0, max: 100 };
+          r[h][k] = s[h][k].length
+            ? { min: Math.min(...s[h][k]), max: Math.max(...s[h][k]) }
+            : { min: 0, max: 100 };
         });
       });
       return r;
@@ -2475,6 +2532,19 @@ function populateDatePicker() {
     // ==================== RENDER TABLE ====================
     function renderTable() {
       const data = getFilteredData();
+
+      // REAL hours actually present in filtered data
+      const hourSet = new Set();
+      data.forEach(d => {
+        getSortedHourKeys(d).forEach(h => hourSet.add(Number(h)));
+      });
+      const realHours = [...hourSet].sort((a, b) => a - b);
+      if (!realHours.length) {
+        console.warn('renderTable: no realHours found');
+        return;
+      }
+    
+      // UI / settings
       const hours = getVisibleHours();
       const cols = getActiveColumns();
       const dtCols = getActiveDTCols();
@@ -2506,7 +2576,7 @@ function populateDatePicker() {
         hd += `<th class="sticky-col sticky-header day-totals-header" style="left:113px" colspan="${dtCols.length}">Day Totals (ET)</th>`;
       }
       
-      hours.forEach((h, i) => {
+      realHours.forEach((h, i) => {
         hd += `<th class="hour-header${i===0?' hour-border-left':''}" colspan="${cols.length}">${formatHourHeader(h)}</th>`;
       });
       hd += '</tr><tr class="col-row">';
@@ -2522,10 +2592,13 @@ function populateDatePicker() {
         });
       }
       
-      hours.forEach((h, hi) => {
+      realHours.forEach((h, hi) => {
         cols.forEach((col, ci) => {
           const isSorted = sortColumn === col.id && sortHour === h;
-          hd += `<th class="col-header${ci===0?' hour-border-left':''}${isSorted?' sorted':''}" onclick="sortBy('${col.id}',${h})">${col.label}${isSorted?(sortDirection==='asc'?'↑':'↓'):''}</th>`;
+          hd += `<th class="col-header${ci===0?' hour-border-left':''}${isSorted?' sorted':''}"
+                  onclick="sortBy('${col.id}',${h})">
+                  ${col.label}${isSorted?(sortDirection==='asc'?'↑':'↓'):''}
+                </th>`;
         });
       });
       hd += '</tr>';
@@ -2589,7 +2662,7 @@ function populateDatePicker() {
           });
         }
         
-        hours.forEach((h, hi) => {
+        realHours.forEach((h, hi) => {
           const m = day.hrs[h]?.m;
           const stats = gMode === 'row' ? rowStats : colStats[h];
           const cStats = colStats[h];
@@ -2598,12 +2671,13 @@ function populateDatePicker() {
           let madeNewDayHigh = false, madeNewDayLow = false;
           if (day.hrs[h]) {
             let runH = -Infinity, runL = Infinity;
-            for (let prevH = 0; prevH < h; prevH++) {
-              if (day.hrs[prevH]) {
-                runH = Math.max(runH, day.hrs[prevH].h);
-                runL = Math.min(runL, day.hrs[prevH].l);
+            realHours.forEach(ph => {
+              if (ph >= h) return;
+              if (day.hrs[ph]) {
+                runH = Math.max(runH, day.hrs[ph].h);
+                runL = Math.min(runL, day.hrs[ph].l);
               }
-            }
+            });
             madeNewDayHigh = day.hrs[h].h > runH;
             madeNewDayLow = day.hrs[h].l < runL;
           }
@@ -2667,7 +2741,7 @@ function populateDatePicker() {
         
         // Calculate percentile values for each hour and column
         const hourColVals = {};
-        hours.forEach(h => {
+        realHours.forEach(h => {
           hourColVals[h] = {};
           cols.forEach(col => {
             hourColVals[h][col.id] = [];
@@ -2675,7 +2749,7 @@ function populateDatePicker() {
         });
         
         data.forEach(day => {
-          hours.forEach(h => {
+          realHours.forEach(h => {
             const m = day.hrs[h]?.m;
             if (!m) return;
             cols.forEach(col => {
@@ -2717,7 +2791,7 @@ function populateDatePicker() {
             });
           }
           
-          hours.forEach((h, hi) => {
+          realHours.forEach((h, hi) => {
             cols.forEach((col, ci) => {
               const vals = hourColVals[h][col.id];
               const pVal = calcPercentile(vals, p);
@@ -2779,51 +2853,45 @@ function populateDatePicker() {
       
       // Pre-calculate which minutes made new highs/lows for each hour
       const hourHighLowMins = {};
-      HOURS.forEach(h => {
-        if (!hourBars[h]) return;
+      Object.keys(hourBars).map(Number).sort((a,b)=>a-b).forEach(h => {
         hourHighLowMins[h] = { highMins: new Set(), lowMins: new Set() };
         let runningHigh = -Infinity;
         let runningLow = Infinity;
-        
+      
         MINS.forEach(m => {
-          const bar = hourBars[h][m];
-          if (bar) {
-            if (bar.high > runningHigh) {
-              runningHigh = bar.high;
-              hourHighLowMins[h].highMins.add(m);
-            }
-            if (bar.low < runningLow) {
-              runningLow = bar.low;
-              hourHighLowMins[h].lowMins.add(m);
-            }
+          const bar = hourBars[h]?.[m];
+          if (!bar) return;
+      
+          if (bar.high > runningHigh) {
+            runningHigh = bar.high;
+            hourHighLowMins[h].highMins.add(m);
+          }
+          if (bar.low < runningLow) {
+            runningLow = bar.low;
+            hourHighLowMins[h].lowMins.add(m);
           }
         });
-        
-        if (hourHighLowMins[h].highMins.size > 1 && hourHighLowMins[h].highMins.has('00')) {
-          hourHighLowMins[h].highMins.delete('00');
-        }
-        if (hourHighLowMins[h].lowMins.size > 1 && hourHighLowMins[h].lowMins.has('00')) {
-          hourHighLowMins[h].lowMins.delete('00');
-        }
+      
+        if (hourHighLowMins[h].highMins.size > 1) hourHighLowMins[h].highMins.delete('00');
+        if (hourHighLowMins[h].lowMins.size > 1) hourHighLowMins[h].lowMins.delete('00');
       });
       
       // Pre-calculate which bars made new DAY high/low
       const dayHighLowBars = { highBars: new Set(), lowBars: new Set() };
       let dayRunningHigh = -Infinity;
       let dayRunningLow = Infinity;
-      HOURS.forEach(h => {
-        if (!hourBars[h]) return;
+      Object.keys(hourBars).map(Number).sort((a,b)=>a-b).forEach(h => {
         MINS.forEach(m => {
-          const bar = hourBars[h][m];
-          if (bar) {
-            if (bar.high > dayRunningHigh) {
-              dayRunningHigh = bar.high;
-              dayHighLowBars.highBars.add(`${h}-${m}`);
-            }
-            if (bar.low < dayRunningLow) {
-              dayRunningLow = bar.low;
-              dayHighLowBars.lowBars.add(`${h}-${m}`);
-            }
+          const bar = hourBars[h]?.[m];
+          if (!bar) return;
+      
+          if (bar.high > dayRunningHigh) {
+            dayRunningHigh = bar.high;
+            dayHighLowBars.highBars.add(`${h}-${m}`);
+          }
+          if (bar.low < dayRunningLow) {
+            dayRunningLow = bar.low;
+            dayHighLowBars.lowBars.add(`${h}-${m}`);
           }
         });
       });
@@ -2839,34 +2907,36 @@ function populateDatePicker() {
       
       // Calculate hourly drawdown and reversal for each hour
       const hourlyDDRev = {};
-      HOURS.forEach(h => {
+      Object.keys(hourBars).map(Number).sort((a,b)=>a-b).forEach(h => {
         const hd = day.hrs[h];
         if (!hd) return;
-        
+      
         // Hourly high drawdown: drop from hour high to lowest point after
         let postHiLow = Infinity;
         let foundHi = false;
         MINS.forEach(m => {
           const bar = hourBars[h]?.[m];
-          if (bar) {
-            if (bar.high >= hd.h - 0.01) foundHi = true; // Found the high
-            if (foundHi) postHiLow = Math.min(postHiLow, bar.low);
-          }
+          if (!bar) return;
+          if (bar.high >= hd.h - 0.01) foundHi = true;
+          if (foundHi) postHiLow = Math.min(postHiLow, bar.low);
         });
-        const hDD = foundHi && postHiLow < Infinity ? Math.round(hd.h - postHiLow) : null;
-        
+        const hDD = foundHi && postHiLow < Infinity
+          ? Math.round(hd.h - postHiLow)
+          : null;
+      
         // Hourly low reversal: rise from hour low to highest point after
         let postLoHigh = -Infinity;
         let foundLo = false;
         MINS.forEach(m => {
           const bar = hourBars[h]?.[m];
-          if (bar) {
-            if (bar.low <= hd.l + 0.01) foundLo = true; // Found the low
-            if (foundLo) postLoHigh = Math.max(postLoHigh, bar.high);
-          }
+          if (!bar) return;
+          if (bar.low <= hd.l + 0.01) foundLo = true;
+          if (foundLo) postLoHigh = Math.max(postLoHigh, bar.high);
         });
-        const hRev = foundLo && postLoHigh > -Infinity ? Math.round(postLoHigh - hd.l) : null;
-        
+        const hRev = foundLo && postLoHigh > -Infinity
+          ? Math.round(postLoHigh - hd.l)
+          : null;
+      
         hourlyDDRev[h] = { hDD, hRev };
       });
       
@@ -2878,42 +2948,37 @@ function populateDatePicker() {
       let currentRev = 0;
       let prevDD = null, prevRev = null;
       
-      HOURS.forEach(h => {
+      realHours.forEach(h => {
         const hd = day.hrs[h];
         if (!hd) return;
-        
+      
         const hourHigh = hd.h;
         const hourLow = hd.l;
-        
-        // Check if new high is made - reset drawdown
+      
         let madeNewHigh = false;
         if (hourHigh > currentHigh) {
           currentHigh = hourHigh;
-          currentDD = 0; // Reset drawdown when new high is made
+          currentDD = 0;
           madeNewHigh = true;
         }
-        
-        // Check if new low is made - reset reversal
+      
         let madeNewLow = false;
         if (hourLow < currentLow) {
           currentLow = hourLow;
-          currentRev = 0; // Reset reversal when new low is made
+          currentRev = 0;
           madeNewLow = true;
         }
-        
-        // Calculate current drawdown from high (if not new high)
+      
         if (!madeNewHigh) {
           const ddFromHigh = Math.round(currentHigh - hourLow);
           currentDD = Math.max(currentDD, ddFromHigh);
         }
-        
-        // Calculate current reversal from low (if not new low)
+      
         if (!madeNewLow) {
           const revFromLow = Math.round(hourHigh - currentLow);
           currentRev = Math.max(currentRev, revFromLow);
         }
-        
-        // Only show value if it changed (new max DD or Rev, or reset)
+      
         cumDDRev[h] = {
           mxDD: (currentDD !== prevDD || madeNewHigh) ? currentDD : null,
           mxRev: (currentRev !== prevRev || madeNewLow) ? currentRev : null,
@@ -2922,6 +2987,7 @@ function populateDatePicker() {
           madeNewHigh,
           madeNewLow,
         };
+      
         prevDD = currentDD;
         prevRev = currentRev;
       });
@@ -2943,7 +3009,7 @@ function populateDatePicker() {
       const hourStats = { rng: [], urlr: [], oc: [], cdr: [], ddrev: [] };
       const minStats = { ur: [], lr: [], oc: [], hrOC: [] };
       
-      HOURS.forEach(h => {
+      realHours.forEach(h => {
         const hd = day.hrs[h];
         if (hd?.m) {
           hourStats.rng.push(hd.m.rng);
@@ -2955,17 +3021,17 @@ function populateDatePicker() {
           if (hourlyDDRev[h].hDD != null) hourStats.ddrev.push(hourlyDDRev[h].hDD);
           if (hourlyDDRev[h].hRev != null) hourStats.ddrev.push(hourlyDDRev[h].hRev);
         }
-        if (hourBars[h] && day.hrs[h]) {
-          MINS.forEach(m => {
-            const bar = hourBars[h][m];
-            if (bar) {
-              minStats.ur.push(Math.round(bar.high - bar.open));
-              minStats.lr.push(Math.round(bar.open - bar.low));
-              minStats.oc.push(Math.round(bar.close - bar.open));
-              minStats.hrOC.push(Math.round(bar.close - day.hrs[h].o));
-            }
-          });
-        }
+      });
+      Object.keys(hourBars).map(Number).sort((a,b)=>a-b).forEach(h => {
+        if (!day.hrs[h]) return;
+        MINS.forEach(m => {
+          const bar = hourBars[h]?.[m];
+          if (!bar) return;
+          minStats.ur.push(Math.round(bar.high - bar.open));
+          minStats.lr.push(Math.round(bar.open - bar.low));
+          minStats.oc.push(Math.round(bar.close - bar.open));
+          minStats.hrOC.push(Math.round(bar.close - day.hrs[h].o));
+        });
       });
       
       const hStats = {
@@ -2982,7 +3048,7 @@ function populateDatePicker() {
       };
       
       let bd = '';
-      HOURS.forEach(h => {
+      realHours.forEach(h => {
         const hd = day.hrs[h];
         const hm = hd?.m;
         const isHL = h >= hlFrom && h <= hlTo;
@@ -3118,7 +3184,7 @@ function populateDatePicker() {
       const hStats = { rng: [], urlr: [], oc: [], cdr: [] };
       const mStats = { urlr: [], oc: [] };
       
-      HOURS.forEach(h => {
+      realHours.forEach(h => {
         const hd = day.hrs[h];
         if (hd?.m) {
           hStats.rng.push(hd.m.rng);
@@ -3146,7 +3212,7 @@ function populateDatePicker() {
       document.getElementById('day-table-head-2').innerHTML = hd;
       
       let bd = '';
-      HOURS.forEach(h => {
+      realHours.forEach(h => {
         const hdata = day.hrs[h];
         const hm = hdata?.m;
         const isHL = h >= hlFrom && h <= hlTo;
