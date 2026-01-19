@@ -1124,7 +1124,13 @@
       { id: 'hi', label: 'High', desc: 'High', default: false, gradient: null },
       { id: 'lo', label: 'Low', desc: 'Low', default: false, gradient: null },
       { id: 'c', label: 'Close', desc: 'Close', default: false, gradient: null },
-      { id: 'v', label: 'Vol', desc: 'Volume', default: false, gradient: null },
+      { id: 'vol', label: 'Vol', desc: 'Volume', default: false, gradient: null },
+
+      // ===== RELATIVE VOLUME (HOURLY) =====
+      { id: 'rVol', label: 'rVol', desc: 'Relative Volume (hour)', default: false, gradient: 'purple', group: 'vol' },
+      { id: 'rVolC', label: 'rVolC', desc: 'Cumulative Relative Volume (day)', default: false, gradient: 'purple', group: 'vol' },
+      { id: 'rVolDOW', label: 'rVolDOW', desc: 'Relative Volume (hour + DOW)', default: false, gradient: 'purple', group: 'vol' },
+
       // RSI columns
       { id: 'rsiMax', label: 'RSI↑', desc: 'Max RSI', default: false, gradient: 'purple', group: 'rsi' },
       { id: 'rsiMin', label: 'RSI↓', desc: 'Min RSI', default: false, gradient: 'purple', group: 'rsi' },
@@ -1180,6 +1186,9 @@
       { id: 'dDnEstHr', label: 'DnEst', desc: 'Hour Down % Established', default: false },
       { id: 'dRangeEstHr', label: 'RngEst', desc: 'Hour Range % Established', default: false },
       { id: 'dHourlyMaxRng', label: 'HMaxR', desc: 'Hourly Max Range', default: false },
+      // ===== RELATIVE VOLUME (DAY) =====
+      { id: 'dRelVol', label: 'dRV', desc: 'Day Relative Volume (30d)', default: false },
+      { id: 'dRelVolDOW', label: 'dRV-DOW', desc: 'Day Relative Volume (DOW)', default: false },
     ];
     
     // ==================== STATE ====================
@@ -2065,6 +2074,13 @@
     
     // ==================== DATE PICKER ====================
     
+
+function getFilteredDays() {
+  if (typeof getFilteredData === 'function') {
+    return getFilteredData();
+  }
+  return Object.values(etDays);
+}
 
 function computeRelativeVolume(){
   try {
