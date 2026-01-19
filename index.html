@@ -32,6 +32,11 @@
     }
     
     /* Tooltip styles */
+/* HIDE SPECIFIC TOOLBAR FILTER BUTTONS ON MOBILE */
+@media (max-width:768px){
+  .mobile-hide{display:none !important;}
+}
+
     
     /* Improved Info Tooltip (supports hover on desktop, click-to-toggle on mobile) */
     .info-tooltip {
@@ -678,12 +683,12 @@
       </header>
 
       <div class="toolbar">
-        <button class="tb-btn" id="btn-filters" onclick="toggleFilters()">⚙ Filters</button>
-        <button class="tb-btn" id="btn-columns" onclick="toggleColumns()">▤ Columns</button>
-        <button class="tb-btn" id="btn-day-cols" onclick="toggleDayColsPanel()">📊 DayTotals</button>
-        <button class="tb-btn" id="btn-pct" onclick="togglePercentiles()">📈 Pctiles</button>
-        <button class="tb-btn filter-btn" id="btn-col-filter" onclick="toggleColFilterPanel()">🔍 ColFilter</button>
-        <button class="tb-btn" id="btn-rsi" onclick="toggleRsiSettings()" style="background:rgba(167,139,250,0.1);border-color:rgba(167,139,250,0.3);color:var(--accent-purple)">📉 RSI</button>
+        <button class="tb-btn mobile-hide" id="btn-filters" onclick="toggleFilters()">⚙ Filters</button>
+        <button class="tb-btn mobile-hide" id="btn-columns" onclick="toggleColumns()">▤ Columns</button>
+        <button class="tb-btn mobile-hide" id="btn-day-cols" onclick="toggleDayColsPanel()">📊 DayTotals</button>
+        <button class="tb-btn mobile-hide" id="btn-pct" onclick="togglePercentiles()">📈 Pctiles</button>
+        <button class="tb-btn filter-btn mobile-hide" id="btn-col-filter" onclick="toggleColFilterPanel()">🔍 ColFilter</button>
+        <button class="tb-btn mobile-hide" id="btn-rsi" onclick="toggleRsiSettings()" style="background:rgba(167,139,250,0.1);border-color:rgba(167,139,250,0.3);color:var(--accent-purple)">📉 RSI</button>
         
         <div class="tb-group">
           <label>Font:</label>
@@ -3976,6 +3981,19 @@
         // Tidy up widths for cloned selects
         clone.querySelectorAll('select').forEach(s=>s.style.width='100%');
         content.appendChild(clone);
+        // Add sync listeners: clicking cloned buttons will toggle original immediately
+        clone.querySelectorAll('button[data-month], button[data-day], button[data-occ]').forEach(cb=>{
+          cb.addEventListener('click', function(ev){
+            const m = this.getAttribute('data-month');
+            const d = this.getAttribute('data-day');
+            const o = this.getAttribute('data-occ');
+            try{
+              if(m){ const orig=document.querySelector('#month-filters button[data-month=+m+]'); if(orig) orig.classList.toggle('active'); }
+              if(d){ const orig=document.querySelector('#filters-panel button[data-day=+d+]'); if(orig) orig.classList.toggle('active'); }
+              if(o){ const orig=document.querySelector('#filters-panel button[data-occ=+o+]'); if(orig) orig.classList.toggle('active'); }
+            }catch(e){console.warn('sync cloned click',e)}
+          })
+        });
       }
     });
     modal.classList.add('visible');
@@ -4324,6 +4342,19 @@ function wrapMobileSections(){
     const clone = orig.cloneNode(true);
     clone.style.display = 'block';
     content.appendChild(clone);
+        // Add sync listeners: clicking cloned buttons will toggle original immediately
+        clone.querySelectorAll('button[data-month], button[data-day], button[data-occ]').forEach(cb=>{
+          cb.addEventListener('click', function(ev){
+            const m = this.getAttribute('data-month');
+            const d = this.getAttribute('data-day');
+            const o = this.getAttribute('data-occ');
+            try{
+              if(m){ const orig=document.querySelector('#month-filters button[data-month=+m+]'); if(orig) orig.classList.toggle('active'); }
+              if(d){ const orig=document.querySelector('#filters-panel button[data-day=+d+]'); if(orig) orig.classList.toggle('active'); }
+              if(o){ const orig=document.querySelector('#filters-panel button[data-occ=+o+]'); if(orig) orig.classList.toggle('active'); }
+            }catch(e){console.warn('sync cloned click',e)}
+          })
+        });
 
     // Inject date chips under date picker
     if (s.id === 'filters-panel') {
@@ -4974,6 +5005,101 @@ document.getElementById('interval-info-close').onclick=()=>{
 };
 </script>
 <!-- === END HARD FIX === -->
+
+
+<!-- Quick UI Toggles -->
+<style>
+#quick-ui-toggles{position:fixed;right:18px;top:80px;z-index:1600;display:flex;flex-direction:column;gap:8px}
+#quick-ui-toggles button{background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.06);color:var(--text-primary);padding:8px 10px;border-radius:8px;cursor:pointer;font-size:0.85rem}
+#quick-ui-toggles button.active{background:var(--accent-btc);color:#fff}
+@media(max-width:768px){#quick-ui-toggles{right:16px;top:auto;bottom:120px;flex-direction:row}}</style>
+<div id="quick-ui-toggles" aria-hidden="false">
+  <button id="toggle-tabs-btn" title="Hide/Show top/bottom tabs">Toggle Tabs</button>
+  <button id="toggle-day-stats-btn" title="Hide/Show Day View top stats">Toggle Day Stats</button>
+</div>
+<script>
+(function(){
+  const tabsBtn=document.getElementById('toggle-tabs-btn');
+  const dayStatsBtn=document.getElementById('toggle-day-stats-btn');
+  function setTabsHidden(h){
+    document.body.classList.toggle('hidden-tabs',!!h);
+    localStorage.setItem('hiddenTabs', !!h);
+    tabsBtn.classList.toggle('active', !!h);
+  }
+  function setDayStatsHidden(h){
+    document.body.classList.toggle('hidden-day-stats',!!h);
+    localStorage.setItem('hiddenDayStats', !!h);
+    dayStatsBtn.classList.toggle('active', !!h);
+  }
+  tabsBtn.addEventListener('click', ()=> setTabsHidden(!document.body.classList.contains('hidden-tabs')));
+  dayStatsBtn.addEventListener('click', ()=> setDayStatsHidden(!document.body.classList.contains('hidden-day-stats')));
+  // init from storage
+  setTabsHidden(localStorage.getItem('hiddenTabs')==='true');
+  setDayStatsHidden(localStorage.getItem('hiddenDayStats')==='true');
+  // expose functions
+  window.toggleTabsVisibility = ()=> setTabsHidden(!document.body.classList.contains('hidden-tabs'));
+  window.toggleDayStatsVisibility = ()=> setDayStatsHidden(!document.body.classList.contains('hidden-day-stats'));
+})();
+</script>
+<style>
+/* Hidden classes controlled by quick toggles */
+.hidden-tabs .tab-nav{display:none !important}
+.hidden-tabs .tab-btn{display:none !important}
+.hidden-day-stats .day-view-header{display:none !important}
+</style>
+
+
+<script>
+// Robust info-btn handler
+document.addEventListener('click', function(e){
+  const b = e.target.closest('.info-btn');
+  if(!b) return;
+  const panel = document.getElementById('interval-info-panel');
+  if(!panel) return;
+  if(panel.style.display==='block') panel.style.display='none'; else panel.style.display='block';
+});
+// Close interval panel when clicking close
+document.getElementById && document.getElementById('interval-info-close')?.addEventListener('click', function(){document.getElementById('interval-info-panel').style.display='none'});
+</script>
+
+
+<script>
+function refreshFilterUI(){
+  // Sync DOM active classes to FilterState if present, otherwise ensure buttons reflect any existing 'active' classes
+  try{
+    // months
+    document.querySelectorAll('#month-filters [data-month]').forEach(b=>{
+      const m = +b.dataset.month;
+      if(window.FilterState && FilterState.months){
+        b.classList.toggle('active', FilterState.months.has(m));
+      }
+    });
+    // days
+    document.querySelectorAll('[data-day]').forEach(b=>{
+      const d = b.dataset.day!==undefined ? +b.dataset.day : null;
+      if(d!==null && window.FilterState && FilterState.daysOfWeek){
+        b.classList.toggle('active', FilterState.daysOfWeek.has(d));
+      }
+    });
+    // occ
+    document.querySelectorAll('[data-occ]').forEach(b=>{
+      const o = +b.dataset.occ;
+      if(window.FilterState && FilterState.dayNumbers){
+        b.classList.toggle('active', FilterState.dayNumbers.has(o));
+      }
+    });
+  }catch(e){console.warn('refreshFilterUI failed',e)}
+}
+// Try to wrap renderTable/renderDayView to call refreshFilterUI after render
+['renderTable','renderDayView','renderCalendar'].forEach(fn=>{
+  if(typeof window[fn] === 'function'){
+    const orig=window[fn];
+    window[fn]=function(){ const r=orig.apply(this,arguments); setTimeout(refreshFilterUI,10); return r; }
+  }
+});
+// fallback: call once DOM ready
+document.addEventListener('DOMContentLoaded', function(){ setTimeout(refreshFilterUI,300); });
+</script>
 
 </body>
 </html>
