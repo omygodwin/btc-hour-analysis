@@ -2094,6 +2094,7 @@ function getFilteredDays() {
 }
 
 function computeRelativeVolume() {
+  console.log("computeRelativeVolume() RUNNING");
   try {
     const days = getFilteredDays ? getFilteredDays() : Object.values(etDays);
 
