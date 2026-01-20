@@ -994,7 +994,79 @@
   padding:14px;width:90%;max-width:320px;
   color:#fff;
 }
+
+/* Live Status Indicator */
+.live-status-container {
+  margin-top: 10px;
+}
+
+.live-status-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px;
+  background: rgba(74, 222, 128, 0.1);
+  border: 1px solid rgba(74, 222, 128, 0.3);
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.live-status-indicator:hover {
+  background: rgba(74, 222, 128, 0.15);
+  border-color: rgba(74, 222, 128, 0.5);
+}
+
+.live-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #4ade80;
+  animation: pulse 2s ease-in-out infinite;
+}
+
+.live-status-indicator.loading .live-dot {
+  background: #fbbf24;
+  animation: pulse 1s ease-in-out infinite;
+}
+
+.live-status-indicator.error .live-dot {
+  background: #f87171;
+  animation: none;
+}
+
+.live-status-indicator.refreshing .live-dot {
+  background: #60a5fa;
+  animation: pulse 0.5s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+.live-text {
+  color: var(--text-primary);
+}
+
+@media (max-width: 768px) {
+  .live-status-container {
+    margin-top: 8px;
+  }
+  .live-status-indicator {
+    font-size: 10px;
+    padding: 4px 8px;
+  }
+  .live-dot {
+    width: 6px;
+    height: 6px;
+  }
+}
 </style>
+<!-- Live Data Fetcher -->
+<script src="live-data-fetcher.js"></script>
 </head>
 <body>
 
@@ -1047,6 +1119,12 @@
           <div class="stat"><span class="stat-val" id="stat-hours">24</span><span class="stat-lbl">Hours</span></div>
           <div class="stat"><span class="stat-val" id="stat-cols">7</span><span class="stat-lbl">Cols</span></div>
         </div>
+        <div class="live-status-container">
+          <div class="live-status-indicator" id="live-status">
+            <span class="live-dot"></span>
+            <span class="live-text">Initializing...</span>
+          </div>
+        </div>
       </header>
 
       <div class="toolbar">
@@ -1056,7 +1134,8 @@
         <button class="tb-btn mobile-hide" id="btn-pct" onclick="togglePercentiles()">📈 Pctiles</button>
         <button class="tb-btn filter-btn mobile-hide" id="btn-col-filter" onclick="toggleColFilterPanel()">🔍 ColFilter</button>
         <button class="tb-btn mobile-hide" id="btn-rsi" onclick="toggleRsiSettings()" style="background:rgba(167,139,250,0.1);border-color:rgba(167,139,250,0.3);color:var(--accent-purple)">📉 RSI</button>
-        
+        <button class="tb-btn mobile-hide" id="btn-refresh" onclick="manualRefresh()" title="Refresh live data">🔄 Refresh</button>
+
         <div class="tb-group">
           <label>Font:</label>
           <select id="font-family" onchange="updateFont()">
@@ -2286,43 +2365,125 @@
       'data/bitcoin_5m_combined.csv',
       'data/bitcoin_5m_coinbase.csv'
     ];
-    
+
+    // Global variable for live data fetcher
+    let liveDataFetcher = null;
+
     async function autoLoadData() {
       // Check if we're on GitHub Pages or a web server (not file://)
       if (window.location.protocol === 'file:') {
         console.log('Local file, skipping auto-load');
         return false;
       }
-      
+
       document.getElementById('upload-screen').style.display = 'none';
       document.getElementById('loading-screen').style.display = 'flex';
-      document.getElementById('loading-text').textContent = 'Loading Bitcoin data...';
-      
-      for (const url of DATA_URLS) {
-        try {
-          console.log(`Trying to load: ${url}`);
-          const response = await fetch(url);
-          
-          if (response.ok) {
-            const csvText = await response.text();
-            
-            if (csvText && csvText.includes('timestamp') && csvText.length > 100) {
-              console.log(`Successfully loaded from: ${url}`);
-              processCSVText(csvText);
-              return true;
+      document.getElementById('loading-text').textContent = 'Loading Bitcoin data with live updates...';
+
+      try {
+        // Create live data fetcher
+        liveDataFetcher = new LiveDataFetcher({
+          dataFile: 'data/bitcoin_5m_combined.csv',
+          refreshInterval: 5 * 60 * 1000, // 5 minutes
+
+          // Callback when new data arrives
+          onDataUpdate: (mergedData) => {
+            console.log(`Data updated: ${mergedData.length} total bars`);
+
+            // Convert to rawBars format
+            rawBars = mergedData.map(bar => ({
+              timestamp: new Date(bar.timestamp),
+              open: parseFloat(bar.open),
+              high: parseFloat(bar.high),
+              low: parseFloat(bar.low),
+              close: parseFloat(bar.close),
+              volume: parseFloat(bar.volume) || 0,
+            })).filter(b => !isNaN(b.open) && b.timestamp instanceof Date && !isNaN(b.timestamp.getTime()));
+
+            if (rawBars.length === 0) {
+              throw new Error('No valid data found');
             }
+
+            // Process data
+            calculateRSI();
+            calculateBarMetrics();
+            processDataET();
+
+            // Update UI (only if not first load)
+            if (document.getElementById('app').classList.contains('visible')) {
+              renderTable();
+              if (window.location.hash === '#dayview') renderDayView();
+              if (window.location.hash === '#hourview') renderHourView();
+              if (window.location.hash === '#pm5session') render5pmSession();
+              console.log('✓ Data refreshed and UI updated');
+            } else {
+              // First load - initialize UI
+              populateFilterSelects();
+              document.getElementById('loading-screen').style.display = 'none';
+              document.getElementById('app').classList.add('visible');
+              renderTable();
+              populateDayViewSelect();
+              populateHourViewSelect();
+              populateCalendarYearSelect();
+              initPm5YearFilters();
+              console.log(`Loaded ${rawBars.length} bars, ${allETDates.length} days`);
+            }
+          },
+
+          // Callback for status changes
+          onStatusChange: (statusInfo) => {
+            updateLiveStatusIndicator(statusInfo);
           }
-        } catch (err) {
-          console.log(`Failed to load ${url}: ${err.message}`);
-        }
+        });
+
+        // Start live data fetching
+        await liveDataFetcher.start();
+        return true;
+
+      } catch (error) {
+        console.error('Failed to start live data:', error);
+        showError(`Failed to load live data: ${error.message}`);
+        return false;
       }
-      
-      // If auto-load fails, show upload screen
-      console.log('Auto-load failed, showing upload screen');
-      document.getElementById('loading-screen').style.display = 'none';
-      document.getElementById('upload-screen').style.display = 'flex';
-      return false;
     }
+
+    // Update live status indicator
+    function updateLiveStatusIndicator(statusInfo) {
+      const indicator = document.getElementById('live-status');
+      if (!indicator) return;
+
+      // Update status class
+      indicator.className = 'live-status-indicator ' + statusInfo.status;
+
+      // Update text
+      const text = indicator.querySelector('.live-text');
+      if (text) {
+        text.textContent = statusInfo.message;
+      }
+
+      // Update title with details
+      const details = `Historical: ${statusInfo.historicalBarCount.toLocaleString()} bars\nLive: ${statusInfo.liveBarCount.toLocaleString()} bars\nLast update: ${statusInfo.timestamp.toLocaleTimeString()}`;
+      indicator.title = details;
+    }
+
+    // Manual refresh function
+    function manualRefresh() {
+      if (!liveDataFetcher) {
+        console.log('Live data fetcher not initialized');
+        return;
+      }
+
+      console.log('Manual refresh triggered');
+      liveDataFetcher.refresh();
+    }
+
+    // Add click handler to status indicator for manual refresh
+    document.addEventListener('DOMContentLoaded', () => {
+      const statusIndicator = document.getElementById('live-status');
+      if (statusIndicator) {
+        statusIndicator.addEventListener('click', manualRefresh);
+      }
+    });
 
     function buildRealHours(data) {
       const hourSet = new Set();
@@ -2373,8 +2534,45 @@
     }
     
     function processCSVText(csvText) {
+      // Handle both CSV text and array of objects
+      if (Array.isArray(csvText)) {
+        // Already parsed data
+        try {
+          rawBars = csvText.map(row => ({
+            timestamp: new Date(row.timestamp),
+            open: parseFloat(row.open),
+            high: parseFloat(row.high),
+            low: parseFloat(row.low),
+            close: parseFloat(row.close),
+            volume: parseFloat(row.volume) || 0,
+          })).filter(b => !isNaN(b.open) && b.timestamp instanceof Date && !isNaN(b.timestamp.getTime())).sort((a, b) => a.timestamp - b.timestamp);
+
+          if (rawBars.length === 0) {
+            throw new Error('No valid data found');
+          }
+
+          calculateRSI();
+          calculateBarMetrics();
+          processDataET();
+          populateFilterSelects();
+          document.getElementById('loading-screen').style.display = 'none';
+          document.getElementById('app').classList.add('visible');
+          renderTable();
+          populateDayViewSelect();
+          populateHourViewSelect();
+          populateCalendarYearSelect();
+          initPm5YearFilters();
+
+          console.log(`Loaded ${rawBars.length} bars, ${allETDates.length} days`);
+        } catch (err) {
+          showError(err.message);
+        }
+        return;
+      }
+
+      // Original CSV text parsing
       Papa.parse(csvText, {
-        header: true, 
+        header: true,
         skipEmptyLines: true,
         complete: function(results) {
           try {
@@ -2386,7 +2584,7 @@
               close: parseFloat(row.close),
               volume: parseFloat(row.volume) || 0,
             })).filter(b => !isNaN(b.open) && b.timestamp instanceof Date && !isNaN(b.timestamp.getTime())).sort((a, b) => a.timestamp - b.timestamp);
-            
+
             if (rawBars.length === 0) {
               throw new Error('No valid data found in CSV');
             }
@@ -2402,10 +2600,10 @@
             populateHourViewSelect();
             populateCalendarYearSelect();
             initPm5YearFilters();
-            
+
             console.log(`Loaded ${rawBars.length} bars, ${allETDates.length} days`);
-          } catch (err) { 
-            showError(err.message); 
+          } catch (err) {
+            showError(err.message);
           }
         },
         error: (err) => showError(err.message)
