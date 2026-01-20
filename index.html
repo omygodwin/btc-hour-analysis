@@ -85,7 +85,7 @@
     /* make sure popup flips above if near top edge */
     .info-popup.top { bottom: auto; top: calc(100% + 8px); transform: translateX(-50%); }
 
-    /* Info Button styles */
+    /* Info Button styles - Redesigned for mobile */
     .info-btn {
       display: inline-flex;
       align-items: center;
@@ -105,19 +105,31 @@
       transition: all 0.2s;
       padding: 0;
       line-height: 1;
+      opacity: 0.7;
     }
     .info-btn:hover {
       background: rgba(167,139,250,0.25);
       transform: scale(1.1);
+      opacity: 1;
     }
-    /* Mobile: increase touch target */
+    /* Mobile: smaller visual but larger touch target */
     @media (max-width: 768px) {
       .info-btn {
-        width: 44px;
-        height: 44px;
-        min-width: 44px;
-        min-height: 44px;
-        font-size: 16px;
+        width: 20px;
+        height: 20px;
+        min-width: 20px;
+        min-height: 20px;
+        font-size: 11px;
+        opacity: 0.6;
+        position: relative;
+        /* Create larger invisible touch target */
+        padding: 12px;
+        margin: -12px;
+        margin-left: 4px;
+      }
+      .info-btn:active {
+        opacity: 1;
+        transform: scale(1.15);
       }
     }
 
@@ -439,6 +451,54 @@
     .day-stat-val.positive { color: var(--accent-green); }
     .day-stat-val.negative { color: var(--accent-red); }
     .day-stat-lbl { font-size: 0.55rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; }
+
+    /* Collapsible Day View Header */
+    .day-view-header-wrapper {
+      display: flex;
+      flex-direction: column;
+    }
+    .day-view-header-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .day-view-collapse-btn {
+      display: none;
+      background: rgba(255,255,255,0.1);
+      border: 1px solid var(--border-medium);
+      border-radius: 50%;
+      width: 32px;
+      height: 32px;
+      color: var(--text-primary);
+      font-size: 1.2rem;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .day-view-collapse-btn:active {
+      background: rgba(255,255,255,0.2);
+    }
+    .day-view-stats-collapsible {
+      overflow: hidden;
+      transition: max-height 0.3s ease;
+    }
+    @media (max-width: 768px) {
+      .day-view-collapse-btn {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      .day-view-stats-collapsible.collapsed {
+        max-height: 0;
+        margin-top: 0 !important;
+      }
+      .day-view-collapse-btn.collapsed {
+        transform: rotate(180deg);
+      }
+      /* Also hide toolbar when collapsed on mobile */
+      .day-toolbar.collapsed {
+        display: none;
+      }
+    }
     
     .day-toolbar { display: flex; gap: 8px; padding: 8px 16px; background: var(--bg-secondary); border-bottom: 1px solid var(--border-subtle); align-items: center; flex-wrap: wrap; flex-shrink: 0; }
     .day-toolbar label { font-size: 0.65rem; color: var(--text-muted); }
@@ -529,17 +589,18 @@
     
     /* Mobile Detection Class */
     .is-mobile { --font-size: 11px; }
-    
+
     /* Mobile Tab Navigation */
     @media (max-width: 768px) {
       .tab-nav { flex-wrap: wrap; justify-content: center; gap: 2px; padding: 5px; }
       .tab-btn { padding: 8px 12px; font-size: 0.7rem; flex: 1 1 auto; min-width: 70px; text-align: center; }
       .tab-btn.active { background: var(--accent-btc-dim); }
-      
-      /* Mobile Header */
-      .header { flex-direction: column; padding: 8px 12px; gap: 8px; }
+
+      /* Mobile Header - Hide subtitle and stats */
+      .header { flex-direction: column; padding: 8px 12px; gap: 4px; }
       .header h1 { font-size: 0.9rem; }
-      .header-stats { flex-wrap: wrap; justify-content: center; gap: 4px; }
+      .header .sub { display: none !important; }
+      .header-stats { display: none !important; }
       .stat { padding: 3px 8px; min-width: 50px; }
       .stat-val { font-size: 0.75rem; }
       .stat-lbl { font-size: 0.4rem; }
@@ -639,14 +700,14 @@
     /* Mobile Menu Toggle */
     .mobile-menu-btn { display: none; }
     @media (max-width: 768px) {
-      .mobile-menu-btn { 
-        display: flex; 
-        position: fixed; 
-        bottom: 16px; 
-        right: 16px; 
+      .mobile-menu-btn {
+        display: flex;
+        position: fixed;
+        bottom: 16px;
+        right: 16px;
         z-index: 1000;
-        width: 48px;
-        height: 48px;
+        width: 56px;
+        height: 56px;
         border-radius: 50%;
         background: var(--accent-btc);
         color: white;
@@ -658,6 +719,183 @@
         cursor: pointer;
       }
       .mobile-menu-btn:active { transform: scale(0.95); }
+    }
+
+    /* Mobile Filter Modal */
+    .mobile-filter-modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.85);
+      z-index: 9999;
+      backdrop-filter: blur(4px);
+    }
+    .mobile-filter-modal.visible {
+      display: flex;
+      flex-direction: column;
+    }
+    .mobile-filter-content {
+      background: var(--bg-primary);
+      margin: auto;
+      max-width: 95vw;
+      max-height: 90vh;
+      border-radius: 12px;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      box-shadow: 0 12px 48px rgba(0,0,0,0.9);
+    }
+    .mobile-filter-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px 16px;
+      background: linear-gradient(180deg, rgba(247,147,26,0.15) 0%, var(--bg-secondary) 100%);
+      border-bottom: 1px solid var(--border-medium);
+    }
+    .mobile-filter-title {
+      font-size: 1rem;
+      font-weight: 600;
+      color: var(--accent-btc);
+    }
+    .mobile-filter-close {
+      background: rgba(255,255,255,0.1);
+      border: none;
+      color: var(--text-primary);
+      font-size: 24px;
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .mobile-filter-tabs {
+      display: flex;
+      background: var(--bg-secondary);
+      border-bottom: 1px solid var(--border-medium);
+      overflow-x: auto;
+      flex-shrink: 0;
+    }
+    .mobile-tab-btn {
+      padding: 10px 16px;
+      background: transparent;
+      border: none;
+      border-bottom: 2px solid transparent;
+      color: var(--text-muted);
+      font-size: 0.75rem;
+      cursor: pointer;
+      white-space: nowrap;
+      flex: 1;
+      min-width: fit-content;
+    }
+    .mobile-tab-btn.active {
+      color: var(--accent-btc);
+      border-bottom-color: var(--accent-btc);
+      background: rgba(247,147,26,0.08);
+    }
+    .mobile-filter-body {
+      flex: 1;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+      padding: 12px;
+    }
+    .mobile-tab-panel {
+      display: none;
+    }
+    .mobile-tab-panel.active {
+      display: block;
+    }
+    .mobile-filter-section {
+      margin-bottom: 16px;
+      padding: 12px;
+      background: rgba(255,255,255,0.02);
+      border-radius: 8px;
+      border: 1px solid var(--border-subtle);
+    }
+    .mobile-filter-section h3 {
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--text-muted);
+      margin-bottom: 8px;
+      font-weight: 500;
+    }
+    .mobile-filter-btns {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px;
+    }
+    .mobile-filter-btn {
+      padding: 8px 12px;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid var(--border-medium);
+      border-radius: 4px;
+      color: var(--text-muted);
+      font-size: 0.7rem;
+      cursor: pointer;
+      min-height: 40px;
+      min-width: 44px;
+    }
+    .mobile-filter-btn.active {
+      background: var(--accent-btc-dim);
+      border-color: rgba(247,147,26,0.4);
+      color: var(--accent-btc);
+    }
+    .mobile-filter-btn.quick {
+      background: rgba(100,149,237,0.1);
+      border-color: rgba(100,149,237,0.25);
+      color: var(--accent-blue);
+    }
+    .mobile-filter-btn.none-btn {
+      background: rgba(248,113,113,0.1);
+      border-color: rgba(248,113,113,0.25);
+      color: var(--accent-red);
+    }
+    .mobile-settings-row {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+    .mobile-settings-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 8px;
+      background: rgba(255,255,255,0.02);
+      border-radius: 6px;
+    }
+    .mobile-settings-label {
+      font-size: 0.7rem;
+      color: var(--text-secondary);
+    }
+    .mobile-settings-input {
+      padding: 6px 10px;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid var(--border-medium);
+      border-radius: 4px;
+      color: var(--text-primary);
+      font-size: 0.75rem;
+      min-height: 40px;
+    }
+    .mobile-action-btn-large {
+      padding: 12px 20px;
+      background: rgba(100,149,237,0.15);
+      border: 1px solid rgba(100,149,237,0.3);
+      border-radius: 8px;
+      color: var(--accent-blue);
+      font-size: 0.85rem;
+      cursor: pointer;
+      min-height: 44px;
+      font-weight: 500;
+    }
+    .mobile-action-btn-large:active {
+      background: rgba(100,149,237,0.25);
     }
     
     /* Mobile Quick Actions Panel */
@@ -1032,11 +1270,16 @@
     <!-- Day View Tab -->
     <div id="tab-dayview" class="tab-content">
       <div class="day-view-header">
-        <div class="day-view-title" id="day-view-title">Select a Date</div>
-        <div class="day-stats-grid" id="day-stats-grid"></div>
+        <div class="day-view-header-top">
+          <div class="day-view-title" id="day-view-title">Select a Date</div>
+          <button class="day-view-collapse-btn collapsed" id="day-view-collapse-btn" onclick="toggleDayViewStats()">▼</button>
+        </div>
+        <div class="day-view-stats-collapsible collapsed" id="day-view-stats-collapsible" style="margin-top:8px;">
+          <div class="day-stats-grid" id="day-stats-grid"></div>
+        </div>
       </div>
-      
-      <div class="day-toolbar">
+
+      <div class="day-toolbar" id="day-toolbar-main">
         <label>Select Date:</label>
         <select id="day-view-date" onchange="renderDayView()"></select>
         <div class="tb-group" id="compare-group" style="display:none;">
@@ -1235,12 +1478,276 @@
     </div>
     
     <!-- Mobile Menu Button -->
-    <button class="mobile-menu-btn" onclick="toggleMobileMenu()">☰</button>
-    <div class="mobile-actions" id="mobile-actions">
-      <button class="mobile-action-btn" onclick="toggleFilters(); hideMobileMenu();">⚙ Filters</button>
-      <button class="mobile-action-btn" onclick="toggleColumns(); hideMobileMenu();">▤ Columns</button>
-      <button class="mobile-action-btn" onclick="loadNewFile(); hideMobileMenu();">📁 Load File</button>
-      <button class="mobile-action-btn" onclick="resetAll(); hideMobileMenu();">↺ Reset</button>
+    <button class="mobile-menu-btn" onclick="toggleMobileFilterModal()">☰</button>
+
+    <!-- Mobile Filter Modal -->
+    <div class="mobile-filter-modal" id="mobile-filter-modal">
+      <div class="mobile-filter-content">
+        <div class="mobile-filter-header">
+          <div class="mobile-filter-title">⚙ Filters & Settings</div>
+          <button class="mobile-filter-close" onclick="closeMobileFilterModal()">×</button>
+        </div>
+
+        <div class="mobile-filter-tabs">
+          <button class="mobile-tab-btn active" onclick="switchMobileTab('filters')">Filters</button>
+          <button class="mobile-tab-btn" onclick="switchMobileTab('columns')">Columns</button>
+          <button class="mobile-tab-btn" onclick="switchMobileTab('daytotals')">DayTotals</button>
+          <button class="mobile-tab-btn" onclick="switchMobileTab('colfilters')">ColFilters</button>
+          <button class="mobile-tab-btn" onclick="switchMobileTab('settings')">Settings</button>
+        </div>
+
+        <div class="mobile-filter-body">
+          <!-- Tab 1: Filters -->
+          <div id="mobile-tab-filters" class="mobile-tab-panel active">
+            <div class="mobile-filter-section">
+              <h3>Years</h3>
+              <div class="mobile-filter-btns" id="mobile-year-filters"></div>
+            </div>
+
+            <div class="mobile-filter-section">
+              <h3>Months</h3>
+              <div class="mobile-filter-btns">
+                <button class="mobile-filter-btn quick" onclick="setQ1(); updateMobileFilterUI();">Q1</button>
+                <button class="mobile-filter-btn quick" onclick="setQ2(); updateMobileFilterUI();">Q2</button>
+                <button class="mobile-filter-btn quick" onclick="setQ3(); updateMobileFilterUI();">Q3</button>
+                <button class="mobile-filter-btn quick" onclick="setQ4(); updateMobileFilterUI();">Q4</button>
+                <button class="mobile-filter-btn quick" onclick="setAllMonths(); updateMobileFilterUI();">All</button>
+                <button class="mobile-filter-btn none-btn" onclick="setNoMonths(); updateMobileFilterUI();">None</button>
+              </div>
+              <div class="mobile-filter-btns" id="mobile-month-filters" style="margin-top:8px;"></div>
+            </div>
+
+            <div class="mobile-filter-section">
+              <h3>Days of Week</h3>
+              <div class="mobile-filter-btns">
+                <button class="mobile-filter-btn quick" onclick="setWeekdays(); updateMobileFilterUI();">Weekdays</button>
+                <button class="mobile-filter-btn quick" onclick="setWeekend(); updateMobileFilterUI();">Weekend</button>
+                <button class="mobile-filter-btn quick" onclick="setAllDays(); updateMobileFilterUI();">All</button>
+                <button class="mobile-filter-btn none-btn" onclick="setNoDays(); updateMobileFilterUI();">None</button>
+              </div>
+              <div class="mobile-filter-btns" id="mobile-day-filters" style="margin-top:8px;"></div>
+            </div>
+
+            <div class="mobile-filter-section">
+              <h3>Day # in Month</h3>
+              <div class="mobile-filter-btns" id="mobile-occ-filters"></div>
+            </div>
+
+            <div class="mobile-filter-section">
+              <h3>Hours (Eastern Time)</h3>
+              <div style="display:flex;gap:8px;margin-bottom:8px;flex-wrap:wrap;">
+                <div style="flex:1;min-width:120px;">
+                  <label style="font-size:0.65rem;color:var(--text-muted);display:block;margin-bottom:4px;">From Hour:</label>
+                  <select id="mobile-hour-from" class="mobile-settings-input" style="width:100%;" onchange="updateHourRange()"></select>
+                </div>
+                <div style="flex:1;min-width:120px;">
+                  <label style="font-size:0.65rem;color:var(--text-muted);display:block;margin-bottom:4px;">To Hour:</label>
+                  <select id="mobile-hour-to" class="mobile-settings-input" style="width:100%;" onchange="updateHourRange()"></select>
+                </div>
+              </div>
+              <div class="mobile-filter-btns">
+                <button class="mobile-filter-btn quick" onclick="setHours(0, 23)">All (0-23)</button>
+                <button class="mobile-filter-btn quick" onclick="setHours(9, 16)">RTH (9-16)</button>
+                <button class="mobile-filter-btn quick" onclick="setHours(4, 9)">Pre (4-9)</button>
+                <button class="mobile-filter-btn quick" onclick="setHours(16, 20)">AH (16-20)</button>
+              </div>
+            </div>
+
+            <div class="mobile-filter-section">
+              <h3>Specific Dates</h3>
+              <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px;">
+                <button class="mobile-filter-btn quick" onclick="selectAllDates(); updateMobileFilterUI();">All Dates</button>
+                <button class="mobile-filter-btn none-btn" onclick="selectNoDates(); updateMobileFilterUI();">Clear Dates</button>
+                <button class="mobile-filter-btn quick" onclick="syncDatesFromFilters(); updateMobileFilterUI();">Sync from Filters</button>
+              </div>
+              <div style="font-size:0.7rem;color:var(--text-secondary);">
+                Selected: <span id="mobile-date-count">0</span> dates
+              </div>
+            </div>
+          </div>
+
+          <!-- Tab 2: Columns -->
+          <div id="mobile-tab-columns" class="mobile-tab-panel">
+            <div class="mobile-filter-section">
+              <h3>Column Presets</h3>
+              <div class="mobile-filter-btns">
+                <button class="mobile-filter-btn quick" onclick="setDefaultCols()">Default</button>
+                <button class="mobile-filter-btn quick" onclick="setAllCols()">All</button>
+                <button class="mobile-filter-btn quick" onclick="setRangeCols()">Range</button>
+                <button class="mobile-filter-btn quick" onclick="setOHLCVCols()">OHLCV</button>
+                <button class="mobile-filter-btn quick" onclick="setRSICols()">RSI</button>
+              </div>
+            </div>
+
+            <div class="mobile-filter-section">
+              <h3>Gradient Mode</h3>
+              <select id="mobile-gradient-mode" class="mobile-settings-input" style="width:100%;" onchange="document.getElementById('gradient-mode').value=this.value; renderTable();">
+                <option value="row">Per Row</option>
+                <option value="column">Per Column</option>
+              </select>
+            </div>
+
+            <div class="mobile-filter-section">
+              <h3>Select Columns (per Hour)</h3>
+              <div id="mobile-col-grid" class="mobile-settings-row"></div>
+            </div>
+          </div>
+
+          <!-- Tab 3: DayTotals -->
+          <div id="mobile-tab-daytotals" class="mobile-tab-panel">
+            <div class="mobile-filter-section">
+              <h3>Day Total Presets</h3>
+              <div class="mobile-filter-btns">
+                <button class="mobile-filter-btn quick" onclick="defaultDTCols()">Default</button>
+                <button class="mobile-filter-btn quick" onclick="showAllDTCols()">All</button>
+                <button class="mobile-filter-btn none-btn" onclick="hideAllDTCols()">None</button>
+              </div>
+            </div>
+
+            <div class="mobile-filter-section">
+              <h3>Show in Table</h3>
+              <button id="mobile-btn-show-dt-cols" class="mobile-action-btn-large" onclick="toggleShowDayCols()" style="width:100%;margin-bottom:12px;">
+                <span id="mobile-show-dt-text">Show Day Totals</span>
+              </button>
+            </div>
+
+            <div class="mobile-filter-section">
+              <h3>Established % Threshold</h3>
+              <input id="mobile-est-pct" type="number" value="85" min="1" max="100" class="mobile-settings-input" style="width:100%;" onchange="document.getElementById('est-pct').value=this.value; computeEstablishedHours(); computeRelativeVolume(); renderTable();" />
+            </div>
+
+            <div class="mobile-filter-section">
+              <h3>O-C Close Hour</h3>
+              <select id="mobile-oc-close-hour" class="mobile-settings-input" style="width:100%;" onchange="document.getElementById('oc-close-hour').value=this.value; renderTable();"></select>
+            </div>
+
+            <div class="mobile-filter-section">
+              <h3>Select Day Total Columns</h3>
+              <div id="mobile-dt-col-grid" class="mobile-settings-row"></div>
+            </div>
+          </div>
+
+          <!-- Tab 4: ColFilters -->
+          <div id="mobile-tab-colfilters" class="mobile-tab-panel">
+            <div class="mobile-filter-section">
+              <h3>Active Column Filters</h3>
+              <div id="mobile-active-filters" style="margin-bottom:12px;">
+                <div style="font-size:0.7rem;color:var(--text-muted);">No active filters</div>
+              </div>
+              <button class="mobile-filter-btn none-btn" onclick="clearAllFilters()" style="width:100%;">Clear All Filters</button>
+            </div>
+
+            <div class="mobile-filter-section">
+              <h3>Add New Filter</h3>
+              <div class="mobile-settings-row">
+                <div class="mobile-settings-item">
+                  <span class="mobile-settings-label">Hour/Day:</span>
+                  <select id="mobile-filter-hour" class="mobile-settings-input" style="flex:1;margin-left:8px;">
+                    <option value="day">Day Total</option>
+                  </select>
+                </div>
+                <div class="mobile-settings-item">
+                  <span class="mobile-settings-label">Column:</span>
+                  <select id="mobile-filter-column" class="mobile-settings-input" style="flex:1;margin-left:8px;"></select>
+                </div>
+                <div class="mobile-settings-item">
+                  <span class="mobile-settings-label">Operator:</span>
+                  <select id="mobile-filter-op" class="mobile-settings-input" style="flex:1;margin-left:8px;">
+                    <option value=">=">≥</option>
+                    <option value="<=">≤</option>
+                    <option value=">">&gt;</option>
+                    <option value="<">&lt;</option>
+                    <option value="==">＝</option>
+                    <option value="!=">≠</option>
+                  </select>
+                </div>
+                <div class="mobile-settings-item">
+                  <span class="mobile-settings-label">Value:</span>
+                  <input type="number" id="mobile-filter-value" placeholder="Value" class="mobile-settings-input" style="flex:1;margin-left:8px;">
+                </div>
+                <button class="mobile-action-btn-large" onclick="addMobileColumnFilter()" style="width:100%;">+ Add Filter</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Tab 5: Settings -->
+          <div id="mobile-tab-settings" class="mobile-tab-panel">
+            <div class="mobile-filter-section">
+              <h3>Quick Actions</h3>
+              <div style="display:flex;flex-direction:column;gap:8px;">
+                <button class="mobile-action-btn-large" onclick="resetAll(); closeMobileFilterModal();">↺ Reset All Filters</button>
+                <button class="mobile-action-btn-large" onclick="setRTH(); closeMobileFilterModal();">🕐 US RTH (9-16, Weekdays)</button>
+                <button class="mobile-action-btn-large" onclick="loadNewFile(); closeMobileFilterModal();">📁 Load New File</button>
+              </div>
+            </div>
+
+            <div class="mobile-filter-section">
+              <h3>RSI Settings</h3>
+              <div class="mobile-settings-row">
+                <div class="mobile-settings-item">
+                  <span class="mobile-settings-label">RSI Length:</span>
+                  <input type="number" id="mobile-rsi-length" value="9" min="2" class="mobile-settings-input" style="width:80px;" onchange="document.getElementById('rsi-length').value=this.value; recalcRSI();">
+                </div>
+                <div class="mobile-settings-item">
+                  <span class="mobile-settings-label">RSI Method:</span>
+                  <select id="mobile-rsi-method" class="mobile-settings-input" style="flex:1;margin-left:8px;" onchange="document.getElementById('rsi-method').value=this.value; recalcRSI();">
+                    <option value="RMA" selected>RMA</option>
+                    <option value="EMA">EMA</option>
+                    <option value="SMA">SMA</option>
+                  </select>
+                </div>
+                <div class="mobile-settings-item">
+                  <span class="mobile-settings-label">Signal Length:</span>
+                  <input type="number" id="mobile-signal-length" value="5" min="1" class="mobile-settings-input" style="width:80px;" onchange="document.getElementById('signal-length').value=this.value; recalcRSI();">
+                </div>
+                <div class="mobile-settings-item">
+                  <span class="mobile-settings-label">Signal Method:</span>
+                  <select id="mobile-signal-method" class="mobile-settings-input" style="flex:1;margin-left:8px;" onchange="document.getElementById('signal-method').value=this.value; recalcRSI();">
+                    <option value="EMA" selected>EMA</option>
+                    <option value="RMA">RMA</option>
+                    <option value="SMA">SMA</option>
+                  </select>
+                </div>
+                <div class="mobile-settings-item">
+                  <span class="mobile-settings-label">OB Level:</span>
+                  <input type="number" id="mobile-ob-level" value="88" min="50" max="100" class="mobile-settings-input" style="width:80px;" onchange="document.getElementById('ob-level').value=this.value; recalcRSI();">
+                </div>
+                <div class="mobile-settings-item">
+                  <span class="mobile-settings-label">OS Level:</span>
+                  <input type="number" id="mobile-os-level" value="12" min="0" max="50" class="mobile-settings-input" style="width:80px;" onchange="document.getElementById('os-level').value=this.value; recalcRSI();">
+                </div>
+              </div>
+            </div>
+
+            <div class="mobile-filter-section">
+              <h3>Display Settings</h3>
+              <div class="mobile-settings-row">
+                <div class="mobile-settings-item">
+                  <span class="mobile-settings-label">Font Family:</span>
+                  <select id="mobile-font-family" class="mobile-settings-input" style="flex:1;margin-left:8px;" onchange="document.getElementById('font-family').value=this.value; updateFont();">
+                    <option value="'JetBrains Mono', monospace">JetBrains</option>
+                    <option value="'Roboto Mono', monospace">Roboto</option>
+                    <option value="'Fira Code', monospace">Fira</option>
+                  </select>
+                </div>
+                <div class="mobile-settings-item">
+                  <span class="mobile-settings-label">Font Size:</span>
+                  <select id="mobile-font-size" class="mobile-settings-input" style="flex:1;margin-left:8px;" onchange="document.getElementById('font-size').value=this.value; updateFont();">
+                    <option value="9">9px</option>
+                    <option value="10" selected>10px</option>
+                    <option value="11">11px</option>
+                    <option value="12">12px</option>
+                  </select>
+                </div>
+                <div class="mobile-settings-item">
+                  <span class="mobile-settings-label">Level Size:</span>
+                  <input type="number" id="mobile-level-size" value="250" min="1" class="mobile-settings-input" style="width:100px;" onchange="document.getElementById('level-size').value=this.value; updateLevel();">
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -1420,30 +1927,331 @@
 
     // ==================== MOBILE DETECTION ====================
     const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || window.innerWidth <= 768;
-    let mobileMenuOpen = false;
-    
+    let mobileFilterModalOpen = false;
+    let currentMobileTab = 'filters';
+    let dayViewStatsCollapsed = true; // Start collapsed on mobile
+
     if (isMobile) {
       document.documentElement.classList.add('is-mobile');
       console.log('Mobile device detected');
+      // Initialize day view as collapsed on mobile
+      setTimeout(() => {
+        const toolbarEl = document.getElementById('day-toolbar-main');
+        if (toolbarEl) toolbarEl.classList.add('collapsed');
+      }, 100);
     }
-    
-    function toggleMobileMenu() {
-      mobileMenuOpen = !mobileMenuOpen;
-      document.getElementById('mobile-actions').classList.toggle('visible', mobileMenuOpen);
+
+    // ==================== MOBILE FILTER MODAL ====================
+    function toggleMobileFilterModal() {
+      mobileFilterModalOpen = !mobileFilterModalOpen;
+      const modal = document.getElementById('mobile-filter-modal');
+      modal.classList.toggle('visible', mobileFilterModalOpen);
+      if (mobileFilterModalOpen) {
+        updateMobileFilterUI();
+        syncMobileSettingsInputs();
+      }
     }
-    
-    function hideMobileMenu() {
-      mobileMenuOpen = false;
-      document.getElementById('mobile-actions').classList.remove('visible');
+
+    function closeMobileFilterModal() {
+      mobileFilterModalOpen = false;
+      document.getElementById('mobile-filter-modal').classList.remove('visible');
     }
-    
-    // Close mobile menu when clicking outside
+
+    function switchMobileTab(tabName) {
+      currentMobileTab = tabName;
+      // Update tab buttons
+      document.querySelectorAll('.mobile-tab-btn').forEach(btn => {
+        btn.classList.remove('active');
+      });
+      event.target.classList.add('active');
+
+      // Update tab panels
+      document.querySelectorAll('.mobile-tab-panel').forEach(panel => {
+        panel.classList.remove('active');
+      });
+      document.getElementById(`mobile-tab-${tabName}`).classList.add('active');
+    }
+
+    function updateMobileFilterUI() {
+      // Update year filters
+      const yearContainer = document.getElementById('mobile-year-filters');
+      if (yearContainer) {
+        yearContainer.innerHTML = '';
+        const years = [...selectedYears].sort((a, b) => a.localeCompare(b));
+        years.forEach(year => {
+          const btn = document.createElement('button');
+          btn.className = 'mobile-filter-btn active';
+          btn.textContent = year;
+          btn.onclick = () => {
+            toggleYear(year);
+            updateMobileFilterUI();
+          };
+          if (!selectedYears.has(year)) btn.classList.remove('active');
+          yearContainer.appendChild(btn);
+        });
+      }
+
+      // Update month filters
+      const monthContainer = document.getElementById('mobile-month-filters');
+      if (monthContainer) {
+        monthContainer.innerHTML = '';
+        MONTHS_SHORT.forEach((month, idx) => {
+          const btn = document.createElement('button');
+          btn.className = 'mobile-filter-btn';
+          btn.textContent = month;
+          btn.onclick = () => {
+            toggleMonth(idx + 1);
+            updateMobileFilterUI();
+          };
+          if (selectedMonths.has(idx + 1)) btn.classList.add('active');
+          monthContainer.appendChild(btn);
+        });
+      }
+
+      // Update day filters
+      const dayContainer = document.getElementById('mobile-day-filters');
+      if (dayContainer) {
+        dayContainer.innerHTML = '';
+        DAYS_SHORT.forEach((day, idx) => {
+          const btn = document.createElement('button');
+          btn.className = 'mobile-filter-btn';
+          btn.textContent = day;
+          btn.onclick = () => {
+            toggleDay(idx);
+            updateMobileFilterUI();
+          };
+          if (selectedDays.has(idx)) btn.classList.add('active');
+          dayContainer.appendChild(btn);
+        });
+      }
+
+      // Update occurrence filters
+      const occContainer = document.getElementById('mobile-occ-filters');
+      if (occContainer) {
+        occContainer.innerHTML = '';
+        ['1st', '2nd', '3rd', '4th', '5th'].forEach((occ, idx) => {
+          const btn = document.createElement('button');
+          btn.className = 'mobile-filter-btn';
+          btn.textContent = occ;
+          btn.onclick = () => {
+            toggleOcc(idx + 1);
+            updateMobileFilterUI();
+          };
+          if (selectedOccs.has(idx + 1)) btn.classList.add('active');
+          occContainer.appendChild(btn);
+        });
+      }
+
+      // Update date count
+      const dateCount = document.getElementById('mobile-date-count');
+      if (dateCount) {
+        dateCount.textContent = selectedDates.size;
+      }
+
+      // Update column grid
+      updateMobileColumnGrid();
+      updateMobileDayTotalsGrid();
+      updateMobileActiveFilters();
+    }
+
+    function updateMobileColumnGrid() {
+      const container = document.getElementById('mobile-col-grid');
+      if (!container) return;
+      container.innerHTML = '';
+
+      ALL_COLUMNS.forEach(col => {
+        const item = document.createElement('div');
+        item.className = 'mobile-settings-item';
+        item.style.padding = '8px';
+        item.style.cursor = 'pointer';
+        item.onclick = () => {
+          toggleColumn(col.id);
+          updateMobileColumnGrid();
+        };
+
+        const checkbox = document.createElement('input');
+        checkbox.type = 'checkbox';
+        checkbox.checked = visibleColumns.has(col.id);
+        checkbox.style.accentColor = 'var(--accent-btc)';
+        checkbox.onclick = (e) => e.stopPropagation();
+        checkbox.onchange = () => {
+          toggleColumn(col.id);
+        };
+
+        const label = document.createElement('span');
+        label.className = 'mobile-settings-label';
+        label.textContent = `${col.label} (${col.desc})`;
+        label.style.flex = '1';
+        label.style.marginLeft = '8px';
+
+        item.appendChild(checkbox);
+        item.appendChild(label);
+        container.appendChild(item);
+      });
+    }
+
+    function updateMobileDayTotalsGrid() {
+      const container = document.getElementById('mobile-dt-col-grid');
+      if (!container) return;
+      container.innerHTML = '';
+
+      DAY_TOTAL_COLS.forEach(col => {
+        const item = document.createElement('div');
+        item.className = 'mobile-settings-item';
+        item.style.padding = '8px';
+        item.style.cursor = 'pointer';
+        item.onclick = () => {
+          toggleDayTotalCol(col.id);
+          updateMobileDayTotalsGrid();
+        };
+
+        const checkbox = document.createElement('input');
+        checkbox.type = 'checkbox';
+        checkbox.checked = visibleDayTotalCols.has(col.id);
+        checkbox.style.accentColor = 'var(--accent-blue)';
+        checkbox.onclick = (e) => e.stopPropagation();
+        checkbox.onchange = () => {
+          toggleDayTotalCol(col.id);
+        };
+
+        const label = document.createElement('span');
+        label.className = 'mobile-settings-label';
+        label.textContent = `${col.label} (${col.desc})`;
+        label.style.flex = '1';
+        label.style.marginLeft = '8px';
+
+        item.appendChild(checkbox);
+        item.appendChild(label);
+        container.appendChild(item);
+      });
+
+      // Update show/hide button text
+      const showBtn = document.getElementById('mobile-show-dt-text');
+      if (showBtn) {
+        showBtn.textContent = showDayCols ? 'Hide Day Totals' : 'Show Day Totals';
+      }
+    }
+
+    function updateMobileActiveFilters() {
+      const container = document.getElementById('mobile-active-filters');
+      if (!container) return;
+
+      if (columnFilters.length === 0) {
+        container.innerHTML = '<div style="font-size:0.7rem;color:var(--text-muted);">No active filters</div>';
+      } else {
+        container.innerHTML = '';
+        columnFilters.forEach((filter, idx) => {
+          const tag = document.createElement('div');
+          tag.style.cssText = 'display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:rgba(74,222,128,0.15);border:1px solid rgba(74,222,128,0.3);border-radius:6px;margin-bottom:8px;';
+
+          const text = document.createElement('span');
+          text.style.cssText = 'font-size:0.7rem;color:var(--accent-green);';
+          text.textContent = `${filter.hour === 'day' ? 'Day' : 'Hr ' + filter.hour} ${filter.column} ${filter.op} ${filter.value}`;
+
+          const removeBtn = document.createElement('button');
+          removeBtn.textContent = '×';
+          removeBtn.style.cssText = 'background:rgba(248,113,113,0.2);border:none;color:var(--accent-red);font-size:1.2rem;width:28px;height:28px;border-radius:50%;cursor:pointer;';
+          removeBtn.onclick = () => {
+            removeColumnFilter(idx);
+            updateMobileActiveFilters();
+          };
+
+          tag.appendChild(text);
+          tag.appendChild(removeBtn);
+          container.appendChild(tag);
+        });
+      }
+    }
+
+    function addMobileColumnFilter() {
+      const hour = document.getElementById('mobile-filter-hour').value;
+      const column = document.getElementById('mobile-filter-column').value;
+      const op = document.getElementById('mobile-filter-op').value;
+      const value = parseFloat(document.getElementById('mobile-filter-value').value);
+
+      if (!column || isNaN(value)) {
+        alert('Please select a column and enter a valid value');
+        return;
+      }
+
+      // Also update the desktop version
+      document.getElementById('filter-hour').value = hour;
+      document.getElementById('filter-column').value = column;
+      document.getElementById('filter-op').value = op;
+      document.getElementById('filter-value').value = value;
+
+      addColumnFilter();
+      updateMobileActiveFilters();
+      document.getElementById('mobile-filter-value').value = '';
+    }
+
+    function syncMobileSettingsInputs() {
+      // Sync RSI settings
+      document.getElementById('mobile-rsi-length').value = document.getElementById('rsi-length').value;
+      document.getElementById('mobile-rsi-method').value = document.getElementById('rsi-method').value;
+      document.getElementById('mobile-signal-length').value = document.getElementById('signal-length').value;
+      document.getElementById('mobile-signal-method').value = document.getElementById('signal-method').value;
+      document.getElementById('mobile-ob-level').value = document.getElementById('ob-level').value;
+      document.getElementById('mobile-os-level').value = document.getElementById('os-level').value;
+
+      // Sync display settings
+      document.getElementById('mobile-font-family').value = document.getElementById('font-family').value;
+      document.getElementById('mobile-font-size').value = document.getElementById('font-size').value;
+      document.getElementById('mobile-level-size').value = document.getElementById('level-size').value;
+
+      // Sync gradient mode
+      document.getElementById('mobile-gradient-mode').value = document.getElementById('gradient-mode').value;
+
+      // Sync established %
+      document.getElementById('mobile-est-pct').value = document.getElementById('est-pct').value;
+    }
+
+    // Close modal when clicking outside
     document.addEventListener('click', (e) => {
-      if (mobileMenuOpen && !e.target.closest('.mobile-menu-btn') && !e.target.closest('.mobile-actions')) {
-        hideMobileMenu();
+      if (mobileFilterModalOpen && e.target.id === 'mobile-filter-modal') {
+        closeMobileFilterModal();
       }
     });
-    
+
+    // ==================== DAY VIEW STATS COLLAPSE ====================
+    function toggleDayViewStats() {
+      dayViewStatsCollapsed = !dayViewStatsCollapsed;
+      const statsEl = document.getElementById('day-view-stats-collapsible');
+      const btnEl = document.getElementById('day-view-collapse-btn');
+      const toolbarEl = document.getElementById('day-toolbar-main');
+
+      if (dayViewStatsCollapsed) {
+        statsEl.classList.add('collapsed');
+        btnEl.classList.add('collapsed');
+        if (toolbarEl) toolbarEl.classList.add('collapsed');
+        statsEl.style.maxHeight = '0px';
+      } else {
+        statsEl.classList.remove('collapsed');
+        btnEl.classList.remove('collapsed');
+        if (toolbarEl) toolbarEl.classList.remove('collapsed');
+        statsEl.style.maxHeight = statsEl.scrollHeight + 'px';
+      }
+    }
+
+    // ==================== HELPER FUNCTIONS ====================
+    function setAllMonths() {
+      selectedMonths = new Set([1,2,3,4,5,6,7,8,9,10,11,12]);
+      document.querySelectorAll('[data-month]').forEach(b => b.classList.add('active'));
+      useDateFilter = false;
+      selectedDates.clear();
+      updateDatePickerUI();
+      renderTable();
+    }
+
+    function setAllDays() {
+      selectedDays = new Set([0,1,2,3,4,5,6]);
+      document.querySelectorAll('[data-day]').forEach(b => b.classList.add('active'));
+      useDateFilter = false;
+      selectedDates.clear();
+      updateDatePickerUI();
+      renderTable();
+    }
+
     // Handle orientation changes
     window.addEventListener('orientationchange', () => {
       setTimeout(() => {
@@ -2295,12 +3103,14 @@
     realHours.forEach(h => {
       const ampm = h >= 12 ? 'PM' : 'AM';
       const disp = h === 0 ? 12 : h > 12 ? h - 12 : h;
-      ['hour-from', 'hour-to', 'day-hl-from', 'day-hl-to', 'oc-close-hour', 'calendar-close-hour'].forEach(id => {
+      ['hour-from', 'hour-to', 'mobile-hour-from', 'mobile-hour-to', 'day-hl-from', 'day-hl-to', 'oc-close-hour', 'mobile-oc-close-hour', 'calendar-close-hour'].forEach(id => {
         const el = document.getElementById(id);
-        if (el) el.innerHTML += `<option value="${h}" ${(id==='day-hl-from'&&h===9)||(id==='day-hl-to'&&h===15)||(id==='oc-close-hour'&&h===16)||(id==='calendar-close-hour'&&h===16)?'selected':''}>${disp}${ampm}</option>`;
+        if (el) el.innerHTML += `<option value="${h}" ${(id==='day-hl-from'&&h===9)||(id==='day-hl-to'&&h===15)||(id==='oc-close-hour'&&h===16)||(id==='mobile-oc-close-hour'&&h===16)||(id==='calendar-close-hour'&&h===16)?'selected':''}>${disp}${ampm}</option>`;
       });
     });
     document.getElementById('hour-to').value = 23;
+    const mobileHourTo = document.getElementById('mobile-hour-to');
+    if (mobileHourTo) mobileHourTo.value = 23;
     
     function updateLevel() {
       levelSize = parseInt(document.getElementById('level-size').value) || 250;
@@ -2328,13 +3138,17 @@
     // ==================== COLUMN FILTERS ====================
     function populateFilterSelects() {
       const hourSel = document.getElementById('filter-hour');
-      hourSel.innerHTML = '<option value="day">Day Total</option>';
-      hourSel.innerHTML += '<option value="any">Any Hour</option>';
-      for (let h = 0; h < 24; h++) {
-        const ampm = h >= 12 ? 'PM' : 'AM';
-        const disp = h === 0 ? 12 : h > 12 ? h - 12 : h;
-        hourSel.innerHTML += `<option value="${h}">${disp}${ampm}</option>`;
-      }
+      const mobileHourSel = document.getElementById('mobile-filter-hour');
+
+      const hourOptions = '<option value="day">Day Total</option><option value="any">Any Hour</option>' +
+        Array.from({ length: 24 }, (_, h) => {
+          const ampm = h >= 12 ? 'PM' : 'AM';
+          const disp = h === 0 ? 12 : h > 12 ? h - 12 : h;
+          return `<option value="${h}">${disp}${ampm}</option>`;
+        }).join('');
+
+      if (hourSel) hourSel.innerHTML = hourOptions;
+      if (mobileHourSel) mobileHourSel.innerHTML = hourOptions;
 
       updateFilterColumnSelect();
     }
@@ -2342,16 +3156,22 @@
     function updateFilterColumnSelect() {
       const hourVal = document.getElementById('filter-hour').value;
       const colSel = document.getElementById('filter-column');
+      const mobileColSel = document.getElementById('mobile-filter-column');
 
-      if (hourVal === 'day') {
-        colSel.innerHTML = DAY_TOTAL_COLS.map(c => `<option value="${c.id}">${c.label}</option>`).join('');
-      } else {
-        // "any" hour and specific hours both use hourly columns
-        colSel.innerHTML = ALL_COLUMNS.map(c => `<option value="${c.id}">${c.label}</option>`).join('');
-      }
+      const options = hourVal === 'day'
+        ? DAY_TOTAL_COLS.map(c => `<option value="${c.id}">${c.label}</option>`).join('')
+        : ALL_COLUMNS.map(c => `<option value="${c.id}">${c.label}</option>`).join('');
+
+      if (colSel) colSel.innerHTML = options;
+      if (mobileColSel) mobileColSel.innerHTML = options;
     }
-    
+
     document.getElementById('filter-hour')?.addEventListener('change', updateFilterColumnSelect);
+    document.getElementById('mobile-filter-hour')?.addEventListener('change', () => {
+      const val = document.getElementById('mobile-filter-hour').value;
+      document.getElementById('filter-hour').value = val;
+      updateFilterColumnSelect();
+    });
     
     function addColumnFilter() {
       const hour = document.getElementById('filter-hour').value;
@@ -2370,12 +3190,17 @@
     function removeFilter(idx) {
       columnFilters.splice(idx, 1);
       updateFilterUI();
+      if (mobileFilterModalOpen) updateMobileActiveFilters();
       renderTable();
     }
-    
+
+    // Alias for mobile compatibility
+    function removeColumnFilter(idx) { removeFilter(idx); }
+
     function clearAllFilters() {
       columnFilters = [];
       updateFilterUI();
+      if (mobileFilterModalOpen) updateMobileActiveFilters();
       renderTable();
     }
     
@@ -4523,7 +5348,12 @@ function populateDatePicker() {
     }
     function toggleShowDayCols() {
       showDayCols = !showDayCols;
-      document.getElementById('btn-show-dt-cols').classList.toggle('active', showDayCols);
+      document.getElementById('btn-show-dt-cols')?.classList.toggle('active', showDayCols);
+      // Update mobile UI
+      const mobileShowBtn = document.getElementById('mobile-show-dt-text');
+      if (mobileShowBtn) {
+        mobileShowBtn.textContent = showDayCols ? 'Hide Day Totals' : 'Show Day Totals';
+      }
       renderTable();
     }
     function togglePercentiles() { showPercentiles = !showPercentiles; document.getElementById('btn-pct').classList.toggle('active', showPercentiles); renderTable(); }
@@ -4570,11 +5400,42 @@ function populateDatePicker() {
     function setQ3() { selectedMonths = new Set([7,8,9]); document.querySelectorAll('[data-month]').forEach(b => b.classList.toggle('active', selectedMonths.has(+b.dataset.month))); useDateFilter = false; selectedDates.clear(); updateDatePickerUI(); renderTable(); }
     function setQ4() { selectedMonths = new Set([10,11,12]); document.querySelectorAll('[data-month]').forEach(b => b.classList.toggle('active', selectedMonths.has(+b.dataset.month))); useDateFilter = false; selectedDates.clear(); updateDatePickerUI(); renderTable(); }
     
-    function updateHourRange() { hourFrom = +document.getElementById('hour-from').value; hourTo = +document.getElementById('hour-to').value; renderTable(); }
-    function setHours(f, t) { hourFrom = f; hourTo = t; document.getElementById('hour-from').value = f; document.getElementById('hour-to').value = t; renderTable(); }
+    function updateHourRange() {
+      hourFrom = +document.getElementById('hour-from').value;
+      hourTo = +document.getElementById('hour-to').value;
+      // Sync mobile
+      const mobileFrom = document.getElementById('mobile-hour-from');
+      const mobileTo = document.getElementById('mobile-hour-to');
+      if (mobileFrom) mobileFrom.value = hourFrom;
+      if (mobileTo) mobileTo.value = hourTo;
+      renderTable();
+    }
+    function setHours(f, t) {
+      hourFrom = f;
+      hourTo = t;
+      document.getElementById('hour-from').value = f;
+      document.getElementById('hour-to').value = t;
+      const mobileFrom = document.getElementById('mobile-hour-from');
+      const mobileTo = document.getElementById('mobile-hour-to');
+      if (mobileFrom) mobileFrom.value = f;
+      if (mobileTo) mobileTo.value = t;
+      renderTable();
+    }
     
-    function toggleColumn(id) { visibleColumns.has(id) ? visibleColumns.delete(id) : visibleColumns.add(id); renderTable(); }
-    function toggleDTCol(id) { visibleDTCols.has(id) ? visibleDTCols.delete(id) : visibleDTCols.add(id); renderTable(); }
+    function toggleColumn(id) {
+      visibleColumns.has(id) ? visibleColumns.delete(id) : visibleColumns.add(id);
+      renderTable();
+      // Update mobile UI if modal is open
+      if (mobileFilterModalOpen) updateMobileColumnGrid();
+    }
+    function toggleDTCol(id) {
+      visibleDTCols.has(id) ? visibleDTCols.delete(id) : visibleDTCols.add(id);
+      renderTable();
+      // Update mobile UI if modal is open
+      if (mobileFilterModalOpen) updateMobileDayTotalsGrid();
+    }
+    // Alias for mobile compatibility
+    function toggleDayTotalCol(id) { toggleDTCol(id); }
     function showAllDTCols() { visibleDTCols = new Set(DAY_TOTAL_COLS.map(c => c.id)); document.querySelectorAll('[data-dtcol]').forEach(cb => cb.checked = true); renderTable(); }
     function hideAllDTCols() { visibleDTCols.clear(); document.querySelectorAll('[data-dtcol]').forEach(cb => cb.checked = false); renderTable(); }
     function defaultDTCols() { visibleDTCols = new Set(DAY_TOTAL_COLS.filter(c => c.default).map(c => c.id)); document.querySelectorAll('[data-dtcol]').forEach(cb => cb.checked = visibleDTCols.has(cb.dataset.dtcol)); renderTable(); }
