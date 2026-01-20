@@ -408,7 +408,7 @@
     
     .col-header { color: var(--text-muted); font-weight: 500; font-size: calc(var(--font-size) * 0.8); text-transform: uppercase; }
     
-    .sticky-col { position: sticky; z-index: 15; }
+    .sticky-col { position: sticky; background: var(--bg-solid); z-index: 15; }
     .sticky-header { z-index: 25 !important; background: var(--bg-tertiary) !important; }
     .sticky-header-sub { z-index: 25 !important; background: var(--bg-secondary) !important; }
     
@@ -1238,6 +1238,7 @@
         <div class="col-presets">
           <button onclick="setDefaultCols()">Default</button>
           <button onclick="setAllCols()">All</button>
+          <button onclick="setNoCols()">None</button>
           <button onclick="setRangeCols()">Range</button>
           <button onclick="setOHLCVCols()">OHLCV</button>
           <button onclick="setRSICols()">RSI</button>
@@ -1573,6 +1574,7 @@
               <div class="mobile-filter-btns">
                 <button class="mobile-filter-btn quick" onclick="setDefaultCols()">Default</button>
                 <button class="mobile-filter-btn quick" onclick="setAllCols()">All</button>
+                <button class="mobile-filter-btn quick" onclick="setNoCols()">None</button>
                 <button class="mobile-filter-btn quick" onclick="setRangeCols()">Range</button>
                 <button class="mobile-filter-btn quick" onclick="setOHLCVCols()">OHLCV</button>
                 <button class="mobile-filter-btn quick" onclick="setRSICols()">RSI</button>
@@ -1777,6 +1779,8 @@
       { id: 'mxlRk', label: 'MxL#', desc: 'Max Lvl Rank', default: false, gradient: 'orange-inv', group: 'rank' },
       { id: 'cl', label: '#Cl', desc: 'Net Lvls', default: false, gradient: 'rg', group: 'cl' },
       { id: 'oc', label: 'O-C', desc: 'Open-Close', default: true, gradient: 'rg', group: 'oc' },
+      { id: 'oc25', label: 'OC25', desc: ':00-:25 O-C', default: false, gradient: 'rg', group: 'oc' },
+      { id: 'oc55', label: 'OC55', desc: ':30-:55 O-C', default: false, gradient: 'rg', group: 'oc' },
       { id: 'ocRk', label: 'OC#', desc: 'O-C Rank', default: false, gradient: 'orange-inv', group: 'rank' },
       { id: 'cdrU', label: 'CDU', desc: 'Cum Day Up', default: false, gradient: 'orange-col', group: 'cdr' },
       { id: 'cdrD', label: 'CDD', desc: 'Cum Day Dn', default: false, gradient: 'orange-col', group: 'cdr' },
@@ -2789,6 +2793,18 @@
             hd.rsiVals.some(r => r >= obLevel) ? 'OB'
             : hd.rsiVals.some(r => r <= osLevel) ? 'OS'
             : null;
+
+          // Calculate half-hour O-C metrics (:00-:25 and :30-:55)
+          let oc25 = null, oc55 = null;
+          if (hourBars.length > 0) {
+            const bar00 = hourBars.find(b => b.etMin === 0);
+            const bar25 = hourBars.find(b => b.etMin === 25);
+            const bar30 = hourBars.find(b => b.etMin === 30);
+            const bar55 = hourBars.find(b => b.etMin === 55);
+
+            if (bar00 && bar25) oc25 = Math.round(bar00.open - bar25.close);
+            if (bar30 && bar55) oc55 = Math.round(bar30.open - bar55.close);
+          }
           
           // Calculate toNxtLvl: (next level up - close) - (close - next level down)
           const closeLevel = getLevel(hd.c);
@@ -2804,6 +2820,8 @@
             dn: calcLvlDn(hd.o, hd.l),
             cl: calcLvlCl(hd.o, hd.c),
             oc: Math.round(hd.c - hd.o),
+            oc25,
+            oc55,
             hm: hd.hm, lm: hd.lm,
             o: Math.round(hd.o), hi: Math.round(hd.h), lo: Math.round(hd.l), c: Math.round(hd.c),
             v: Math.round(hd.v * 100) / 100,
@@ -3108,8 +3126,11 @@
         if (el) el.innerHTML += `<option value="${h}" ${(id==='day-hl-from'&&h===9)||(id==='day-hl-to'&&h===15)||(id==='oc-close-hour'&&h===16)||(id==='mobile-oc-close-hour'&&h===16)||(id==='calendar-close-hour'&&h===16)?'selected':''}>${disp}${ampm}</option>`;
       });
     });
+    document.getElementById('hour-from').value = 0;
     document.getElementById('hour-to').value = 23;
+    const mobileHourFrom = document.getElementById('mobile-hour-from');
     const mobileHourTo = document.getElementById('mobile-hour-to');
+    if (mobileHourFrom) mobileHourFrom.value = 0;
     if (mobileHourTo) mobileHourTo.value = 23;
     
     function updateLevel() {
@@ -3178,10 +3199,10 @@
       const col = document.getElementById('filter-column').value;
       const op = document.getElementById('filter-op').value;
       const val = parseFloat(document.getElementById('filter-value').value);
-      
+
       if (isNaN(val)) { alert('Please enter a valid number'); return; }
-      
-      columnFilters.push({ hour, col, op, val });
+
+      columnFilters.push({ hour, col, op, val, logic: 'AND' });
       document.getElementById('filter-value').value = '';
       updateFilterUI();
       renderTable();
@@ -3196,6 +3217,13 @@
 
     // Alias for mobile compatibility
     function removeColumnFilter(idx) { removeFilter(idx); }
+
+    function updateFilterLogic(idx, logic) {
+      if (columnFilters[idx]) {
+        columnFilters[idx].logic = logic;
+        renderTable();
+      }
+    }
 
     function clearAllFilters() {
       columnFilters = [];
@@ -3216,7 +3244,15 @@
           hourLabel = formatHourHeader(parseInt(f.hour));
         }
         const colDef = f.hour === 'day' ? DAY_TOTAL_COLS.find(c => c.id === f.col) : ALL_COLUMNS.find(c => c.id === f.col);
-        return `<div class="filter-tag">${hourLabel} ${colDef?.label || f.col} ${f.op} ${f.val}<span class="remove-filter" onclick="removeFilter(${i})">×</span></div>`;
+        const logic = f.logic || 'AND';
+        return `<div class="filter-tag">
+          <select onchange="updateFilterLogic(${i}, this.value)" style="padding:1px 3px;background:rgba(0,0,0,0.3);border:1px solid rgba(74,222,128,0.3);border-radius:2px;color:var(--accent-green);font-size:0.5rem;margin-right:4px;">
+            <option value="AND" ${logic === 'AND' ? 'selected' : ''}>AND</option>
+            <option value="OR" ${logic === 'OR' ? 'selected' : ''}>OR</option>
+          </select>
+          ${hourLabel} ${colDef?.label || f.col} ${f.op} ${f.val}
+          <span class="remove-filter" onclick="removeFilter(${i})">×</span>
+        </div>`;
       }).join('');
 
       document.getElementById('btn-col-filter').classList.toggle('has-filters', columnFilters.length > 0);
@@ -3225,8 +3261,16 @@
     function applyColumnFilters(data) {
       if (columnFilters.length === 0) return data;
 
+      // Separate filters by logic type
+      const andFilters = columnFilters.filter(f => (f.logic || 'AND') === 'AND');
+      const orFilters = columnFilters.filter(f => f.logic === 'OR');
+
       return data.filter(day => {
-        return columnFilters.every(f => {
+        // Clear previous matched hours
+        day._matchedHours = {};
+
+        // Helper function to evaluate a filter
+        const evaluateFilter = (f) => {
           if (f.hour === 'day') {
             // Day total filter
             const val = day[f.col];
@@ -3242,22 +3286,38 @@
               default: return true;
             }
           } else if (f.hour === 'any') {
-            // Any hour filter - check if ANY hour meets the criteria
+            // Any hour filter - check if ANY hour meets the criteria and track matches
             const hours = Object.keys(day.hrs);
-            return hours.some(h => {
-              const val = day.hrs[h]?.m?.[f.col];
-              if (val == null) return false;
+            const matchedHours = [];
 
+            hours.forEach(h => {
+              const val = day.hrs[h]?.m?.[f.col];
+              if (val == null) return;
+
+              let matches = false;
               switch (f.op) {
-                case '>=': return val >= f.val;
-                case '<=': return val <= f.val;
-                case '>': return val > f.val;
-                case '<': return val < f.val;
-                case '==': return val === f.val;
-                case '!=': return val !== f.val;
-                default: return false;
+                case '>=': matches = val >= f.val; break;
+                case '<=': matches = val <= f.val; break;
+                case '>': matches = val > f.val; break;
+                case '<': matches = val < f.val; break;
+                case '==': matches = val === f.val; break;
+                case '!=': matches = val !== f.val; break;
+              }
+
+              if (matches) {
+                matchedHours.push(parseInt(h));
               }
             });
+
+            // Store matched hours for this column
+            if (matchedHours.length > 0) {
+              if (!day._matchedHours[f.col]) {
+                day._matchedHours[f.col] = new Set();
+              }
+              matchedHours.forEach(h => day._matchedHours[f.col].add(h));
+            }
+
+            return matchedHours.length > 0;
           } else {
             // Specific hour filter
             const h = parseInt(f.hour);
@@ -3274,7 +3334,15 @@
               default: return true;
             }
           }
-        });
+        };
+
+        // All AND filters must pass
+        const andPass = andFilters.every(evaluateFilter);
+
+        // At least one OR filter must pass (if any OR filters exist)
+        const orPass = orFilters.length === 0 || orFilters.some(evaluateFilter);
+
+        return andPass && orPass;
       });
     }
     
@@ -3530,6 +3598,21 @@ function populateDatePicker() {
       return '#0d0d12';
     }
 
+    function getMinuteGradient(minute) {
+      if (minute == null) return '#0d0d12';
+      // 0-25: Cyan gradient (transparent to cyan)
+      if (minute >= 0 && minute <= 25) {
+        const t = minute / 25;
+        return `rgba(${Math.round(13 + t * 47)}, ${Math.round(13 + t * 198)}, ${Math.round(18 + t * 200)}, ${0.2 + t * 0.8})`;
+      }
+      // 30-55: Orange gradient (transparent to orange)
+      else if (minute >= 30 && minute <= 55) {
+        const t = (minute - 30) / 25;
+        return `rgba(${Math.round(13 + t * 238)}, ${Math.round(13 + t * 133)}, ${Math.round(18 + t * 42)}, ${0.2 + t * 0.8})`;
+      }
+      return '#0d0d12';
+    }
+
     function getGreenBarGradient(val) {
       if (val == null) return '#0d0d12';
       if (val < 6) {
@@ -3733,7 +3816,7 @@ function populateDatePicker() {
       if (id === 'cl') return v === 0 ? '0' : (v > 0 ? '+' + v : v);
       if (id === 'v') return v.toFixed(1);
       if (['o','hi','lo','c'].includes(id)) return v.toLocaleString();
-      if (['oc','cdr','wCdr','p5Cdr','toNxtLvl'].includes(id)) return (v >= 0 ? '+' : '') + v.toLocaleString();
+      if (['oc','oc25','oc55','cdr','wCdr','p5Cdr','toNxtLvl'].includes(id)) return (v >= 0 ? '+' : '') + v.toLocaleString();
       if (id.endsWith('Rk')) return v;
       if (['cdrU','cdrD','mxcd','wCdrU','wCdrD','wMxcd','p5CdrU','p5CdrD','p5Mxcd'].includes(id)) return v.toLocaleString();
       if (['rsiMax','rsiMin','rsiAvg','rsiOpen','rsiClose','rsiDelta','sigMax','sigMin','sigAvg'].includes(id)) return v.toFixed(1);
@@ -3943,7 +4026,11 @@ function populateDatePicker() {
             else if (col.id === 'p5CdrD' && cStats?.p5cdr) bg = getOrangeGradient(v, cStats.p5cdr.min, cStats.p5cdr.max);
             else if (col.id === 'p5Mxcd' && cStats?.p5mxcd) bg = getOrangeGradient(v, cStats.p5mxcd.min, cStats.p5mxcd.max);
             else if (col.id === 'p5Cdr' && cStats?.p5cdrRG) bg = getRGGradient(v, cStats.p5cdrRG.min, cStats.p5cdrRG.max);
-            
+            // Minute-based gradients for HMin/LMin
+            if (col.id === 'hm' || col.id === 'lm') {
+              bg = getMinuteGradient(v);
+            }
+
             let cls = 'data-cell';
             if (col.id === 'cl') cls += v > 0 ? ' up' : v < 0 ? ' down' : ' neutral';
             else if (col.id === 'up' && v > 0) cls += ' up';
@@ -3955,7 +4042,11 @@ function populateDatePicker() {
             let extraStyle = '';
             if (col.id === 'hi' && madeNewDayHigh) extraStyle = 'border:2px solid #4ade80;';
             else if (col.id === 'lo' && madeNewDayLow) extraStyle = 'border:2px solid #f87171;';
-            
+
+            // Add border for Any Hour filter matches
+            const hasMatch = day._matchedHours?.[col.id]?.has(h);
+            if (hasMatch) extraStyle = 'border:2px solid #fbbf24;';
+
             bd += `<td class="${cls}${ci===0?' hour-border-left':''}" style="background:${bg};${extraStyle}">${fmt(v, col.id)}</td>`;
           });
         });
@@ -5442,6 +5533,7 @@ function populateDatePicker() {
     
     function setDefaultCols() { visibleColumns = new Set(ALL_COLUMNS.filter(c => c.default).map(c => c.id)); document.querySelectorAll('#col-grid input').forEach((cb, i) => cb.checked = ALL_COLUMNS[i].default); renderTable(); }
     function setAllCols() { visibleColumns = new Set(ALL_COLUMNS.map(c => c.id)); document.querySelectorAll('#col-grid input').forEach(cb => cb.checked = true); renderTable(); }
+    function setNoCols() { visibleColumns = new Set([]); document.querySelectorAll('#col-grid input').forEach(cb => cb.checked = false); renderTable(); }
     function setRangeCols() { visibleColumns = new Set(['rng','ur','lr','mxr','mxrRk','rngRk']); document.querySelectorAll('#col-grid input').forEach((cb, i) => cb.checked = visibleColumns.has(ALL_COLUMNS[i].id)); renderTable(); }
     function setOHLCVCols() { visibleColumns = new Set(['o','hi','lo','c','v']); document.querySelectorAll('#col-grid input').forEach((cb, i) => cb.checked = visibleColumns.has(ALL_COLUMNS[i].id)); renderTable(); }
     function setRSICols() { visibleColumns = new Set(['rsiMax','rsiMin','rsiAvg','rsiOpen','rsiClose','rsiDelta','rsiOBmin','rsiOSmin','sigMax','sigMin','sigAvg','obos']); document.querySelectorAll('#col-grid input').forEach((cb, i) => cb.checked = visibleColumns.has(ALL_COLUMNS[i].id)); renderTable(); }
