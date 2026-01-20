@@ -1,0 +1,76 @@
+name: Update Bitcoin Data (Every 5 Minutes - Optimized)
+
+on:
+  schedule:
+    # Run every 5 minutes
+    - cron: '*/5 * * * *'
+  workflow_dispatch:  # Allow manual trigger
+
+jobs:
+  update-data:
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          pip install pandas requests
+
+      - name: Run data fetcher
+        run: python fetch_bitcoin_data.py
+        env:
+          GITHUB_ACTIONS: true
+
+      - name: Check for changes
+        id: check_changes
+        run: |
+          git diff --quiet data/ || echo "changes=true" >> $GITHUB_OUTPUT
+
+      - name: Get current time info
+        id: time
+        run: |
+          echo "minute=$(date -u +%M)" >> $GITHUB_OUTPUT
+          echo "datetime=$(date -u +'%Y-%m-%d %H:%M UTC')" >> $GITHUB_OUTPUT
+
+      - name: Commit strategy
+        id: commit_strategy
+        run: |
+          # Check if last commit is an auto-update from today
+          LAST_COMMIT_MSG=$(git log -1 --pretty=%B)
+          LAST_COMMIT_DATE=$(git log -1 --format=%cd --date=format:'%Y-%m-%d')
+          TODAY=$(date -u +%Y-%m-%d)
+
+          if [[ "$LAST_COMMIT_MSG" == *"Auto-update Bitcoin data"* ]] && [[ "$LAST_COMMIT_DATE" == "$TODAY" ]]; then
+            echo "strategy=amend" >> $GITHUB_OUTPUT
+          else
+            echo "strategy=new" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Commit and push (amend today's commits)
+        if: steps.check_changes.outputs.changes == 'true'
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          git add data/
+
+          if [[ "${{ steps.commit_strategy.outputs.strategy }}" == "amend" ]]; then
+            # Amend the last commit to keep only one commit per day
+            git commit --amend -m "📊 Auto-update Bitcoin data ${{ steps.time.outputs.datetime }}"
+            git push --force-with-lease
+          else
+            # Create new commit (first commit of the day)
+            git commit -m "📊 Auto-update Bitcoin data ${{ steps.time.outputs.datetime }}"
+            git push
+          fi

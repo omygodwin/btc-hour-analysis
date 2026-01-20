@@ -1,0 +1,53 @@
+name: Update Bitcoin Data (Every 5 Minutes)
+
+on:
+  schedule:
+    # Run every 5 minutes
+    - cron: '*/5 * * * *'
+  workflow_dispatch:  # Allow manual trigger
+
+jobs:
+  update-data:
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          pip install pandas requests
+
+      - name: Run data fetcher
+        run: python fetch_bitcoin_data.py
+        env:
+          GITHUB_ACTIONS: true
+
+      - name: Check for changes
+        id: check_changes
+        run: |
+          git diff --quiet data/ || echo "changes=true" >> $GITHUB_OUTPUT
+
+      - name: Get current minute
+        id: time
+        run: echo "minute=$(date -u +%M)" >> $GITHUB_OUTPUT
+
+      - name: Commit and push if changed (hourly or manual)
+        # Only commit on the hour (:00-:05 minutes) or if manually triggered
+        if: steps.check_changes.outputs.changes == 'true' && (steps.time.outputs.minute < 6 || github.event_name == 'workflow_dispatch')
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          git add data/
+          git commit -m "📊 Auto-update Bitcoin data $(date -u +'%Y-%m-%d %H:%M UTC')"
+          git push
