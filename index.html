@@ -4042,8 +4042,11 @@ function populateDatePicker() {
         cumRG: stats5pm.cumRG.length ? { min: Math.min(...stats5pm.cumRG), max: Math.max(...stats5pm.cumRG) } : { min: -1000, max: 1000 },
       };
       
-      // Build header - columns depend on cumulative toggle
-      const colsPerHour = pm5ShowCumulative ? 8 : 4;
+      // Get active columns for PM5
+      const pm5Cols = ALL_COLUMNS.filter(c => pm5VisibleColumns.has(c.id));
+      const colsPerHour = pm5Cols.length + (pm5ShowCumulative ? 4 : 0);
+
+      // Build header
       let hd = '<tr class="hour-row">';
       hd += `<th class="sticky-col sticky-header" style="left:0;min-width:65px" rowspan="2">Date</th>`;
       hd += `<th class="sticky-col sticky-header" style="left:65px;min-width:28px" rowspan="2">Day</th>`;
@@ -4059,14 +4062,12 @@ function populateDatePicker() {
       hd += '<th class="sticky-col sticky-header-sub" style="left:131px;background:rgba(139,92,246,0.1) !important">5pLR</th>';
       hd += '<th class="sticky-col sticky-header-sub" style="left:169px;background:rgba(139,92,246,0.1) !important">5pMx</th>';
       hd += '<th class="sticky-col sticky-header-sub" style="left:207px;background:rgba(139,92,246,0.1) !important;border-right:2px solid rgba(139,92,246,0.3)">5pOC</th>';
-      // Hour sub-headers (regular + optionally cumulative)
+      // Hour sub-headers (dynamic columns)
       PM5_HOURS.forEach((h, hi) => {
-        hd += `<th class="col-header${hi===0?' hour-border-left':''}">Rng</th>`;
-        hd += '<th class="col-header">UR</th>';
-        hd += '<th class="col-header">LR</th>';
-        hd += '<th class="col-header">O-C</th>';
+        pm5Cols.forEach((col, ci) => {
+          hd += `<th class="col-header${ci===0 && hi===0?' hour-border-left':''}">${col.label}</th>`;
+        });
         if (pm5ShowCumulative) {
-          // Cumulative headers with purple tint
           hd += '<th class="col-header" style="background:rgba(139,92,246,0.1)">5CU</th>';
           hd += '<th class="col-header" style="background:rgba(139,92,246,0.1)">5CD</th>';
           hd += '<th class="col-header" style="background:rgba(139,92,246,0.1)">5MxC</th>';
@@ -4119,18 +4120,24 @@ function populateDatePicker() {
             const cumLR = pm5Open ? Math.round(pm5Open - cumLow) : null;
             const cumMx = cumUR != null && cumLR != null ? Math.max(cumUR, cumLR) : null;
             const cumRng = pm5Open && hourData ? Math.round(hourData.c - pm5Open) : null;
-            
-            const rngBg = getOrangeGradient(hm.rng, pm5Stats.rng.min, pm5Stats.rng.max);
-            const urBg = getOrangeGradient(hm.ur, pm5Stats.urlr.min, pm5Stats.urlr.max);
-            const lrBg = getOrangeGradient(hm.lr, pm5Stats.urlr.min, pm5Stats.urlr.max);
-            const ocBg = getRGGradient(hm.oc, pm5Stats.oc.min, pm5Stats.oc.max);
-            const ocCls = hm.oc >= 0 ? 'up' : 'down';
-            
-            bd += `<td class="data-cell${hi===0?' hour-border-left':''}" style="background:${rngBg}">${hm.rng}</td>`;
-            bd += `<td class="data-cell" style="background:${urBg}">${hm.ur}</td>`;
-            bd += `<td class="data-cell" style="background:${lrBg}">${hm.lr}</td>`;
-            bd += `<td class="data-cell ${ocCls}" style="background:${ocBg}">${hm.oc >= 0 ? '+' : ''}${hm.oc}</td>`;
-            
+
+            // Render dynamic columns
+            pm5Cols.forEach((col, ci) => {
+              const v = hm[col.id];
+              let bg = '#0d0d12';
+              let cls = 'data-cell';
+              if (ci === 0 && hi === 0) cls += ' hour-border-left';
+
+              // Apply gradients based on column type
+              if (col.gradient === 'orange' && pm5Stats.rng) bg = getOrangeGradient(v, pm5Stats.rng.min, pm5Stats.rng.max);
+              else if (col.gradient === 'rg' && pm5Stats.oc) bg = getRGGradient(v, pm5Stats.oc.min, pm5Stats.oc.max);
+
+              // Special styling for certain columns
+              if (['oc','cdr'].includes(col.id)) cls += v > 0 ? ' up' : v < 0 ? ' down' : '';
+
+              bd += `<td class="${cls}" style="background:${bg}">${fmt(v, col.id)}</td>`;
+            });
+
             if (pm5ShowCumulative) {
               // Cumulative backgrounds
               const cumURBg = getOrangeGradient(cumUR, pm5Stats.cum.min, pm5Stats.cum.max);
@@ -4146,10 +4153,11 @@ function populateDatePicker() {
               bd += `<td class="data-cell ${cumRngCls}" style="background:${cumRngBg}">${cumRng != null ? ((cumRng >= 0 ? '+' : '') + cumRng.toLocaleString()) : '—'}</td>`;
             }
           } else {
-            bd += `<td class="data-cell${hi===0?' hour-border-left':''}" style="color:var(--text-muted)">—</td>`;
-            bd += '<td class="data-cell" style="color:var(--text-muted)">—</td>';
-            bd += '<td class="data-cell" style="color:var(--text-muted)">—</td>';
-            bd += '<td class="data-cell" style="color:var(--text-muted)">—</td>';
+            // No data for this hour - render empty cells
+            pm5Cols.forEach((col, ci) => {
+              const cls = ci === 0 && hi === 0 ? 'data-cell hour-border-left' : 'data-cell';
+              bd += `<td class="${cls}" style="color:var(--text-muted)">—</td>`;
+            });
             if (pm5ShowCumulative) {
               bd += '<td class="data-cell" style="color:var(--text-muted)">—</td>';
               bd += '<td class="data-cell" style="color:var(--text-muted)">—</td>';
