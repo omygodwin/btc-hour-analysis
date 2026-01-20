@@ -1002,6 +1002,7 @@
 
       <div class="toolbar">
         <button class="tb-btn" id="btn-pm5-filters" onclick="togglePm5Filters()">⚙ Filters</button>
+        <button class="tb-btn" id="btn-pm5-columns" onclick="togglePm5Columns()">📋 Columns</button>
         <button class="tb-btn active" id="btn-pm5-cum" onclick="togglePm5Cumulative()">📊 Cumulative</button>
         <div class="tb-group">
           <label>Level:</label>
@@ -1016,6 +1017,17 @@
         </div>
         <div class="tb-spacer"></div>
         <button class="tb-btn preset" onclick="syncPm5FromOverview()">Sync from Overview</button>
+      </div>
+
+      <div id="pm5-columns-panel" class="col-selector" style="display:none;">
+        <h3>5PM Session Columns (per Hour)</h3>
+        <div class="col-grid" id="pm5-col-grid"></div>
+        <div class="col-presets">
+          <button onclick="setPm5DefaultCols()">Default</button>
+          <button onclick="setPm5AllCols()">All</button>
+          <button onclick="setPm5RangeCols()">Range</button>
+          <button onclick="setPm5OHLCVCols()">OHLCV</button>
+        </div>
       </div>
 
       <div id="pm5-filters-panel" class="filters" style="display:none;">
@@ -1113,6 +1125,7 @@
       { id: 'rngRk', label: 'Rng#', desc: 'Range Rank', default: false, gradient: 'orange-inv', group: 'rank' },
       { id: 'up', label: '#Up', desc: 'Lvls Up', default: false, gradient: null },
       { id: 'dn', label: '#Dn', desc: 'Lvls Down', default: false, gradient: null },
+      { id: 'totl', label: 'TotL', desc: 'Total Levels', default: false, gradient: 'orange', group: 'mxl' },
       { id: 'mxl', label: 'MxL', desc: 'Max Level', default: false, gradient: 'orange', group: 'mxl' },
       { id: 'mxlRk', label: 'MxL#', desc: 'Max Lvl Rank', default: false, gradient: 'orange-inv', group: 'rank' },
       { id: 'cl', label: '#Cl', desc: 'Net Lvls', default: false, gradient: 'rg', group: 'cl' },
@@ -1255,7 +1268,9 @@
     let pm5SortDirection = 'desc';
     let pm5SortHour = null;
     let pm5ShowCumulative = true;
-    
+    // Default columns for 5PM Session: Rng, UR, LR, O-C
+    let pm5VisibleColumns = new Set(['rng', 'ur', 'lr', 'oc']);
+
     // ==================== MOBILE DETECTION ====================
     const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || window.innerWidth <= 768;
     let mobileMenuOpen = false;
@@ -1367,7 +1382,14 @@
     DAY_TOTAL_COLS.forEach(col => {
       dtColGrid.innerHTML += `<label class="dt-col-item"><input type="checkbox" ${col.default ? 'checked' : ''} data-dtcol="${col.id}" onchange="toggleDTCol('${col.id}')"><span>${col.label}</span></label>`;
     });
-    
+
+    // Populate PM5 column grid (using subset of ALL_COLUMNS that make sense for hourly data)
+    const pm5ColGrid = document.getElementById('pm5-col-grid');
+    ALL_COLUMNS.forEach(col => {
+      const isDefault = pm5VisibleColumns.has(col.id);
+      pm5ColGrid.innerHTML += `<label class="col-item" title="${col.desc}"><input type="checkbox" ${isDefault ? 'checked' : ''} onchange="togglePm5Column('${col.id}')"><span class="col-label">${col.label}</span><span class="col-desc">${col.desc}</span></label>`;
+    });
+
     document.addEventListener('click', (e) => {
       const dd = document.getElementById('date-picker-dropdown');
       const btn = document.querySelector('.date-picker-btn');
@@ -2035,6 +2057,7 @@
           hd.m.dn = calcLvlDn(hd.o, hd.l);
           hd.m.cl = calcLvlCl(hd.o, hd.c);
           hd.m.mxl = Math.max(hd.m.up, hd.m.dn);
+          hd.m.totl = hd.m.up + hd.m.dn;
         });
       });
       renderTable();
@@ -2582,7 +2605,7 @@ function populateDatePicker() {
     function fmt(v, id) {
       if (v == null) return '—';
       if (['hm','lm'].includes(id)) return ':' + String(v).padStart(2, '0');
-      if (['up','dn','mxl'].includes(id)) return v;
+      if (['up','dn','totl','mxl'].includes(id)) return v;
       if (id === 'cl') return v === 0 ? '0' : (v > 0 ? '+' + v : v);
       if (id === 'v') return v.toFixed(1);
       if (['o','hi','lo','c'].includes(id)) return v.toLocaleString();
@@ -2963,7 +2986,7 @@ function populateDatePicker() {
       const dayHighLowBars = { highBars: new Set(), lowBars: new Set() };
       let dayRunningHigh = -Infinity;
       let dayRunningLow = Infinity;
-      Object.keys(hourBars).map(Number).sort((a,b)=>a-b).forEach(h => {
+      dayHours.forEach(h => {
         MINS.forEach(m => {
           const bar = hourBars[h]?.[m];
           if (!bar) return;
@@ -3091,8 +3114,8 @@ function populateDatePicker() {
       
       const hourStats = { rng: [], urlr: [], oc: [], cdr: [], ddrev: [] };
       const minStats = { ur: [], lr: [], oc: [], hrOC: [] };
-      
-      realHours.forEach(h => {
+
+      dayHours.forEach(h => {
         const hd = day.hrs[h];
         if (hd?.m) {
           hourStats.rng.push(hd.m.rng);
@@ -3105,7 +3128,7 @@ function populateDatePicker() {
           if (hourlyDDRev[h].hRev != null) hourStats.ddrev.push(hourlyDDRev[h].hRev);
         }
       });
-      Object.keys(hourBars).map(Number).sort((a,b)=>a-b).forEach(h => {
+      dayHours.forEach(h => {
         if (!day.hrs[h]) return;
         MINS.forEach(m => {
           const bar = hourBars[h]?.[m];
@@ -3131,7 +3154,7 @@ function populateDatePicker() {
       };
       
       let bd = '';
-      realHours.forEach(h => {
+      dayHours.forEach(h => {
         const hd = day.hrs[h];
         const hm = hd?.m;
         const isHL = h >= hlFrom && h <= hlTo;
@@ -3868,11 +3891,52 @@ function populateDatePicker() {
     }
     
     function togglePm5Filters() {
-      document.getElementById('pm5-filters-panel').style.display = 
+      document.getElementById('pm5-filters-panel').style.display =
         document.getElementById('pm5-filters-panel').style.display === 'none' ? 'flex' : 'none';
       document.getElementById('btn-pm5-filters').classList.toggle('active');
     }
-    
+
+    function togglePm5Columns() {
+      document.getElementById('pm5-columns-panel').style.display =
+        document.getElementById('pm5-columns-panel').style.display === 'none' ? 'block' : 'none';
+      document.getElementById('btn-pm5-columns').classList.toggle('active');
+    }
+
+    function togglePm5Column(id) {
+      pm5VisibleColumns.has(id) ? pm5VisibleColumns.delete(id) : pm5VisibleColumns.add(id);
+      render5pmSession();
+    }
+
+    function setPm5DefaultCols() {
+      pm5VisibleColumns = new Set(['rng', 'ur', 'lr', 'oc']);
+      document.querySelectorAll('#pm5-col-grid input').forEach((cb, i) => {
+        cb.checked = pm5VisibleColumns.has(ALL_COLUMNS[i].id);
+      });
+      render5pmSession();
+    }
+
+    function setPm5AllCols() {
+      pm5VisibleColumns = new Set(ALL_COLUMNS.map(c => c.id));
+      document.querySelectorAll('#pm5-col-grid input').forEach(cb => cb.checked = true);
+      render5pmSession();
+    }
+
+    function setPm5RangeCols() {
+      pm5VisibleColumns = new Set(['rng', 'ur', 'lr', 'mxr']);
+      document.querySelectorAll('#pm5-col-grid input').forEach((cb, i) => {
+        cb.checked = pm5VisibleColumns.has(ALL_COLUMNS[i].id);
+      });
+      render5pmSession();
+    }
+
+    function setPm5OHLCVCols() {
+      pm5VisibleColumns = new Set(['o', 'hi', 'lo', 'c', 'v']);
+      document.querySelectorAll('#pm5-col-grid input').forEach((cb, i) => {
+        cb.checked = pm5VisibleColumns.has(ALL_COLUMNS[i].id);
+      });
+      render5pmSession();
+    }
+
     function syncPm5FromOverview() {
       // Copy overview-selected filters to 5PM session view (years, days, months, occs, selectedDates)
       pm5SelectedYears = new Set(selectedYears);
@@ -3978,8 +4042,11 @@ function populateDatePicker() {
         cumRG: stats5pm.cumRG.length ? { min: Math.min(...stats5pm.cumRG), max: Math.max(...stats5pm.cumRG) } : { min: -1000, max: 1000 },
       };
       
-      // Build header - columns depend on cumulative toggle
-      const colsPerHour = pm5ShowCumulative ? 8 : 4;
+      // Get active columns for PM5
+      const pm5Cols = ALL_COLUMNS.filter(c => pm5VisibleColumns.has(c.id));
+      const colsPerHour = pm5Cols.length + (pm5ShowCumulative ? 4 : 0);
+
+      // Build header
       let hd = '<tr class="hour-row">';
       hd += `<th class="sticky-col sticky-header" style="left:0;min-width:65px" rowspan="2">Date</th>`;
       hd += `<th class="sticky-col sticky-header" style="left:65px;min-width:28px" rowspan="2">Day</th>`;
@@ -3995,14 +4062,12 @@ function populateDatePicker() {
       hd += '<th class="sticky-col sticky-header-sub" style="left:131px;background:rgba(139,92,246,0.1) !important">5pLR</th>';
       hd += '<th class="sticky-col sticky-header-sub" style="left:169px;background:rgba(139,92,246,0.1) !important">5pMx</th>';
       hd += '<th class="sticky-col sticky-header-sub" style="left:207px;background:rgba(139,92,246,0.1) !important;border-right:2px solid rgba(139,92,246,0.3)">5pOC</th>';
-      // Hour sub-headers (regular + optionally cumulative)
+      // Hour sub-headers (dynamic columns)
       PM5_HOURS.forEach((h, hi) => {
-        hd += `<th class="col-header${hi===0?' hour-border-left':''}">Rng</th>`;
-        hd += '<th class="col-header">UR</th>';
-        hd += '<th class="col-header">LR</th>';
-        hd += '<th class="col-header">O-C</th>';
+        pm5Cols.forEach((col, ci) => {
+          hd += `<th class="col-header${ci===0 && hi===0?' hour-border-left':''}">${col.label}</th>`;
+        });
         if (pm5ShowCumulative) {
-          // Cumulative headers with purple tint
           hd += '<th class="col-header" style="background:rgba(139,92,246,0.1)">5CU</th>';
           hd += '<th class="col-header" style="background:rgba(139,92,246,0.1)">5CD</th>';
           hd += '<th class="col-header" style="background:rgba(139,92,246,0.1)">5MxC</th>';
@@ -4055,18 +4120,24 @@ function populateDatePicker() {
             const cumLR = pm5Open ? Math.round(pm5Open - cumLow) : null;
             const cumMx = cumUR != null && cumLR != null ? Math.max(cumUR, cumLR) : null;
             const cumRng = pm5Open && hourData ? Math.round(hourData.c - pm5Open) : null;
-            
-            const rngBg = getOrangeGradient(hm.rng, pm5Stats.rng.min, pm5Stats.rng.max);
-            const urBg = getOrangeGradient(hm.ur, pm5Stats.urlr.min, pm5Stats.urlr.max);
-            const lrBg = getOrangeGradient(hm.lr, pm5Stats.urlr.min, pm5Stats.urlr.max);
-            const ocBg = getRGGradient(hm.oc, pm5Stats.oc.min, pm5Stats.oc.max);
-            const ocCls = hm.oc >= 0 ? 'up' : 'down';
-            
-            bd += `<td class="data-cell${hi===0?' hour-border-left':''}" style="background:${rngBg}">${hm.rng}</td>`;
-            bd += `<td class="data-cell" style="background:${urBg}">${hm.ur}</td>`;
-            bd += `<td class="data-cell" style="background:${lrBg}">${hm.lr}</td>`;
-            bd += `<td class="data-cell ${ocCls}" style="background:${ocBg}">${hm.oc >= 0 ? '+' : ''}${hm.oc}</td>`;
-            
+
+            // Render dynamic columns
+            pm5Cols.forEach((col, ci) => {
+              const v = hm[col.id];
+              let bg = '#0d0d12';
+              let cls = 'data-cell';
+              if (ci === 0 && hi === 0) cls += ' hour-border-left';
+
+              // Apply gradients based on column type
+              if (col.gradient === 'orange' && pm5Stats.rng) bg = getOrangeGradient(v, pm5Stats.rng.min, pm5Stats.rng.max);
+              else if (col.gradient === 'rg' && pm5Stats.oc) bg = getRGGradient(v, pm5Stats.oc.min, pm5Stats.oc.max);
+
+              // Special styling for certain columns
+              if (['oc','cdr'].includes(col.id)) cls += v > 0 ? ' up' : v < 0 ? ' down' : '';
+
+              bd += `<td class="${cls}" style="background:${bg}">${fmt(v, col.id)}</td>`;
+            });
+
             if (pm5ShowCumulative) {
               // Cumulative backgrounds
               const cumURBg = getOrangeGradient(cumUR, pm5Stats.cum.min, pm5Stats.cum.max);
@@ -4082,10 +4153,11 @@ function populateDatePicker() {
               bd += `<td class="data-cell ${cumRngCls}" style="background:${cumRngBg}">${cumRng != null ? ((cumRng >= 0 ? '+' : '') + cumRng.toLocaleString()) : '—'}</td>`;
             }
           } else {
-            bd += `<td class="data-cell${hi===0?' hour-border-left':''}" style="color:var(--text-muted)">—</td>`;
-            bd += '<td class="data-cell" style="color:var(--text-muted)">—</td>';
-            bd += '<td class="data-cell" style="color:var(--text-muted)">—</td>';
-            bd += '<td class="data-cell" style="color:var(--text-muted)">—</td>';
+            // No data for this hour - render empty cells
+            pm5Cols.forEach((col, ci) => {
+              const cls = ci === 0 && hi === 0 ? 'data-cell hour-border-left' : 'data-cell';
+              bd += `<td class="${cls}" style="color:var(--text-muted)">—</td>`;
+            });
             if (pm5ShowCumulative) {
               bd += '<td class="data-cell" style="color:var(--text-muted)">—</td>';
               bd += '<td class="data-cell" style="color:var(--text-muted)">—</td>';
