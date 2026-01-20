@@ -1,18 +1,23 @@
-name: Update Bitcoin Data
+name: Update Bitcoin Data (Smart Commits)
 
 on:
   schedule:
-    # Run every hour at minute 5 (e.g., 1:05, 2:05, etc.)
-    - cron: '5 * * * *'
+    # Run every 5 minutes
+    - cron: '*/5 * * * *'
   workflow_dispatch:  # Allow manual trigger
+    inputs:
+      force_commit:
+        description: 'Force commit regardless of time'
+        required: false
+        default: 'false'
 
 jobs:
   update-data:
     runs-on: ubuntu-latest
-    
+
     permissions:
       contents: write
-    
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -38,11 +43,58 @@ jobs:
         run: |
           git diff --quiet data/ || echo "changes=true" >> $GITHUB_OUTPUT
 
-      - name: Commit and push if changed
+      - name: Check time since last commit
+        id: check_time
+        run: |
+          # Get timestamp of last commit that modified data/
+          LAST_COMMIT_TIME=$(git log -1 --format=%ct -- data/ 2>/dev/null || echo 0)
+          CURRENT_TIME=$(date +%s)
+          TIME_DIFF=$((CURRENT_TIME - LAST_COMMIT_TIME))
+          FOUR_HOURS=$((4 * 60 * 60))
+
+          echo "last_commit_time=$LAST_COMMIT_TIME" >> $GITHUB_OUTPUT
+          echo "time_diff=$TIME_DIFF" >> $GITHUB_OUTPUT
+          echo "four_hours=$FOUR_HOURS" >> $GITHUB_OUTPUT
+
+          # Check if 4 hours have passed
+          if [ $TIME_DIFF -ge $FOUR_HOURS ] || [ "${{ github.event.inputs.force_commit }}" == "true" ]; then
+            echo "should_commit=true" >> $GITHUB_OUTPUT
+            echo "✓ Time to commit (${TIME_DIFF}s since last commit)"
+          else
+            REMAINING=$((FOUR_HOURS - TIME_DIFF))
+            echo "should_commit=false" >> $GITHUB_OUTPUT
+            echo "⏳ Skipping commit (${REMAINING}s remaining until 4 hours)"
+          fi
+
+      - name: Update last fetch timestamp
         if: steps.check_changes.outputs.changes == 'true'
+        run: |
+          # Store the last successful fetch time for dashboard reference
+          echo "$(date -u +'%Y-%m-%d %H:%M:%S UTC')" > data/last_fetch.txt
+          git add data/last_fetch.txt
+
+      - name: Commit and push (every 4 hours or manual)
+        if: steps.check_changes.outputs.changes == 'true' && steps.check_time.outputs.should_commit == 'true'
         run: |
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
           git add data/
-          git commit -m "📊 Auto-update Bitcoin data $(date -u +'%Y-%m-%d %H:%M UTC')"
+
+          # Calculate hours since last commit
+          TIME_DIFF=${{ steps.check_time.outputs.time_diff }}
+          HOURS=$((TIME_DIFF / 3600))
+
+          git commit -m "📊 Auto-update Bitcoin data $(date -u +'%Y-%m-%d %H:%M UTC') [${HOURS}h since last commit]"
           git push
+
+      - name: Summary
+        if: always()
+        run: |
+          echo "================================"
+          echo "Update Summary"
+          echo "================================"
+          echo "Changes detected: ${{ steps.check_changes.outputs.changes }}"
+          echo "Should commit: ${{ steps.check_time.outputs.should_commit }}"
+          echo "Time since last commit: ${{ steps.check_time.outputs.time_diff }}s"
+          echo "Last fetch time: $(cat data/last_fetch.txt 2>/dev/null || echo 'N/A')"
+          echo "================================"
