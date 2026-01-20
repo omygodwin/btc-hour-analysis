@@ -85,7 +85,136 @@
     /* make sure popup flips above if near top edge */
     .info-popup.top { bottom: auto; top: calc(100% + 8px); transform: translateX(-50%); }
 
-    
+    /* Info Button styles */
+    .info-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 18px;
+      height: 18px;
+      min-width: 18px;
+      min-height: 18px;
+      font-size: 11px;
+      border-radius: 50%;
+      background: rgba(167,139,250,0.15);
+      color: var(--accent-purple);
+      cursor: pointer;
+      margin-left: 4px;
+      flex-shrink: 0;
+      border: 1px solid rgba(167,139,250,0.25);
+      transition: all 0.2s;
+      padding: 0;
+      line-height: 1;
+    }
+    .info-btn:hover {
+      background: rgba(167,139,250,0.25);
+      transform: scale(1.1);
+    }
+    /* Mobile: increase touch target */
+    @media (max-width: 768px) {
+      .info-btn {
+        width: 44px;
+        height: 44px;
+        min-width: 44px;
+        min-height: 44px;
+        font-size: 16px;
+      }
+    }
+
+    /* Info Panel styles */
+    .info-panel {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: linear-gradient(180deg, rgba(20,20,30,0.98) 0%, rgba(15,15,20,0.98) 100%);
+      border: 1px solid var(--border-medium);
+      border-radius: 12px;
+      padding: 20px;
+      min-width: 300px;
+      max-width: 400px;
+      max-height: 80vh;
+      overflow-y: auto;
+      z-index: 10000;
+      box-shadow: 0 12px 48px rgba(0,0,0,0.8);
+      color: var(--text-primary);
+      font-family: var(--font-family);
+    }
+    .info-header {
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--accent-purple);
+      margin-bottom: 16px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid var(--border-medium);
+    }
+    .info-body {
+      font-size: 12px;
+    }
+    .info-section {
+      margin-top: 12px;
+      font-size: 11px;
+      color: var(--accent-btc);
+    }
+    .info-section:first-child {
+      margin-top: 0;
+    }
+    .info-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 4px 0;
+      color: var(--text-secondary);
+      font-size: 11px;
+    }
+    .info-row span {
+      color: var(--text-primary);
+      font-weight: 500;
+    }
+    .info-row .up {
+      color: var(--accent-green);
+    }
+    .info-row .down {
+      color: var(--accent-red);
+    }
+    .info-close {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      background: rgba(255,255,255,0.1);
+      border: none;
+      color: var(--text-primary);
+      font-size: 20px;
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s;
+    }
+    .info-close:hover {
+      background: rgba(255,255,255,0.2);
+    }
+    /* Mobile optimizations */
+    @media (max-width: 768px) {
+      .info-panel {
+        max-width: 90vw;
+        max-height: 70vh;
+        padding: 16px;
+        -webkit-overflow-scrolling: touch;
+      }
+      .info-header {
+        font-size: 13px;
+      }
+      .info-section {
+        font-size: 10px;
+      }
+      .info-row {
+        font-size: 10px;
+      }
+    }
+
     body {
       background: linear-gradient(135deg, var(--bg-primary) 0%, var(--bg-secondary) 50%, var(--bg-primary) 100%);
       color: var(--text-primary);
@@ -926,6 +1055,11 @@
         </div>
         <button class="tb-btn active" id="btn-day-ohlc" onclick="toggleDayOHLC()">OHLC</button>
         <button class="tb-btn" id="btn-compare" onclick="toggleCompareMode()">⚖ Compare</button>
+        <button class="tb-btn" id="btn-show-after-hl" onclick="toggleShowAfterHL()">AfterH/L</button>
+        <div class="tb-group">
+          <label>rVol ≥</label>
+          <input type="number" id="rvol-threshold" value="1.5" min="0" step="0.1" style="width:60px;" onchange="updateRVolThreshold()">
+        </div>
       </div>
       
       <div class="day-compare-container" id="day-compare-container">
@@ -1085,8 +1219,13 @@
           <button class="f-btn quick" onclick="setHVWeekdays()">Wkdays</button>
         </div>
         <button class="tb-btn preset" onclick="syncHVFromOverview()">Sync Filters</button>
+        <button class="tb-btn" id="btn-hv-after-hl" onclick="toggleShowAfterHL()">AfterH/L</button>
+        <div class="tb-group">
+          <label>rVol ≥</label>
+          <input type="number" id="hv-rvol-threshold" value="1.5" min="0" step="0.1" style="width:60px;" onchange="updateRVolThreshold()">
+        </div>
       </div>
-      
+
       <div class="day-table-container">
         <table class="day-table" id="hour-table">
           <thead id="hour-table-head"></thead>
@@ -1241,6 +1380,8 @@
     let dayHlTo = 15;
     let showDayOHLC = true;
     let compareMode = false;
+    let showAfterHL = false; // Show hour high/low after close in Day/Hour View
+    let rVolThreshold = 1.5; // Relative volume highlight threshold
     let calColorDays = new Set([0,1,2,3,4,5,6]);
     let calColorDates = null;
     let calSelectedYears = new Set();
@@ -1437,8 +1578,9 @@
             if (rawBars.length === 0) {
               throw new Error('No valid data found in CSV');
             }
-            
+
             calculateRSI();
+            calculateBarMetrics();
             processDataET();
             populateFilterSelects();
             document.getElementById('loading-screen').style.display = 'none';
@@ -1477,8 +1619,9 @@
               close: parseFloat(row.close),
               volume: parseFloat(row.volume) || 0,
             })).filter(b => !isNaN(b.open) && b.timestamp instanceof Date && !isNaN(b.timestamp.getTime())).sort((a, b) => a.timestamp - b.timestamp);
-            
+
             calculateRSI();
+            calculateBarMetrics();
             processDataET();
             populateFilterSelects();
             document.getElementById('loading-screen').style.display = 'none';
@@ -1590,10 +1733,40 @@
         bar.signal = sigVals[i];
       });
     }
-    
+
+    function calculateBarMetrics() {
+      // Calculate 5-minute bar relative volume
+      // Group bars by hour and minute
+      const barsByHourMin = {};
+      rawBars.forEach(bar => {
+        const etDate = getETDateString(bar.timestamp);
+        const etHour = getETHour(bar.timestamp);
+        const etMin = getETMinute(bar.timestamp);
+        const key = `${etHour}-${etMin}`;
+        if (!barsByHourMin[key]) barsByHourMin[key] = [];
+        barsByHourMin[key].push(bar);
+      });
+
+      // Calculate rVol for each bar based on historical average for same hour:minute
+      Object.keys(barsByHourMin).forEach(key => {
+        const bars = barsByHourMin[key];
+        bars.forEach((bar, idx) => {
+          // Get historical bars for same hour:minute (lookback 2500)
+          const historicalBars = bars.slice(Math.max(0, idx - RELVOL_LOOKBACK_HOUR), idx);
+          if (historicalBars.length > 0) {
+            const avgVol = historicalBars.reduce((sum, b) => sum + b.volume, 0) / historicalBars.length;
+            bar.rVol = avgVol > 0 ? bar.volume / avgVol : null;
+          } else {
+            bar.rVol = null;
+          }
+        });
+      });
+    }
+
     function recalcRSI() {
       if (rawBars.length === 0) return;
       calculateRSI();
+      calculateBarMetrics();
       processDataET();
       renderTable();
     }
@@ -2068,14 +2241,50 @@
         }
       });
       
+      // Calculate hour high/low after close for each bar
+      Object.keys(barsByET).forEach(date => {
+        const bars = barsByET[date];
+
+        // Group bars by hour
+        const barsByHour = {};
+        bars.forEach(bar => {
+          if (!barsByHour[bar.etHour]) barsByHour[bar.etHour] = [];
+          barsByHour[bar.etHour].push(bar);
+        });
+
+        // For each hour, calculate after-close metrics
+        Object.keys(barsByHour).forEach(hour => {
+          const hourBars = barsByHour[hour];
+
+          hourBars.forEach((bar, idx) => {
+            // Get all bars after this one in the same hour
+            const barsAfter = hourBars.slice(idx + 1);
+
+            if (barsAfter.length > 0) {
+              const maxHighAfter = Math.max(...barsAfter.map(b => b.high));
+              const minLowAfter = Math.min(...barsAfter.map(b => b.low));
+
+              // Hour high after close: max high after - this bar's close
+              bar.hhAfterClose = Math.round(maxHighAfter - bar.close);
+              // Hour low after close: this bar's close - min low after
+              bar.hlAfterClose = Math.round(bar.close - minLowAfter);
+            } else {
+              // Last bar of the hour has no bars after
+              bar.hhAfterClose = 0;
+              bar.hlAfterClose = 0;
+            }
+          });
+        });
+      });
+
       allETDates = Object.keys(etDays).sort().reverse();
       availableYears = [...new Set(allETDates.map(d => d.slice(0, 4)))].sort();
       selectedYears = new Set(availableYears);
-      
-      document.getElementById('year-filters').innerHTML = availableYears.map(y => 
+
+      document.getElementById('year-filters').innerHTML = availableYears.map(y =>
         `<button class="f-btn active" data-year="${y}" onclick="toggleYear('${y}')">${y}</button>`
       ).join('');
-      
+
       populateDatePicker();
       computeEstablishedHours();
       computeRelativeVolume();
@@ -3345,22 +3554,27 @@ function populateDatePicker() {
             
             // Gradient for row4 based on hrOC value
             const hrOCGradient = getRGGradient(hrOC, mStats.hrOC.min, mStats.hrOC.max);
-            
+
+            // Check for high relative volume
+            const rVolHighlight = bar.rVol != null && bar.rVol >= rVolThreshold ? 'box-shadow: inset 0 0 0 2px rgba(167, 139, 250, 0.5);' : '';
+
             // Build tooltip info
             const barRng = Math.round(bar.high - bar.low);
             const barMaxUR = ur;
             const barMaxLR = lr;
             const tooltipText = `O: ${Math.round(bar.open).toLocaleString()}\\nH: ${Math.round(bar.high).toLocaleString()}\\nL: ${Math.round(bar.low).toLocaleString()}\\nC: ${Math.round(bar.close).toLocaleString()}\\nRng: ${barRng}\\nUR: ${barMaxUR} / LR: ${barMaxLR}`;
-            
-            bd += `<td class="min-cell${borderCls}" style="min-height:56px;">
-              <div class="min-grid" style="grid-template-rows:1fr 1fr 1fr 1fr;">
+
+            const afterHLRow = showAfterHL ? `<div class="min-grid-after" style="grid-column:1/3;font-size:8px;color:var(--text-muted);padding:1px 2px;">H+${bar.hhAfterClose ?? 0} L${bar.hlAfterClose >= 0 ? '+' : ''}${bar.hlAfterClose ?? 0}</div>` : '';
+            bd += `<td class="min-cell${borderCls}" style="min-height:56px;${rVolHighlight}">
+              <div class="min-grid" style="grid-template-rows:1fr 1fr 1fr 1fr${showAfterHL ? ' auto' : ''};">
                 <div class="min-grid-top left" style="background:${getOrangeGradient(ur, mStats.urlr.min, mStats.urlr.max)};${urBorder}">${ur}<span class="min-lvl">(${lvlUp})</span></div>
                 <div class="min-grid-top" style="background:${getOrangeGradient(lr, mStats.urlr.min, mStats.urlr.max)};${lrBorder}">${lr}<span class="min-lvl">(${lvlDn})</span></div>
-                <div class="min-grid-bottom ${oc >= 0 ? 'up' : 'down'}" style="background:${getRGGradient(oc, mStats.oc.min, mStats.oc.max)};border-bottom:1px solid var(--border-medium);${ocBorder}">${oc >= 0 ? '+' : ''}${oc}<span class="min-lvl">(${lvlCl >= 0 ? '+' : ''}${lvlCl})</span><span class="info-tooltip" data-tooltip="${tooltipText}">ⓘ</span></div>
+                <div class="min-grid-bottom ${oc >= 0 ? 'up' : 'down'}" style="background:${getRGGradient(oc, mStats.oc.min, mStats.oc.max)};border-bottom:1px solid var(--border-medium);${ocBorder}">${oc >= 0 ? '+' : ''}${oc}<span class="min-lvl">(${lvlCl >= 0 ? '+' : ''}${lvlCl})</span><span class="info-btn" data-date="${date}" data-hour="${h}" data-minute="${m}">ⓘ</span></div>
                 <div class="min-grid-row4${row4BorderCls}" style="grid-column:1/3;background:${hrOCGradient};">
                   <span class="hr-oc ${hrOC >= 0 ? 'up' : 'down'}">${hrOC >= 0 ? '+' : ''}${hrOC}<span class="min-lvl">(${hrLvl >= 0 ? '+' : ''}${hrLvl})</span></span>
                   <span class="bar-rsi" style="background:${rsiBg}">${rsiDisplay}</span>
                 </div>
+                ${afterHLRow}
               </div>
             </td>`;
           } else {
@@ -3765,20 +3979,25 @@ function populateDatePicker() {
             
             // Gradient for row4 based on hrOC value
             const hrOCGradient = getRGGradient(hrOC.oc, hStats.oc.min, hStats.oc.max);
-            
+
+            // Check for high relative volume
+            const rVolHighlight = bar.rVol != null && bar.rVol >= rVolThreshold ? 'box-shadow: inset 0 0 0 2px rgba(167, 139, 250, 0.5);' : '';
+
             // Build tooltip info
             const barRng = Math.round(bar.high - bar.low);
             const tooltipText = `O: ${Math.round(bar.open).toLocaleString()}\\nH: ${Math.round(bar.high).toLocaleString()}\\nL: ${Math.round(bar.low).toLocaleString()}\\nC: ${Math.round(bar.close).toLocaleString()}\\nRng: ${barRng}\\nUR: ${ur} / LR: ${lr}`;
-            
-            bd += `<td class="min-cell${borderCls}" style="min-height:56px;">
-              <div class="min-grid" style="grid-template-rows:1fr 1fr 1fr 1fr;">
+
+            const afterHLRow = showAfterHL ? `<div class="min-grid-after" style="grid-column:1/3;font-size:8px;color:var(--text-muted);padding:1px 2px;">H+${bar.hhAfterClose ?? 0} L${bar.hlAfterClose >= 0 ? '+' : ''}${bar.hlAfterClose ?? 0}</div>` : '';
+            bd += `<td class="min-cell${borderCls}" style="min-height:56px;${rVolHighlight}">
+              <div class="min-grid" style="grid-template-rows:1fr 1fr 1fr 1fr${showAfterHL ? ' auto' : ''};">
                 <div class="min-grid-top left" style="background:${getOrangeGradient(ur, mStats.urlr.min, mStats.urlr.max)};${urBorder}">${ur}<span class="min-lvl">(${lvlUp})</span></div>
                 <div class="min-grid-top" style="background:${getOrangeGradient(lr, mStats.urlr.min, mStats.urlr.max)};${lrBorder}">${lr}<span class="min-lvl">(${lvlDn})</span></div>
-                <div class="min-grid-bottom ${oc >= 0 ? 'up' : 'down'}" style="background:${getRGGradient(oc, mStats.oc.min, mStats.oc.max)};border-bottom:1px solid var(--border-medium);">${oc >= 0 ? '+' : ''}${oc}<span class="min-lvl">(${lvlCl >= 0 ? '+' : ''}${lvlCl})</span><span class="info-tooltip" data-tooltip="${tooltipText}">ⓘ</span></div>
+                <div class="min-grid-bottom ${oc >= 0 ? 'up' : 'down'}" style="background:${getRGGradient(oc, mStats.oc.min, mStats.oc.max)};border-bottom:1px solid var(--border-medium);">${oc >= 0 ? '+' : ''}${oc}<span class="min-lvl">(${lvlCl >= 0 ? '+' : ''}${lvlCl})</span><span class="info-btn" data-date="${day.date}" data-hour="${hour}" data-minute="${m}">ⓘ</span></div>
                 <div class="min-grid-row4${row4BorderCls}" style="grid-column:1/3;background:${hrOCGradient};">
                   <span class="hr-oc ${hrOC.oc >= 0 ? 'up' : 'down'}">${hrOC.oc >= 0 ? '+' : ''}${hrOC.oc}<span class="min-lvl">(${hrOC.lvl >= 0 ? '+' : ''}${hrOC.lvl})</span></span>
                   <span class="bar-rsi" style="background:${rsiBg}">${rsiDisplay}</span>
                 </div>
+                ${afterHLRow}
               </div>
             </td>`;
           } else {
@@ -4309,13 +4528,30 @@ function populateDatePicker() {
     }
     function togglePercentiles() { showPercentiles = !showPercentiles; document.getElementById('btn-pct').classList.toggle('active', showPercentiles); renderTable(); }
     function toggleDayOHLC() { showDayOHLC = !showDayOHLC; document.getElementById('btn-day-ohlc').classList.toggle('active', showDayOHLC); renderDayView(); }
-    function toggleCompareMode() { 
-      compareMode = !compareMode; 
-      document.getElementById('btn-compare').classList.toggle('active', compareMode); 
+    function toggleCompareMode() {
+      compareMode = !compareMode;
+      document.getElementById('btn-compare').classList.toggle('active', compareMode);
       document.getElementById('compare-group').style.display = compareMode ? 'flex' : 'none';
       document.getElementById('day-table-panel-2').style.display = compareMode ? 'flex' : 'none';
       document.getElementById('day-compare-container').classList.toggle('compare-mode', compareMode);
-      renderDayView(); 
+      renderDayView();
+    }
+    function toggleShowAfterHL() {
+      showAfterHL = !showAfterHL;
+      document.getElementById('btn-show-after-hl')?.classList.toggle('active', showAfterHL);
+      document.getElementById('btn-hv-after-hl')?.classList.toggle('active', showAfterHL);
+      renderDayView();
+      renderHourView();
+    }
+    function updateRVolThreshold() {
+      const val1 = parseFloat(document.getElementById('rvol-threshold')?.value);
+      const val2 = parseFloat(document.getElementById('hv-rvol-threshold')?.value);
+      rVolThreshold = !isNaN(val1) ? val1 : !isNaN(val2) ? val2 : 1.5;
+      // Sync both inputs
+      if (document.getElementById('rvol-threshold')) document.getElementById('rvol-threshold').value = rVolThreshold;
+      if (document.getElementById('hv-rvol-threshold')) document.getElementById('hv-rvol-threshold').value = rVolThreshold;
+      renderDayView();
+      renderHourView();
     }
     function toggleColFilterPanel() { document.getElementById('col-filter-panel').classList.toggle('visible'); document.getElementById('btn-col-filter').classList.toggle('active'); }
     function toggleRsiSettings() { document.getElementById('rsi-settings').classList.toggle('visible'); document.getElementById('btn-rsi').classList.toggle('active'); }
@@ -4588,6 +4824,106 @@ function populateDatePicker() {
 
   // Improved info tooltip behavior: click toggles popup on mobile; clicking outside closes any open popups
   document.addEventListener('click', function(e){
+    // Check for info-btn clicks
+    const btn = e.target.closest && e.target.closest('.info-btn');
+    if(btn){
+      const date = btn.getAttribute('data-date');
+      const hour = parseInt(btn.getAttribute('data-hour'));
+      const minute = btn.getAttribute('data-minute');
+
+      // Find the bar data
+      const bars = barsByET[date];
+      if (!bars) return;
+
+      const bar = bars.find(b => b.etHour === hour && String(b.etMin).padStart(2, '0') === minute);
+      if (!bar) return;
+
+      // Get hour data for context
+      const day = etDays[date];
+      const hourData = day?.hrs[hour];
+
+      // Build comprehensive info panel
+      let infoHTML = '<div class="info-panel">';
+      infoHTML += `<div class="info-header">${date} ${hour}:${minute} ET</div>`;
+      infoHTML += '<div class="info-body">';
+
+      // OHLC
+      infoHTML += '<div class="info-section"><strong>Bar OHLC:</strong></div>';
+      infoHTML += `<div class="info-row">Open: <span>${Math.round(bar.open).toLocaleString()}</span></div>`;
+      infoHTML += `<div class="info-row">High: <span>${Math.round(bar.high).toLocaleString()}</span></div>`;
+      infoHTML += `<div class="info-row">Low: <span>${Math.round(bar.low).toLocaleString()}</span></div>`;
+      infoHTML += `<div class="info-row">Close: <span>${Math.round(bar.close).toLocaleString()}</span></div>`;
+
+      // Range and UR/LR
+      const barRng = Math.round(bar.high - bar.low);
+      const barUR = Math.round(bar.high - bar.open);
+      const barLR = Math.round(bar.open - bar.low);
+      const barOC = Math.round(bar.close - bar.open);
+      infoHTML += '<div class="info-section"><strong>Bar Metrics:</strong></div>';
+      infoHTML += `<div class="info-row">Range: <span>${barRng}</span></div>`;
+      infoHTML += `<div class="info-row">UR: <span>${barUR}</span> | LR: <span>${barLR}</span></div>`;
+      infoHTML += `<div class="info-row">O-C: <span class="${barOC >= 0 ? 'up' : 'down'}">${barOC >= 0 ? '+' : ''}${barOC}</span></div>`;
+
+      // Hour O-C
+      if (hourData) {
+        const hrOC = Math.round(bar.close - hourData.o);
+        infoHTML += `<div class="info-row">Hour O-C: <span class="${hrOC >= 0 ? 'up' : 'down'}">${hrOC >= 0 ? '+' : ''}${hrOC}</span></div>`;
+      }
+
+      // Levels
+      const lvlSize = parseInt(document.getElementById('day-level-size')?.value || document.getElementById('hour-level-size')?.value) || 250;
+      const lvlUp = Math.max(0, Math.floor(bar.high / lvlSize) - Math.floor(bar.open / lvlSize));
+      const lvlDn = Math.max(0, Math.floor(bar.open / lvlSize) - Math.floor(bar.low / lvlSize));
+      const lvlCl = Math.floor(bar.close / lvlSize) - Math.floor(bar.open / lvlSize);
+      infoHTML += '<div class="info-section"><strong>Levels:</strong></div>';
+      infoHTML += `<div class="info-row">Up: <span>${lvlUp}</span> | Down: <span>${lvlDn}</span></div>`;
+      infoHTML += `<div class="info-row">Close: <span class="${lvlCl >= 0 ? 'up' : 'down'}">${lvlCl >= 0 ? '+' : ''}${lvlCl}</span></div>`;
+
+      if (hourData) {
+        const hrLvl = Math.floor(bar.close / lvlSize) - Math.floor(hourData.o / lvlSize);
+        infoHTML += `<div class="info-row">Hour Close: <span class="${hrLvl >= 0 ? 'up' : 'down'}">${hrLvl >= 0 ? '+' : ''}${hrLvl}</span></div>`;
+      }
+
+      // RSI and Signal
+      if (bar.rsi != null || bar.signal != null) {
+        infoHTML += '<div class="info-section"><strong>RSI:</strong></div>';
+        if (bar.rsi != null) infoHTML += `<div class="info-row">RSI: <span>${Math.round(bar.rsi * 10) / 10}</span></div>`;
+        if (bar.signal != null) infoHTML += `<div class="info-row">Signal: <span>${Math.round(bar.signal * 10) / 10}</span></div>`;
+      }
+
+      // Relative Volume
+      if (bar.rVol != null) {
+        infoHTML += '<div class="info-section"><strong>Relative Volume:</strong></div>';
+        infoHTML += `<div class="info-row">rVol: <span style="color:${bar.rVol >= rVolThreshold ? '#a78bfa' : ''}">${Math.round(bar.rVol * 100) / 100}x</span></div>`;
+      }
+
+      // Hour High/Low After Close
+      if (showAfterHL && (bar.hhAfterClose != null || bar.hlAfterClose != null)) {
+        infoHTML += '<div class="info-section"><strong>After This Bar:</strong></div>';
+        if (bar.hhAfterClose != null) infoHTML += `<div class="info-row">Hour High After: <span class="${bar.hhAfterClose >= 0 ? 'up' : 'down'}">${bar.hhAfterClose >= 0 ? '+' : ''}${bar.hhAfterClose}</span></div>`;
+        if (bar.hlAfterClose != null) infoHTML += `<div class="info-row">Hour Low After: <span class="${bar.hlAfterClose >= 0 ? 'down' : 'up'}">${bar.hlAfterClose >= 0 ? '+' : ''}${bar.hlAfterClose}</span></div>`;
+      }
+
+      // Volume
+      infoHTML += '<div class="info-section"><strong>Volume:</strong></div>';
+      infoHTML += `<div class="info-row">Vol: <span>${Math.round(bar.volume * 100) / 100}</span></div>`;
+
+      infoHTML += '</div>';
+      infoHTML += '<button class="info-close" onclick="this.parentElement.remove()">×</button>';
+      infoHTML += '</div>';
+
+      // Remove any existing info panel
+      document.querySelectorAll('.info-panel').forEach(p => p.remove());
+
+      // Add new panel to body
+      const panel = document.createElement('div');
+      panel.innerHTML = infoHTML;
+      document.body.appendChild(panel.firstChild);
+
+      e.stopPropagation();
+      return;
+    }
+
     // if clicked on an .info-tooltip or inside one, toggle its popup
     const tt = e.target.closest && e.target.closest('.info-tooltip');
     if(tt){
@@ -4599,8 +4935,10 @@ function populateDatePicker() {
       e.stopPropagation();
       return;
     }
-    // else close all visible info popups
+
+    // else close all visible info popups and panels
     document.querySelectorAll('.info-popup.visible').forEach(p=>p.classList.remove('visible'));
+    document.querySelectorAll('.info-panel').forEach(p=>p.remove());
   });
 
   // Accessibility: close modal on Escape
