@@ -1126,6 +1126,7 @@
       { id: 'up', label: '#Up', desc: 'Lvls Up', default: false, gradient: null },
       { id: 'dn', label: '#Dn', desc: 'Lvls Down', default: false, gradient: null },
       { id: 'totl', label: 'TotL', desc: 'Total Levels', default: false, gradient: 'orange', group: 'mxl' },
+      { id: 'toNxtLvl', label: 'ToNxt', desc: 'Distance to next levels (up - down)', default: false, gradient: null },
       { id: 'mxl', label: 'MxL', desc: 'Max Level', default: false, gradient: 'orange', group: 'mxl' },
       { id: 'mxlRk', label: 'MxL#', desc: 'Max Lvl Rank', default: false, gradient: 'orange-inv', group: 'rank' },
       { id: 'cl', label: '#Cl', desc: 'Net Lvls', default: false, gradient: 'rg', group: 'cl' },
@@ -1152,6 +1153,11 @@
       { id: 'rsiMax', label: 'RSI↑', desc: 'Max RSI', default: false, gradient: 'purple', group: 'rsi' },
       { id: 'rsiMin', label: 'RSI↓', desc: 'Min RSI', default: false, gradient: 'purple', group: 'rsi' },
       { id: 'rsiAvg', label: 'RSIμ', desc: 'Avg RSI', default: false, gradient: 'purple', group: 'rsi' },
+      { id: 'rsiOpen', label: 'RSIo', desc: 'RSI Open (first 5-min)', default: false, gradient: 'purple', group: 'rsi' },
+      { id: 'rsiClose', label: 'RSIc', desc: 'RSI Close (last 5-min)', default: false, gradient: 'purple', group: 'rsi' },
+      { id: 'rsiDelta', label: 'RSIδ', desc: 'RSI Open - RSI Close', default: false, gradient: 'purple', group: 'rsi' },
+      { id: 'rsiOBmin', label: 'OBm', desc: 'First OB minute in hour', default: false, group: 'rsi' },
+      { id: 'rsiOSmin', label: 'OSm', desc: 'First OS minute in hour', default: false, group: 'rsi' },
       { id: 'sigMax', label: 'Sig↑', desc: 'Max Signal', default: false, gradient: 'purple', group: 'sig' },
       { id: 'sigMin', label: 'Sig↓', desc: 'Min Signal', default: false, gradient: 'purple', group: 'sig' },
       { id: 'sigAvg', label: 'Sigμ', desc: 'Avg Signal', default: false, gradient: 'purple', group: 'sig' },
@@ -1762,18 +1768,53 @@
           const rsiAvg = hd.rsiVals.length
             ? hd.rsiVals.reduce((a,b) => a+b, 0) / hd.rsiVals.length
             : null;
-        
+
+          // RSI open/close/delta - get from bars for this day and hour
+          let rsiOpen = null, rsiClose = null, rsiDelta = null;
+          let rsiOBmin = null, rsiOSmin = null;
+          const dayBars = barsByET[day.date] || [];
+          const hourBars = dayBars.filter(b => b.etHour === hrNum);
+
+          if (hourBars.length > 0) {
+            // Find first and last bars with RSI values
+            const barsWithRSI = hourBars.filter(b => b.rsi != null);
+            if (barsWithRSI.length > 0) {
+              rsiOpen = barsWithRSI[0].rsi;
+              rsiClose = barsWithRSI[barsWithRSI.length - 1].rsi;
+              rsiDelta = rsiOpen - rsiClose;
+            }
+
+            // Find first OB/OS minute
+            for (const bar of hourBars) {
+              if (bar.rsi != null) {
+                if (rsiOBmin === null && bar.rsi >= obLevel) {
+                  rsiOBmin = bar.etMin;
+                }
+                if (rsiOSmin === null && bar.rsi <= osLevel) {
+                  rsiOSmin = bar.etMin;
+                }
+              }
+              if (rsiOBmin !== null && rsiOSmin !== null) break;
+            }
+          }
+
           const sigMax = hd.sigVals.length ? Math.max(...hd.sigVals) : null;
           const sigMin = hd.sigVals.length ? Math.min(...hd.sigVals) : null;
           const sigAvg = hd.sigVals.length
             ? hd.sigVals.reduce((a,b) => a+b, 0) / hd.sigVals.length
             : null;
-        
+
           const obos =
             hd.rsiVals.some(r => r >= obLevel) ? 'OB'
             : hd.rsiVals.some(r => r <= osLevel) ? 'OS'
             : null;
           
+          // Calculate toNxtLvl: (next level up - close) - (close - next level down)
+          const closeLevel = getLevel(hd.c);
+          const nextLevelUp = (closeLevel + 1) * levelSize;
+          const nextLevelDown = closeLevel * levelSize;
+          const toNxtLvl = Math.round((nextLevelUp - hd.c) - (hd.c - nextLevelDown));
+
           hd.m = {
             rng: Math.round(hd.h - hd.l),
             ur: Math.round(hd.h - hd.o),
@@ -1796,10 +1837,16 @@
             rsiMax,
             rsiMin,
             rsiAvg: rsiAvg ? Math.round(rsiAvg * 10) / 10 : null,
+            rsiOpen: rsiOpen ? Math.round(rsiOpen * 10) / 10 : null,
+            rsiClose: rsiClose ? Math.round(rsiClose * 10) / 10 : null,
+            rsiDelta: rsiDelta ? Math.round(rsiDelta * 10) / 10 : null,
+            rsiOBmin,
+            rsiOSmin,
             sigMax,
             sigMin,
             sigAvg: sigAvg ? Math.round(sigAvg * 10) / 10 : null,
             obos,
+            toNxtLvl,
           };
         
           hd.m.mxr = Math.max(hd.m.ur, hd.m.lr);
@@ -2052,12 +2099,18 @@
         getSortedHourKeys(day).forEach(h => {
           const hd = day.hrs[h];
           if (!hd.m) return;
-        
+
           hd.m.up = calcLvlUp(hd.o, hd.h);
           hd.m.dn = calcLvlDn(hd.o, hd.l);
           hd.m.cl = calcLvlCl(hd.o, hd.c);
           hd.m.mxl = Math.max(hd.m.up, hd.m.dn);
           hd.m.totl = hd.m.up + hd.m.dn;
+
+          // Recalculate toNxtLvl
+          const closeLevel = getLevel(hd.c);
+          const nextLevelUp = (closeLevel + 1) * levelSize;
+          const nextLevelDown = closeLevel * levelSize;
+          hd.m.toNxtLvl = Math.round((nextLevelUp - hd.c) - (hd.c - nextLevelDown));
         });
       });
       renderTable();
@@ -2067,22 +2120,24 @@
     function populateFilterSelects() {
       const hourSel = document.getElementById('filter-hour');
       hourSel.innerHTML = '<option value="day">Day Total</option>';
+      hourSel.innerHTML += '<option value="any">Any Hour</option>';
       for (let h = 0; h < 24; h++) {
         const ampm = h >= 12 ? 'PM' : 'AM';
         const disp = h === 0 ? 12 : h > 12 ? h - 12 : h;
         hourSel.innerHTML += `<option value="${h}">${disp}${ampm}</option>`;
       }
-      
+
       updateFilterColumnSelect();
     }
     
     function updateFilterColumnSelect() {
       const hourVal = document.getElementById('filter-hour').value;
       const colSel = document.getElementById('filter-column');
-      
+
       if (hourVal === 'day') {
         colSel.innerHTML = DAY_TOTAL_COLS.map(c => `<option value="${c.id}">${c.label}</option>`).join('');
       } else {
+        // "any" hour and specific hours both use hourly columns
         colSel.innerHTML = ALL_COLUMNS.map(c => `<option value="${c.id}">${c.label}</option>`).join('');
       }
     }
@@ -2118,37 +2173,72 @@
     function updateFilterUI() {
       const container = document.getElementById('active-filters');
       container.innerHTML = columnFilters.map((f, i) => {
-        const hourLabel = f.hour === 'day' ? 'Day' : formatHourHeader(parseInt(f.hour));
+        let hourLabel;
+        if (f.hour === 'day') {
+          hourLabel = 'Day';
+        } else if (f.hour === 'any') {
+          hourLabel = 'Any';
+        } else {
+          hourLabel = formatHourHeader(parseInt(f.hour));
+        }
         const colDef = f.hour === 'day' ? DAY_TOTAL_COLS.find(c => c.id === f.col) : ALL_COLUMNS.find(c => c.id === f.col);
         return `<div class="filter-tag">${hourLabel} ${colDef?.label || f.col} ${f.op} ${f.val}<span class="remove-filter" onclick="removeFilter(${i})">×</span></div>`;
       }).join('');
-      
+
       document.getElementById('btn-col-filter').classList.toggle('has-filters', columnFilters.length > 0);
     }
     
     function applyColumnFilters(data) {
       if (columnFilters.length === 0) return data;
-      
+
       return data.filter(day => {
         return columnFilters.every(f => {
-          let val;
           if (f.hour === 'day') {
-            val = day[f.col];
+            // Day total filter
+            const val = day[f.col];
+            if (val == null) return false;
+
+            switch (f.op) {
+              case '>=': return val >= f.val;
+              case '<=': return val <= f.val;
+              case '>': return val > f.val;
+              case '<': return val < f.val;
+              case '==': return val === f.val;
+              case '!=': return val !== f.val;
+              default: return true;
+            }
+          } else if (f.hour === 'any') {
+            // Any hour filter - check if ANY hour meets the criteria
+            const hours = Object.keys(day.hrs);
+            return hours.some(h => {
+              const val = day.hrs[h]?.m?.[f.col];
+              if (val == null) return false;
+
+              switch (f.op) {
+                case '>=': return val >= f.val;
+                case '<=': return val <= f.val;
+                case '>': return val > f.val;
+                case '<': return val < f.val;
+                case '==': return val === f.val;
+                case '!=': return val !== f.val;
+                default: return false;
+              }
+            });
           } else {
+            // Specific hour filter
             const h = parseInt(f.hour);
-            val = day.hrs[h]?.m?.[f.col];
-          }
-          
-          if (val == null) return false;
-          
-          switch (f.op) {
-            case '>=': return val >= f.val;
-            case '<=': return val <= f.val;
-            case '>': return val > f.val;
-            case '<': return val < f.val;
-            case '==': return val === f.val;
-            case '!=': return val !== f.val;
-            default: return true;
+            const val = day.hrs[h]?.m?.[f.col];
+            if (val == null) return false;
+
+            switch (f.op) {
+              case '>=': return val >= f.val;
+              case '<=': return val <= f.val;
+              case '>': return val > f.val;
+              case '<': return val < f.val;
+              case '==': return val === f.val;
+              case '!=': return val !== f.val;
+              default: return true;
+            }
           }
         });
       });
@@ -2468,7 +2558,7 @@ function populateDatePicker() {
 
         if (m.mxcdActual != null) s.mxcd.push(m.mxcdActual);
 
-        ['rsiMax','rsiMin','rsiAvg'].forEach(r => {
+        ['rsiMax','rsiMin','rsiAvg','rsiOpen','rsiClose','rsiDelta'].forEach(r => {
           if (m[r] != null) s.rsi.push(m[r]);
         });
 
@@ -2526,7 +2616,7 @@ function populateDatePicker() {
 
           if (m.mxcdActual != null) s[h].mxcd.push(m.mxcdActual);
 
-          ['rsiMax','rsiMin','rsiAvg'].forEach(r => {
+          ['rsiMax','rsiMin','rsiAvg','rsiOpen','rsiClose','rsiDelta'].forEach(r => {
             if (m[r] != null) s[h].rsi.push(m[r]);
           });
 
@@ -2604,15 +2694,15 @@ function populateDatePicker() {
     // ==================== FORMATTING ====================
     function fmt(v, id) {
       if (v == null) return '—';
-      if (['hm','lm'].includes(id)) return ':' + String(v).padStart(2, '0');
+      if (['hm','lm','rsiOBmin','rsiOSmin'].includes(id)) return ':' + String(v).padStart(2, '0');
       if (['up','dn','totl','mxl'].includes(id)) return v;
       if (id === 'cl') return v === 0 ? '0' : (v > 0 ? '+' + v : v);
       if (id === 'v') return v.toFixed(1);
       if (['o','hi','lo','c'].includes(id)) return v.toLocaleString();
-      if (['oc','cdr','wCdr','p5Cdr'].includes(id)) return (v >= 0 ? '+' : '') + v.toLocaleString();
+      if (['oc','cdr','wCdr','p5Cdr','toNxtLvl'].includes(id)) return (v >= 0 ? '+' : '') + v.toLocaleString();
       if (id.endsWith('Rk')) return v;
       if (['cdrU','cdrD','mxcd','wCdrU','wCdrD','wMxcd','p5CdrU','p5CdrD','p5Mxcd'].includes(id)) return v.toLocaleString();
-      if (['rsiMax','rsiMin','rsiAvg','sigMax','sigMin','sigAvg'].includes(id)) return v.toFixed(1);
+      if (['rsiMax','rsiMin','rsiAvg','rsiOpen','rsiClose','rsiDelta','sigMax','sigMin','sigAvg'].includes(id)) return v.toFixed(1);
       if (id === 'obos') return v;
       return v.toLocaleString();
     }
@@ -2841,7 +2931,21 @@ function populateDatePicker() {
       // Add percentile rows if enabled
       if (showPercentiles && data.length > 0) {
         const percentiles = [10, 25, 50, 75, 90];
-        
+
+        // Calculate percentile values for day total columns
+        const dayColVals = {};
+        if (showDayCols && dtCols.length > 0) {
+          dtCols.forEach(col => {
+            dayColVals[col.id] = [];
+          });
+          data.forEach(day => {
+            dtCols.forEach(col => {
+              const v = day[col.id];
+              if (v != null && typeof v === 'number') dayColVals[col.id].push(v);
+            });
+          });
+        }
+
         // Calculate percentile values for each hour and column
         const hourColVals = {};
         realHours.forEach(h => {
@@ -2850,7 +2954,7 @@ function populateDatePicker() {
             hourColVals[h][col.id] = [];
           });
         });
-        
+
         data.forEach(day => {
           realHours.forEach(h => {
             const m = day.hrs[h]?.m;
@@ -2865,7 +2969,7 @@ function populateDatePicker() {
             });
           });
         });
-        
+
         // Calculate percentile function
         function calcPercentile(arr, p) {
           if (arr.length === 0) return null;
@@ -2876,24 +2980,27 @@ function populateDatePicker() {
           if (lower === upper) return sorted[lower];
           return sorted[lower] + (sorted[upper] - sorted[lower]) * (idx - lower);
         }
-        
+
         // Add percentile rows
         percentiles.forEach(p => {
           bd += `<tr class="percentile-row" style="background:rgba(247,147,26,0.08);border-top:2px solid rgba(247,147,26,0.3);">`;
           bd += `<td class="sticky-col" style="left:0;min-width:65px;font-weight:600;color:var(--accent-btc)">P${p}</td>`;
           bd += `<td class="sticky-col" style="left:65px;min-width:28px"></td>`;
           bd += `<td class="sticky-col" style="left:93px;min-width:20px"></td>`;
-          
+
           if (showDayCols && dtCols.length > 0) {
             let pos = 113;
             dtCols.forEach((c, i) => {
+              const vals = dayColVals[c.id];
+              const pVal = calcPercentile(vals, p);
+              const display = pVal != null ? (Number.isInteger(pVal) ? pVal : pVal.toFixed(1)) : '—';
               const w = ['dOpen','dHigh','dLow','dClose'].includes(c.id) ? 52 : ['dOC','dOCH','d5pmOC','wOC'].includes(c.id) ? 48 : 38;
               const isLast = i === dtCols.length - 1;
-              bd += `<td class="sticky-col" style="left:${pos}px;min-width:${w}px${isLast?';border-right:2px solid rgba(100,149,237,0.3)':''}"></td>`;
+              bd += `<td class="sticky-col" style="left:${pos}px;min-width:${w}px;font-size:9px;color:var(--accent-btc)${isLast?';border-right:2px solid rgba(100,149,237,0.3)':''}";>${display}</td>`;
               pos += w;
             });
           }
-          
+
           realHours.forEach((h, hi) => {
             cols.forEach((col, ci) => {
               const vals = hourColVals[h][col.id];
@@ -4240,7 +4347,7 @@ function populateDatePicker() {
     function setAllCols() { visibleColumns = new Set(ALL_COLUMNS.map(c => c.id)); document.querySelectorAll('#col-grid input').forEach(cb => cb.checked = true); renderTable(); }
     function setRangeCols() { visibleColumns = new Set(['rng','ur','lr','mxr','mxrRk','rngRk']); document.querySelectorAll('#col-grid input').forEach((cb, i) => cb.checked = visibleColumns.has(ALL_COLUMNS[i].id)); renderTable(); }
     function setOHLCVCols() { visibleColumns = new Set(['o','hi','lo','c','v']); document.querySelectorAll('#col-grid input').forEach((cb, i) => cb.checked = visibleColumns.has(ALL_COLUMNS[i].id)); renderTable(); }
-    function setRSICols() { visibleColumns = new Set(['rsiMax','rsiMin','rsiAvg','sigMax','sigMin','sigAvg','obos']); document.querySelectorAll('#col-grid input').forEach((cb, i) => cb.checked = visibleColumns.has(ALL_COLUMNS[i].id)); renderTable(); }
+    function setRSICols() { visibleColumns = new Set(['rsiMax','rsiMin','rsiAvg','rsiOpen','rsiClose','rsiDelta','rsiOBmin','rsiOSmin','sigMax','sigMin','sigAvg','obos']); document.querySelectorAll('#col-grid input').forEach((cb, i) => cb.checked = visibleColumns.has(ALL_COLUMNS[i].id)); renderTable(); }
     
     function resetAll() {
       selectedYears = new Set(availableYears);
