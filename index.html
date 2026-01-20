@@ -1068,17 +1068,52 @@
   color: var(--text-primary);
 }
 
+/* Persist live status across tabs - fixed position */
+.live-status-container {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  margin: 0;
+  z-index: 1001;
+}
+
 @media (max-width: 768px) {
   .live-status-container {
-    margin-top: 8px;
+    top: 10px;
+    right: 10px;
   }
   .live-status-indicator {
-    font-size: 10px;
-    padding: 4px 8px;
+    font-size: 9px;
+    padding: 3px 6px;
+    gap: 3px;
   }
   .live-dot {
     width: 6px;
     height: 6px;
+  }
+}
+
+/* Show compact "Live" text on mobile, full details on hover/desktop */
+.live-status-indicator .live-text-full {
+  display: inline;
+}
+.live-status-indicator .live-text-short {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .live-status-indicator .live-text-full {
+    display: none;
+  }
+  .live-status-indicator .live-text-short {
+    display: inline;
+  }
+  /* Show full text on tap/active */
+  .live-status-indicator:active .live-text-full {
+    display: inline;
+  }
+  .live-status-indicator:active .live-text-short {
+    display: none;
   }
 }
 </style>
@@ -1136,13 +1171,18 @@
           <div class="stat"><span class="stat-val" id="stat-hours">24</span><span class="stat-lbl">Hours</span></div>
           <div class="stat"><span class="stat-val" id="stat-cols">7</span><span class="stat-lbl">Cols</span></div>
         </div>
-        <div class="live-status-container">
-          <div class="live-status-indicator" id="live-status">
-            <span class="live-dot"></span>
-            <span class="live-text">Initializing...</span>
-          </div>
-        </div>
       </header>
+
+      <!-- Live Status Indicator - Fixed position, visible across all tabs -->
+      <div class="live-status-container">
+        <div class="live-status-indicator" id="live-status">
+          <span class="live-dot"></span>
+          <span class="live-text">
+            <span class="live-text-short">Live</span>
+            <span class="live-text-full">Initializing...</span>
+          </span>
+        </div>
+      </div>
 
       <div class="toolbar">
         <button class="tb-btn mobile-hide" id="btn-filters" onclick="toggleFilters()">⚙ Filters</button>
@@ -1843,6 +1883,22 @@
                 </div>
               </div>
             </div>
+
+            <div class="mobile-filter-section">
+              <h3>Data Settings</h3>
+              <div class="mobile-settings-row">
+                <div class="mobile-settings-item" style="flex-direction:row;align-items:center;">
+                  <span class="mobile-settings-label" style="flex:1;">Live Data Updates:</span>
+                  <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+                    <input type="checkbox" id="live-data-toggle" checked onchange="toggleLiveData(this.checked)" style="width:20px;height:20px;cursor:pointer;">
+                    <span id="live-data-status" style="font-size:0.75rem;color:var(--accent-green);">Enabled</span>
+                  </label>
+                </div>
+              </div>
+              <p style="font-size:0.65rem;color:var(--text-muted);margin-top:8px;line-height:1.3;">
+                When enabled, fetches latest data from Coinbase API every 5 minutes. When disabled, shows only historical data from last commit.
+              </p>
+            </div>
           </div>
         </div>
       </div>
@@ -2232,6 +2288,41 @@
       }
     }
 
+    function editMobileFilter(idx) {
+      const filter = columnFilters[idx];
+      if (!filter) return;
+
+      // Populate the mobile filter inputs
+      document.getElementById('mobile-filter-hour').value = filter.hour;
+      document.getElementById('mobile-filter-column').value = filter.col;
+      document.getElementById('mobile-filter-op').value = filter.op;
+      const filterValue = document.getElementById('mobile-filter-value');
+      filterValue.value = filter.val;
+
+      // Also update desktop inputs for consistency
+      document.getElementById('filter-hour').value = filter.hour;
+
+      // Update column select
+      const hourVal = filter.hour;
+      const currentHourType = hourVal === 'day' ? 'day' : 'hour';
+      if (currentHourType !== previousHourType) {
+        const colSel = document.getElementById('mobile-filter-column');
+        const options = hourVal === 'day'
+          ? DAY_TOTAL_COLS.map(c => `<option value="${c.id}">${c.label}</option>`).join('')
+          : ALL_COLUMNS.map(c => `<option value="${c.id}">${c.label}</option>`).join('');
+        if (colSel) colSel.innerHTML = options;
+        previousHourType = currentHourType;
+      }
+      document.getElementById('mobile-filter-column').value = filter.col;
+
+      // Focus the value input
+      filterValue.focus();
+      filterValue.select();
+
+      // Remove the old filter
+      removeFilter(idx);
+    }
+
     function updateMobileActiveFilters() {
       const container = document.getElementById('mobile-active-filters');
       if (!container) return;
@@ -2241,17 +2332,30 @@
       } else {
         container.innerHTML = '';
         columnFilters.forEach((filter, idx) => {
+          let hourLabel;
+          if (filter.hour === 'day') {
+            hourLabel = 'Day';
+          } else if (filter.hour === 'any') {
+            hourLabel = 'Any';
+          } else {
+            hourLabel = formatHourHeader(parseInt(filter.hour));
+          }
+          const colDef = filter.hour === 'day' ? DAY_TOTAL_COLS.find(c => c.id === filter.col) : ALL_COLUMNS.find(c => c.id === filter.col);
+
           const tag = document.createElement('div');
-          tag.style.cssText = 'display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:rgba(74,222,128,0.15);border:1px solid rgba(74,222,128,0.3);border-radius:6px;margin-bottom:8px;';
+          tag.style.cssText = 'display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:rgba(74,222,128,0.15);border:1px solid rgba(74,222,128,0.3);border-radius:6px;margin-bottom:8px;cursor:pointer;';
 
           const text = document.createElement('span');
           text.style.cssText = 'font-size:0.7rem;color:var(--accent-green);';
-          text.textContent = `${filter.hour === 'day' ? 'Day' : 'Hr ' + filter.hour} ${filter.column} ${filter.op} ${filter.value}`;
+          text.innerHTML = `${hourLabel} ${colDef?.label || filter.col} ${filter.op} <u>${filter.val}</u>`;
+          text.title = 'Tap to edit';
+          text.onclick = () => editMobileFilter(idx);
 
           const removeBtn = document.createElement('button');
           removeBtn.textContent = '×';
           removeBtn.style.cssText = 'background:rgba(248,113,113,0.2);border:none;color:var(--accent-red);font-size:1.2rem;width:28px;height:28px;border-radius:50%;cursor:pointer;';
-          removeBtn.onclick = () => {
+          removeBtn.onclick = (e) => {
+            e.stopPropagation(); // Prevent edit trigger
             removeColumnFilter(idx);
             updateMobileActiveFilters();
           };
@@ -2398,10 +2502,14 @@
       document.getElementById('loading-text').textContent = 'Loading Bitcoin data with live updates...';
 
       try {
+        // Check if live data is enabled (default: true)
+        const liveDataEnabled = localStorage.getItem('btc-live-data-enabled') !== 'false';
+
         // Create live data fetcher
         liveDataFetcher = new LiveDataFetcher({
           dataFile: 'data/bitcoin_5m_combined.csv',
           refreshInterval: 5 * 60 * 1000, // 5 minutes
+          enabled: liveDataEnabled,
 
           // Callback when new data arrives
           onDataUpdate: (mergedData) => {
@@ -2472,10 +2580,24 @@
       // Update status class
       indicator.className = 'live-status-indicator ' + statusInfo.status;
 
-      // Update text
-      const text = indicator.querySelector('.live-text');
-      if (text) {
-        text.textContent = statusInfo.message;
+      // Update text - set both short and full versions
+      const textShort = indicator.querySelector('.live-text-short');
+      const textFull = indicator.querySelector('.live-text-full');
+
+      if (textShort && textFull) {
+        // Short text: just status
+        const shortTexts = {
+          'loading': 'Loading',
+          'live': 'Live',
+          'refreshing': 'Sync',
+          'error': 'Error',
+          'disabled': 'Off',
+          'stopped': 'Off'
+        };
+        textShort.textContent = shortTexts[statusInfo.status] || 'Live';
+
+        // Full text: complete message
+        textFull.textContent = statusInfo.message;
       }
 
       // Update title with details
@@ -2494,11 +2616,50 @@
       liveDataFetcher.refresh();
     }
 
+    // Toggle live data updates
+    function toggleLiveData(enabled) {
+      if (!liveDataFetcher) {
+        console.log('Live data fetcher not initialized');
+        return;
+      }
+
+      const statusSpan = document.getElementById('live-data-status');
+
+      if (enabled) {
+        liveDataFetcher.enable();
+        if (statusSpan) {
+          statusSpan.textContent = 'Enabled';
+          statusSpan.style.color = 'var(--accent-green)';
+        }
+        console.log('Live data enabled');
+      } else {
+        liveDataFetcher.disable();
+        if (statusSpan) {
+          statusSpan.textContent = 'Disabled';
+          statusSpan.style.color = 'var(--text-muted)';
+        }
+        console.log('Live data disabled');
+      }
+    }
+
     // Add click handler to status indicator for manual refresh
     document.addEventListener('DOMContentLoaded', () => {
       const statusIndicator = document.getElementById('live-status');
       if (statusIndicator) {
         statusIndicator.addEventListener('click', manualRefresh);
+      }
+
+      // Initialize live data toggle state
+      const liveDataToggle = document.getElementById('live-data-toggle');
+      if (liveDataToggle) {
+        const enabled = localStorage.getItem('btc-live-data-enabled') !== 'false';
+        liveDataToggle.checked = enabled;
+
+        const statusSpan = document.getElementById('live-data-status');
+        if (statusSpan) {
+          statusSpan.textContent = enabled ? 'Enabled' : 'Disabled';
+          statusSpan.style.color = enabled ? 'var(--accent-green)' : 'var(--text-muted)';
+        }
       }
     });
 
@@ -3389,17 +3550,27 @@
       updateFilterColumnSelect();
     }
     
+    // Track previous hour type (day vs non-day) to only update dropdown when switching categories
+    let previousHourType = 'day';
+
     function updateFilterColumnSelect() {
       const hourVal = document.getElementById('filter-hour').value;
-      const colSel = document.getElementById('filter-column');
-      const mobileColSel = document.getElementById('mobile-filter-column');
+      const currentHourType = hourVal === 'day' ? 'day' : 'hour';
 
-      const options = hourVal === 'day'
-        ? DAY_TOTAL_COLS.map(c => `<option value="${c.id}">${c.label}</option>`).join('')
-        : ALL_COLUMNS.map(c => `<option value="${c.id}">${c.label}</option>`).join('');
+      // Only update dropdown if switching between day and hour categories
+      if (currentHourType !== previousHourType) {
+        const colSel = document.getElementById('filter-column');
+        const mobileColSel = document.getElementById('mobile-filter-column');
 
-      if (colSel) colSel.innerHTML = options;
-      if (mobileColSel) mobileColSel.innerHTML = options;
+        const options = hourVal === 'day'
+          ? DAY_TOTAL_COLS.map(c => `<option value="${c.id}">${c.label}</option>`).join('')
+          : ALL_COLUMNS.map(c => `<option value="${c.id}">${c.label}</option>`).join('');
+
+        if (colSel) colSel.innerHTML = options;
+        if (mobileColSel) mobileColSel.innerHTML = options;
+
+        previousHourType = currentHourType;
+      }
     }
 
     document.getElementById('filter-hour')?.addEventListener('change', updateFilterColumnSelect);
@@ -3447,6 +3618,38 @@
       renderTable();
     }
     
+    function editFilter(idx) {
+      const filter = columnFilters[idx];
+      if (!filter) return;
+
+      // Populate the filter inputs
+      document.getElementById('filter-hour').value = filter.hour;
+      document.getElementById('filter-column').value = filter.col;
+      document.getElementById('filter-op').value = filter.op;
+      const filterValue = document.getElementById('filter-value');
+      filterValue.value = filter.val;
+
+      // Update column select in case we're switching between day/hour
+      const hourVal = filter.hour;
+      const currentHourType = hourVal === 'day' ? 'day' : 'hour';
+      if (currentHourType !== previousHourType) {
+        const colSel = document.getElementById('filter-column');
+        const options = hourVal === 'day'
+          ? DAY_TOTAL_COLS.map(c => `<option value="${c.id}">${c.label}</option>`).join('')
+          : ALL_COLUMNS.map(c => `<option value="${c.id}">${c.label}</option>`).join('');
+        if (colSel) colSel.innerHTML = options;
+        previousHourType = currentHourType;
+      }
+      document.getElementById('filter-column').value = filter.col;
+
+      // Focus and select the value input
+      filterValue.focus();
+      filterValue.select();
+
+      // Remove the old filter
+      removeFilter(idx);
+    }
+
     function updateFilterUI() {
       const container = document.getElementById('active-filters');
       container.innerHTML = columnFilters.map((f, i) => {
@@ -3465,7 +3668,9 @@
             <option value="AND" ${logic === 'AND' ? 'selected' : ''}>AND</option>
             <option value="OR" ${logic === 'OR' ? 'selected' : ''}>OR</option>
           </select>
-          ${hourLabel} ${colDef?.label || f.col} ${f.op} ${f.val}
+          <span onclick="editFilter(${i})" style="cursor:pointer;" title="Click to edit">
+            ${hourLabel} ${colDef?.label || f.col} ${f.op} <u>${f.val}</u>
+          </span>
           <span class="remove-filter" onclick="removeFilter(${i})">×</span>
         </div>`;
       }).join('');
