@@ -85,51 +85,47 @@
     /* make sure popup flips above if near top edge */
     .info-popup.top { bottom: auto; top: calc(100% + 8px); transform: translateX(-50%); }
 
-    /* Info Button styles - Redesigned for mobile */
+    /* Info Button styles - Redesigned: small, modern, top-right positioned */
     .info-btn {
-      display: inline-flex;
+      position: absolute;
+      top: 2px;
+      right: 2px;
+      width: 16px;
+      height: 16px;
+      padding: 12px;
+      margin: -12px;
+      font-size: 10px;
+      opacity: 0.5;
+      cursor: pointer;
+      border-radius: 50%;
+      background: rgba(100, 149, 237, 0.1);
+      color: #6495ed;
+      display: flex;
       align-items: center;
       justify-content: center;
-      width: 18px;
-      height: 18px;
-      min-width: 18px;
-      min-height: 18px;
-      font-size: 11px;
-      border-radius: 50%;
-      background: rgba(167,139,250,0.15);
-      color: var(--accent-purple);
-      cursor: pointer;
-      margin-left: 4px;
-      flex-shrink: 0;
-      border: 1px solid rgba(167,139,250,0.25);
-      transition: all 0.2s;
-      padding: 0;
+      transition: all 0.2s ease;
+      border: none;
       line-height: 1;
-      opacity: 0.7;
+      flex-shrink: 0;
     }
     .info-btn:hover {
-      background: rgba(167,139,250,0.25);
-      transform: scale(1.1);
-      opacity: 1;
+      opacity: 0.8;
+      background: rgba(100, 149, 237, 0.2);
     }
-    /* Mobile: smaller visual but larger touch target */
+    .info-btn:active {
+      opacity: 1;
+      transform: scale(0.95);
+    }
+    /* Mobile: even smaller visual size */
     @media (max-width: 768px) {
       .info-btn {
-        width: 20px;
-        height: 20px;
-        min-width: 20px;
-        min-height: 20px;
-        font-size: 11px;
-        opacity: 0.6;
-        position: relative;
-        /* Create larger invisible touch target */
-        padding: 12px;
-        margin: -12px;
-        margin-left: 4px;
-      }
-      .info-btn:active {
-        opacity: 1;
-        transform: scale(1.15);
+        width: 14px;
+        height: 14px;
+        font-size: 9px;
+        padding: 13px;
+        margin: -13px;
+        top: 2px;
+        right: 2px;
       }
     }
 
@@ -538,7 +534,7 @@
     .day-table .cum-header { background: #1a2420 !important; color: var(--accent-green); }
     .day-table .section-header { background: #1f1c18 !important; color: var(--accent-btc); font-weight: 600; }
     
-    .min-cell { min-width: 70px; min-height: 56px; padding: 0 !important; border: 1px solid var(--border-medium) !important; }
+    .min-cell { min-width: 70px; min-height: 56px; padding: 0 !important; border: 1px solid var(--border-medium) !important; position: relative; }
     .min-grid { display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr 1fr 1fr; min-height: 56px; }
     .min-grid-top { display: flex; justify-content: center; align-items: center; padding: 1px; font-size: 9px; border-bottom: 1px solid var(--border-medium); }
     .min-grid-top.left { border-right: 1px solid var(--border-medium); }
@@ -549,7 +545,28 @@
     .min-grid-row4.rsi-ob-border { border: 2px solid var(--accent-purple) !important; }
     .min-grid-row4.rsi-os-border { border: 2px solid var(--accent-orange) !important; }
     .min-lvl { font-size: 8px; color: var(--text-muted); margin-left: 2px; }
-    
+
+    /* After High/Low Grid */
+    .after-metrics-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      grid-column: 1/3;
+      gap: 1px;
+      font-size: 7px;
+      padding: 1px;
+    }
+    .after-high, .after-low {
+      padding: 1px 2px;
+      text-align: center;
+      border-radius: 2px;
+      color: var(--text-muted);
+    }
+    @media (max-width: 768px) {
+      .after-metrics-grid {
+        font-size: 6px;
+      }
+    }
+
     /* Calendar Styles */
     .calendar-toolbar { display: flex; gap: 12px; padding: 10px 16px; background: var(--bg-secondary); border-bottom: 1px solid var(--border-subtle); align-items: center; flex-wrap: wrap; flex-shrink: 0; }
     .calendar-toolbar label { font-size: 0.65rem; color: var(--text-muted); }
@@ -1161,9 +1178,9 @@
         </div>
         
         <div class="tb-spacer"></div>
-        <button class="tb-btn preset" onclick="resetAll()">Reset</button>
-        <button class="tb-btn preset" onclick="setRTH()">US RTH</button>
-        <button class="tb-btn new-file" onclick="loadNewFile()">📁 New</button>
+        <button class="tb-btn preset mobile-hide" onclick="resetAll()">Reset</button>
+        <button class="tb-btn preset mobile-hide" onclick="setRTH()">US RTH</button>
+        <button class="tb-btn new-file mobile-hide" onclick="loadNewFile()">📁 New</button>
       </div>
 
       <!-- Column Filter Panel -->
@@ -3321,7 +3338,7 @@
       const disp = h === 0 ? 12 : h > 12 ? h - 12 : h;
       ['hour-from', 'hour-to', 'mobile-hour-from', 'mobile-hour-to', 'day-hl-from', 'day-hl-to', 'oc-close-hour', 'mobile-oc-close-hour', 'calendar-close-hour'].forEach(id => {
         const el = document.getElementById(id);
-        if (el) el.innerHTML += `<option value="${h}" ${(id==='day-hl-from'&&h===9)||(id==='day-hl-to'&&h===15)||(id==='oc-close-hour'&&h===16)||(id==='mobile-oc-close-hour'&&h===16)||(id==='calendar-close-hour'&&h===16)?'selected':''}>${disp}${ampm}</option>`;
+        if (el) el.innerHTML += `<option value="${h}" ${(id==='hour-from'&&h===0)||(id==='hour-to'&&h===23)||(id==='mobile-hour-from'&&h===0)||(id==='mobile-hour-to'&&h===23)||(id==='day-hl-from'&&h===9)||(id==='day-hl-to'&&h===15)||(id==='oc-close-hour'&&h===16)||(id==='mobile-oc-close-hour'&&h===16)||(id==='calendar-close-hour'&&h===16)?'selected':''}>${disp}${ampm}</option>`;
       });
     });
     document.getElementById('hour-from').value = 0;
@@ -4582,7 +4599,25 @@ function populateDatePicker() {
         oc: { min: Math.min(...minStats.oc), max: Math.max(...minStats.oc) },
         hrOC: minStats.hrOC.length ? { min: Math.min(...minStats.hrOC), max: Math.max(...minStats.hrOC) } : { min: -100, max: 100 },
       };
-      
+
+      // Calculate after high/low stats for gradients (excluding :55 bars)
+      const afterHLStats = { hh: [], hl: [] };
+      if (showAfterHL) {
+        dayHours.forEach(h => {
+          MINS.forEach(m => {
+            if (m === '55') return; // Exclude :55 bars
+            const bar = hourBars[h]?.[m];
+            if (!bar) return;
+            if (bar.hhAfterClose != null) afterHLStats.hh.push(bar.hhAfterClose);
+            if (bar.hlAfterClose != null) afterHLStats.hl.push(bar.hlAfterClose);
+          });
+        });
+      }
+      const afterHLRange = afterHLStats.hh.length && afterHLStats.hl.length ? {
+        min: Math.min(...afterHLStats.hh, ...afterHLStats.hl),
+        max: Math.max(...afterHLStats.hh, ...afterHLStats.hl)
+      } : { min: 0, max: 100 };
+
       let bd = '';
       dayHours.forEach(h => {
         const hd = day.hrs[h];
@@ -4678,7 +4713,18 @@ function populateDatePicker() {
             const barMaxLR = lr;
             const tooltipText = `O: ${Math.round(bar.open).toLocaleString()}\\nH: ${Math.round(bar.high).toLocaleString()}\\nL: ${Math.round(bar.low).toLocaleString()}\\nC: ${Math.round(bar.close).toLocaleString()}\\nRng: ${barRng}\\nUR: ${barMaxUR} / LR: ${barMaxLR}`;
 
-            const afterHLRow = showAfterHL ? `<div class="min-grid-after" style="grid-column:1/3;font-size:8px;color:var(--text-muted);padding:1px 2px;">H+${bar.hhAfterClose ?? 0} L${bar.hlAfterClose >= 0 ? '+' : ''}${bar.hlAfterClose ?? 0}</div>` : '';
+            // After High/Low with 2-column grid and gradient coloring
+            let afterHLRow = '';
+            if (showAfterHL) {
+              if (m === '55') {
+                // Show blank for :55 bars (no bar after them)
+                afterHLRow = '<div class="after-metrics-grid"><div class="after-high">—</div><div class="after-low">—</div></div>';
+              } else {
+                const hhGradient = bar.hhAfterClose != null ? getOrangeGradient(bar.hhAfterClose, afterHLRange.min, afterHLRange.max) : 'transparent';
+                const hlGradient = bar.hlAfterClose != null ? getOrangeGradient(bar.hlAfterClose, afterHLRange.min, afterHLRange.max) : 'transparent';
+                afterHLRow = `<div class="after-metrics-grid"><div class="after-high" style="background:${hhGradient}">+${bar.hhAfterClose ?? 0}</div><div class="after-low" style="background:${hlGradient}">${bar.hlAfterClose >= 0 ? '+' : ''}${bar.hlAfterClose ?? 0}</div></div>`;
+              }
+            }
             bd += `<td class="min-cell${borderCls}" style="min-height:56px;${rVolHighlight}">
               <div class="min-grid" style="grid-template-rows:1fr 1fr 1fr 1fr${showAfterHL ? ' auto' : ''};">
                 <div class="min-grid-top left" style="background:${getOrangeGradient(ur, mStats.urlr.min, mStats.urlr.max)};${urBorder}">${ur}<span class="min-lvl">(${lvlUp})</span></div>
@@ -4948,7 +4994,26 @@ function populateDatePicker() {
         urlr: minStats.ur.length ? { min: Math.min(...minStats.ur, ...minStats.lr), max: Math.max(...minStats.ur, ...minStats.lr) } : { min: 0, max: 100 },
         oc: minStats.oc.length ? { min: Math.min(...minStats.oc), max: Math.max(...minStats.oc) } : { min: 0, max: 100 },
       };
-      
+
+      // Calculate after high/low stats for gradients (excluding :55 bars) - Hour View
+      const afterHLStats = { hh: [], hl: [] };
+      if (showAfterHL) {
+        filteredDays.forEach(day => {
+          const bars = barsByET[day.date];
+          if (!bars) return;
+          bars.filter(b => b.etHour === hour).forEach(bar => {
+            const m = String(bar.etMin).padStart(2, '0');
+            if (m === '55') return; // Exclude :55 bars
+            if (bar.hhAfterClose != null) afterHLStats.hh.push(bar.hhAfterClose);
+            if (bar.hlAfterClose != null) afterHLStats.hl.push(bar.hlAfterClose);
+          });
+        });
+      }
+      const afterHLRange = afterHLStats.hh.length && afterHLStats.hl.length ? {
+        min: Math.min(...afterHLStats.hh, ...afterHLStats.hl),
+        max: Math.max(...afterHLStats.hh, ...afterHLStats.hl)
+      } : { min: 0, max: 100 };
+
       // Stats summary
       const avgRng = hourStats.rng.length ? Math.round(hourStats.rng.reduce((a,b) => a+b, 0) / hourStats.rng.length) : 0;
       const avgOC = hourStats.oc.length ? Math.round(hourStats.oc.reduce((a,b) => a+b, 0) / hourStats.oc.length) : 0;
@@ -5101,7 +5166,18 @@ function populateDatePicker() {
             const barRng = Math.round(bar.high - bar.low);
             const tooltipText = `O: ${Math.round(bar.open).toLocaleString()}\\nH: ${Math.round(bar.high).toLocaleString()}\\nL: ${Math.round(bar.low).toLocaleString()}\\nC: ${Math.round(bar.close).toLocaleString()}\\nRng: ${barRng}\\nUR: ${ur} / LR: ${lr}`;
 
-            const afterHLRow = showAfterHL ? `<div class="min-grid-after" style="grid-column:1/3;font-size:8px;color:var(--text-muted);padding:1px 2px;">H+${bar.hhAfterClose ?? 0} L${bar.hlAfterClose >= 0 ? '+' : ''}${bar.hlAfterClose ?? 0}</div>` : '';
+            // After High/Low with 2-column grid and gradient coloring - Hour View
+            let afterHLRow = '';
+            if (showAfterHL) {
+              if (m === '55') {
+                // Show blank for :55 bars (no bar after them)
+                afterHLRow = '<div class="after-metrics-grid"><div class="after-high">—</div><div class="after-low">—</div></div>';
+              } else {
+                const hhGradient = bar.hhAfterClose != null ? getOrangeGradient(bar.hhAfterClose, afterHLRange.min, afterHLRange.max) : 'transparent';
+                const hlGradient = bar.hlAfterClose != null ? getOrangeGradient(bar.hlAfterClose, afterHLRange.min, afterHLRange.max) : 'transparent';
+                afterHLRow = `<div class="after-metrics-grid"><div class="after-high" style="background:${hhGradient}">+${bar.hhAfterClose ?? 0}</div><div class="after-low" style="background:${hlGradient}">${bar.hlAfterClose >= 0 ? '+' : ''}${bar.hlAfterClose ?? 0}</div></div>`;
+              }
+            }
             bd += `<td class="min-cell${borderCls}" style="min-height:56px;${rVolHighlight}">
               <div class="min-grid" style="grid-template-rows:1fr 1fr 1fr 1fr${showAfterHL ? ' auto' : ''};">
                 <div class="min-grid-top left" style="background:${getOrangeGradient(ur, mStats.urlr.min, mStats.urlr.max)};${urBorder}">${ur}<span class="min-lvl">(${lvlUp})</span></div>
@@ -7003,8 +7079,7 @@ window.addEventListener('scroll',()=>{
 
 <!-- === HARD FIX: WORKING INFO BUTTON + UI CONTROLS === -->
 <style>
-.info-btn{cursor:pointer;border-radius:50%;border:1px solid #888;width:18px;height:18px;display:inline-flex;align-items:center;justify-content:center;font-size:12px;color:#ccc}
-.info-btn:hover{background:#222}
+/* Info button styles moved to main CSS section above - keep this section for other styles */
 #interval-info-panel{
  position:fixed;bottom:0;left:0;right:0;max-height:60%;
  background:#0f1116;border-top:1px solid #333;
