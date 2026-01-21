@@ -1119,7 +1119,7 @@
 }
 </style>
 <!-- Live Data Fetcher -->
-<script src="live-data-fetcher.js"></script>
+<script src="./live-data-fetcher.js"></script>
 </head>
 <body>
 
@@ -2529,6 +2529,13 @@
       // Check if we're on GitHub Pages or a web server (not file://)
       if (window.location.protocol === 'file:') {
         console.log('Local file, skipping auto-load');
+        return false;
+      }
+
+      // Check if LiveDataFetcher is loaded
+      if (typeof LiveDataFetcher === 'undefined') {
+        console.error('LiveDataFetcher not loaded');
+        showError('Failed to load live data system. Please refresh the page.');
         return false;
       }
 
