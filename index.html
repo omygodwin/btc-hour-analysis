@@ -2067,6 +2067,13 @@
       { id: 'sigMin', label: 'Sig↓', desc: 'Min Signal', default: false, gradient: 'purple', group: 'sig' },
       { id: 'sigAvg', label: 'Sigμ', desc: 'Avg Signal', default: false, gradient: 'purple', group: 'sig' },
       { id: 'obos', label: 'OB/OS', desc: 'OB/OS Hit', default: false, gradient: null },
+
+      // ===== 15-MINUTE RANGE METRICS =====
+      { id: 'm15UpperRng', label: '15MUR', desc: '15min Upper Range (Open-High)', default: false, gradient: 'orange', group: 'm15rng' },
+      { id: 'm15LowerRng', label: '15MLR', desc: '15min Lower Range (Open-Low)', default: false, gradient: 'orange', group: 'm15rng' },
+      { id: 'm15FullRng', label: '15MFR', desc: '15min Full Range (High-Low)', default: false, gradient: 'orange', group: 'm15rng' },
+      { id: 'm15MaxRng', label: '15MMx', desc: '15min Max Range (Max of Upper/Lower)', default: false, gradient: 'orange', group: 'm15rng' },
+
       // Weekly cumulative columns
       { id: 'wCdrU', label: 'WCU', desc: 'Weekly Cum Up', default: false, gradient: 'orange-col', group: 'wcdr' },
       { id: 'wCdrD', label: 'WCD', desc: 'Weekly Cum Dn', default: false, gradient: 'orange-col', group: 'wcdr' },
@@ -3466,6 +3473,54 @@
             if (bar45 && bar55) oc4555 = Math.round(bar55.close - bar45.open);
           }
 
+          // Calculate 15-minute range metrics for each quarter of the hour
+          let m15UpperRng = null, m15LowerRng = null, m15FullRng = null, m15MaxRng = null;
+          if (hourBars.length > 0) {
+            // Define 15-minute periods: 0-10, 15-25, 30-40, 45-55
+            const periods = [
+              { start: 0, end: 10, bars: [0, 5, 10] },
+              { start: 15, end: 25, bars: [15, 20, 25] },
+              { start: 30, end: 40, bars: [30, 35, 40] },
+              { start: 45, end: 55, bars: [45, 50, 55] }
+            ];
+
+            let maxUpper = -Infinity, maxLower = -Infinity, maxFull = -Infinity, maxOfBoth = -Infinity;
+
+            periods.forEach(period => {
+              const periodBars = hourBars.filter(b => period.bars.includes(b.etMin));
+              if (periodBars.length > 0) {
+                // First bar's open
+                const firstBar = periodBars.find(b => b.etMin === period.start);
+                if (firstBar) {
+                  // Get high and low within this period
+                  const periodHigh = Math.max(...periodBars.map(b => b.high));
+                  const periodLow = Math.min(...periodBars.map(b => b.low));
+
+                  // Upper range: high - open (how much it went up from open)
+                  const upper = Math.round(periodHigh - firstBar.open);
+                  // Lower range: open - low (how much it went down from open)
+                  const lower = Math.round(firstBar.open - periodLow);
+                  // Full range: high - low
+                  const full = Math.round(periodHigh - periodLow);
+                  // Max of upper and lower
+                  const maxRange = Math.max(upper, lower);
+
+                  // Track the maximum values across all periods
+                  maxUpper = Math.max(maxUpper, upper);
+                  maxLower = Math.max(maxLower, lower);
+                  maxFull = Math.max(maxFull, full);
+                  maxOfBoth = Math.max(maxOfBoth, maxRange);
+                }
+              }
+            });
+
+            // Set the metrics to the maximum values found across all 15-min periods
+            if (maxUpper > -Infinity) m15UpperRng = maxUpper;
+            if (maxLower > -Infinity) m15LowerRng = maxLower;
+            if (maxFull > -Infinity) m15FullRng = maxFull;
+            if (maxOfBoth > -Infinity) m15MaxRng = maxOfBoth;
+          }
+
           // Calculate after bar metrics
           let lastAfterHiBarMin = null, lastAfterLoBarMin = null;
           let bar40AfterHi = null, bar40AfterLo = null;
@@ -3582,6 +3637,10 @@
             oc1525,
             oc3040,
             oc4555,
+            m15UpperRng,
+            m15LowerRng,
+            m15FullRng,
+            m15MaxRng,
             lastAfterHiBarMin,
             lastAfterLoBarMin,
             maxLastAfterBarMin: (lastAfterHiBarMin != null && lastAfterLoBarMin != null) ? Math.max(lastAfterHiBarMin, lastAfterLoBarMin) : (lastAfterHiBarMin ?? lastAfterLoBarMin),
@@ -4565,7 +4624,7 @@ function populateDatePicker() {
     }
     
     function calcRowStats(day, hours) {
-      const s = { rng: [], urlr: [], mxr: [], mxl: [], rank: [], cl: [], oc: [], cdr: [], cdrRG: [], mxcd: [], rsi: [], sig: [], vol: [], b40: [], bars: [], interval: [], afterbar: [], maxrngbar: [], strength: [] };
+      const s = { rng: [], urlr: [], mxr: [], mxl: [], rank: [], cl: [], oc: [], cdr: [], cdrRG: [], mxcd: [], rsi: [], sig: [], vol: [], b40: [], bars: [], interval: [], afterbar: [], maxrngbar: [], strength: [], m15rng: [] };
       getSortedHourKeys(day).forEach(h => {
         const m = day.hrs[h].m;
         if (!m) return;
@@ -4619,6 +4678,12 @@ function populateDatePicker() {
         if (m.oc3040 != null) s.interval.push(m.oc3040);
         if (m.oc4555 != null) s.interval.push(m.oc4555);
 
+        // 15-minute range metrics
+        if (m.m15UpperRng != null) s.m15rng.push(m.m15UpperRng);
+        if (m.m15LowerRng != null) s.m15rng.push(m.m15LowerRng);
+        if (m.m15FullRng != null) s.m15rng.push(m.m15FullRng);
+        if (m.m15MaxRng != null) s.m15rng.push(m.m15MaxRng);
+
         // Max range bar metrics
         if (m.maxRngBarVal != null) s.maxrngbar.push(m.maxRngBarVal);
 
@@ -4647,7 +4712,7 @@ function populateDatePicker() {
           cdrRG: [], cdr: [], mxcd: [], rsi: [], sig: [], vol: [],
           wcdr: [], wcdrRG: [], wmxcd: [],
           p5cdr: [], p5cdrRG: [], p5mxcd: [],
-          b40: [], bars: [], interval: [], afterbar: [], maxrngbar: [], strength: []
+          b40: [], bars: [], interval: [], afterbar: [], maxrngbar: [], strength: [], m15rng: []
         };
 
         data.forEach(d => {
@@ -4714,6 +4779,12 @@ function populateDatePicker() {
           if (m.oc1525 != null) s[h].interval.push(m.oc1525);
           if (m.oc3040 != null) s[h].interval.push(m.oc3040);
           if (m.oc4555 != null) s[h].interval.push(m.oc4555);
+
+          // 15-minute range metrics
+          if (m.m15UpperRng != null) s[h].m15rng.push(m.m15UpperRng);
+          if (m.m15LowerRng != null) s[h].m15rng.push(m.m15LowerRng);
+          if (m.m15FullRng != null) s[h].m15rng.push(m.m15FullRng);
+          if (m.m15MaxRng != null) s[h].m15rng.push(m.m15MaxRng);
 
           // Max range bar metrics
           if (m.maxRngBarVal != null) s[h].maxrngbar.push(m.maxRngBarVal);
