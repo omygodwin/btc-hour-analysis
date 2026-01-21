@@ -361,10 +361,13 @@
     #dt-col-selector,
     #col-selector,
     #rsi-settings,
+    #query-builder-panel,
+    #query-columns-panel,
     .filters,
     .col-selector,
     .dt-col-selector,
     .col-filter-panel,
+    .query-builder-panel,
     .rsi-settings {
       display: none;
     }
@@ -419,15 +422,39 @@
     .col-filter-panel { display: none; padding: 10px 16px; background: rgba(74,222,128,0.05); border-bottom: 1px solid rgba(74,222,128,0.2); flex-shrink: 0; }
     .col-filter-panel.visible { display: block; }
     .col-filter-panel h3 { font-size: 0.55rem; text-transform: uppercase; color: var(--accent-green); margin-bottom: 8px; }
-    
+
     .active-filters { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 8px; }
     .filter-tag { display: flex; align-items: center; gap: 4px; padding: 3px 8px; background: rgba(74,222,128,0.15); border: 1px solid rgba(74,222,128,0.3); border-radius: 3px; font-size: 0.55rem; color: var(--accent-green); }
     .filter-tag .remove-filter { cursor: pointer; color: var(--accent-red); font-weight: bold; }
-    
+
     .add-filter-row { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
     .add-filter-row select, .add-filter-row input { padding: 3px 6px; background: rgba(255,255,255,0.05); border: 1px solid var(--border-medium); border-radius: 3px; color: var(--text-primary); font-size: 0.6rem; font-family: 'JetBrains Mono', monospace; }
     .add-filter-row input[type="number"] { width: 80px; }
     .add-filter-row button { padding: 3px 10px; background: rgba(74,222,128,0.2); border: 1px solid rgba(74,222,128,0.4); border-radius: 3px; color: var(--accent-green); font-size: 0.6rem; cursor: pointer; }
+
+    /* Query Builder Panel */
+    .query-builder-panel { display: none; padding: 10px 16px; background: rgba(100,149,237,0.05); border-bottom: 1px solid rgba(100,149,237,0.2); flex-shrink: 0; }
+    .query-builder-panel.visible { display: block; }
+    .query-builder-panel h3 { font-size: 0.55rem; text-transform: uppercase; color: var(--accent-blue); margin-bottom: 8px; }
+
+    #query-groups-container { display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px; }
+
+    .query-group { padding: 8px; background: rgba(255,255,255,0.02); border: 1px solid rgba(100,149,237,0.15); border-radius: 4px; }
+    .query-group-header { display: flex; align-items: center; gap: 6px; margin-bottom: 6px; padding-bottom: 4px; border-bottom: 1px solid rgba(100,149,237,0.1); }
+    .query-group-title { font-size: 0.6rem; color: var(--accent-blue); font-weight: 600; }
+    .query-group-logic { padding: 2px 6px; background: rgba(100,149,237,0.15); border: 1px solid rgba(100,149,237,0.3); border-radius: 2px; color: var(--accent-blue); font-size: 0.55rem; }
+    .query-group-remove { margin-left: auto; padding: 2px 6px; background: rgba(248,113,113,0.1); border: 1px solid rgba(248,113,113,0.25); border-radius: 2px; color: var(--accent-red); font-size: 0.5rem; cursor: pointer; }
+
+    .query-filters-list { display: flex; flex-direction: column; gap: 4px; }
+
+    .query-filter-item { display: flex; align-items: center; gap: 6px; padding: 4px 6px; background: rgba(255,255,255,0.03); border: 1px solid rgba(100,149,237,0.1); border-radius: 3px; }
+    .query-filter-logic { padding: 2px 4px; background: rgba(74,222,128,0.15); border: 1px solid rgba(74,222,128,0.3); border-radius: 2px; color: var(--accent-green); font-size: 0.5rem; min-width: 40px; }
+    .query-filter-column { flex: 1; padding: 2px 4px; background: rgba(255,255,255,0.05); border: 1px solid var(--border-medium); border-radius: 2px; color: var(--text-primary); font-size: 0.55rem; }
+    .query-filter-op { padding: 2px 4px; background: rgba(255,255,255,0.05); border: 1px solid var(--border-medium); border-radius: 2px; color: var(--text-primary); font-size: 0.55rem; min-width: 45px; }
+    .query-filter-value { width: 80px; padding: 2px 4px; background: rgba(255,255,255,0.05); border: 1px solid var(--border-medium); border-radius: 2px; color: var(--text-primary); font-size: 0.55rem; }
+    .query-filter-remove { padding: 2px 6px; background: rgba(248,113,113,0.1); border: 1px solid rgba(248,113,113,0.25); border-radius: 2px; color: var(--accent-red); font-size: 0.5rem; cursor: pointer; }
+
+    .query-builder-controls { display: flex; align-items: center; gap: 6px; padding-top: 8px; border-top: 1px solid rgba(100,149,237,0.15); }
     
     .col-selector { display: none; padding: 10px 16px; background: var(--bg-tertiary); border-bottom: 1px solid var(--border-subtle); flex-shrink: 0; }
     .col-selector.visible { display: block; }
@@ -1232,6 +1259,7 @@
       <button class="tab-btn" onclick="switchTab('dayview')">📅 Day View</button>
       <button class="tab-btn" onclick="switchTab('hourview')">🕐 Hour View</button>
       <button class="tab-btn" onclick="switchTab('calendar')">🗓 Calendar</button>
+      <button class="tab-btn" onclick="switchTab('query')">🔎 Query</button>
     </nav>
 
     <!-- Live Status Indicator - Fixed position, visible across all tabs -->
@@ -1722,6 +1750,94 @@
       </div>
       <div style="padding: 12px; overflow-y: auto; flex: 1;">
         <div id="dow-content"></div>
+      </div>
+    </div>
+
+    <!-- Query Tab -->
+    <div id="tab-query" class="tab-content">
+      <header class="header" style="background:linear-gradient(180deg, rgba(100,149,237,0.15) 0%, var(--bg-primary) 100%);border-bottom-color:rgba(100,149,237,0.3);">
+        <div>
+          <h1 style="color:#6495ed;"><span class="btc-sym">₿</span> Hour Query Builder</h1>
+          <span class="sub">Build complex queries to find hours matching specific criteria</span>
+        </div>
+        <div class="header-stats">
+          <div class="stat"><span class="stat-val" id="query-stat-matches">0</span><span class="stat-lbl">Matches</span></div>
+          <div class="stat"><span class="stat-val" id="query-stat-days">0</span><span class="stat-lbl">Days</span></div>
+        </div>
+      </header>
+
+      <div class="toolbar">
+        <button class="tb-btn" id="btn-query-builder" onclick="toggleQueryBuilder()">🔍 Query Builder</button>
+        <button class="tb-btn" id="btn-query-columns" onclick="toggleQueryColumns()">▤ Columns</button>
+        <button class="tb-btn active" id="btn-query-detailed" onclick="toggleQueryDetailed()">📊 Detailed View</button>
+        <div class="tb-group">
+          <label>Level:</label>
+          <input type="number" id="query-level-size" value="250" min="1" onchange="renderQueryResults()">
+        </div>
+        <div class="tb-spacer"></div>
+        <button class="tb-btn preset" style="background:rgba(100,149,237,0.15);border-color:rgba(100,149,237,0.4);color:#6495ed" onclick="executeQuery()">▶ Run Query</button>
+        <button class="tb-btn preset" onclick="clearQuery()">Clear</button>
+      </div>
+
+      <!-- Query Builder Panel -->
+      <div id="query-builder-panel" class="query-builder-panel">
+        <h3>Query Builder</h3>
+        <div id="query-groups-container"></div>
+        <div class="query-builder-controls">
+          <button class="tb-btn" onclick="addQueryFilter()">+ Add Filter</button>
+          <button class="tb-btn" onclick="addQueryGroup()">+ Add Group</button>
+          <div style="margin-left: auto; display: flex; gap: 8px; align-items: center;">
+            <label style="font-size: 0.7rem; color: var(--text-muted);">Default Logic:</label>
+            <select id="default-logic" style="padding: 4px; background: var(--bg-tertiary); border: 1px solid var(--border-medium); border-radius: 4px; color: var(--text-primary); font-size: 0.65rem;">
+              <option value="AND">AND</option>
+              <option value="OR">OR</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- Query Columns Panel -->
+      <div id="query-columns-panel" class="col-selector" style="display:none;">
+        <h3>Result Table Columns</h3>
+        <div class="col-grid" id="query-col-grid"></div>
+        <div class="col-presets">
+          <button onclick="setQueryDefaultCols()">Default</button>
+          <button onclick="setQueryAllCols()">All</button>
+          <button onclick="setQueryRangeCols()">Range</button>
+          <button onclick="setQueryOHLCVCols()">OHLCV</button>
+        </div>
+      </div>
+
+      <!-- Results Section -->
+      <div id="query-results-container" style="display:none;">
+        <!-- Table View -->
+        <div id="query-table-view" style="margin-bottom: 20px;">
+          <h3 style="margin: 8px 12px; color: var(--accent-blue); font-size: 0.85rem;">📋 Matching Hours</h3>
+          <div class="table-container">
+            <table class="data-table" id="query-results-table">
+              <thead id="query-results-head"></thead>
+              <tbody id="query-results-body"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Detailed View -->
+        <div id="query-detailed-view" style="display:none;">
+          <h3 style="margin: 8px 12px; color: var(--accent-blue); font-size: 0.85rem;">📊 Detailed 5-Minute Breakdown</h3>
+          <div class="day-table-container">
+            <table class="day-table" id="query-detailed-table">
+              <thead id="query-detailed-head"></thead>
+              <tbody id="query-detailed-body"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Empty State -->
+      <div id="query-empty-state" style="display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 60px 20px; color: var(--text-muted);">
+        <div style="font-size: 4rem; margin-bottom: 16px;">🔍</div>
+        <div style="font-size: 1.1rem; margin-bottom: 8px; color: var(--text-primary);">No Query Results</div>
+        <div style="font-size: 0.85rem;">Build a query using the Query Builder and click "Run Query" to find matching hours</div>
       </div>
     </div>
 
@@ -2948,6 +3064,7 @@
       if (tab === 'calendar' && allETDates.length > 0) renderCalendar();
       if (tab === 'pm5session' && allETDates.length > 0) render5pmSession();
       if (tab === 'dowanalysis' && allETDates.length > 0) renderDOWAnalysis();
+      if (tab === 'query' && allETDates.length > 0) initQueryTab();
     }
     
     function processCSVText(csvText) {
@@ -7108,6 +7225,531 @@ function populateDatePicker() {
 
       document.getElementById('dow-content').innerHTML = html;
     }
+
+    // ==================== QUERY TAB FUNCTIONS ====================
+
+    // Query state
+    let queryGroups = [];
+    let queryGroupIdCounter = 0;
+    let queryFilterIdCounter = 0;
+    let queryResults = [];
+    let querySelectedCols = new Set(['rng', 'ur', 'lr', 'oc', 'cdr']);
+    let queryShowDetailed = true;
+
+    function initQueryTab() {
+      if (queryGroups.length === 0) {
+        // Initialize with one empty group
+        addQueryGroup();
+      }
+      populateQueryColumnSelector();
+      renderQueryBuilder();
+    }
+
+    function toggleQueryBuilder() {
+      document.getElementById('query-builder-panel').classList.toggle('visible');
+      document.getElementById('btn-query-builder').classList.toggle('active');
+    }
+
+    function toggleQueryColumns() {
+      document.getElementById('query-columns-panel').classList.toggle('visible');
+      document.getElementById('btn-query-columns').classList.toggle('active');
+    }
+
+    function toggleQueryDetailed() {
+      queryShowDetailed = !queryShowDetailed;
+      document.getElementById('btn-query-detailed').classList.toggle('active', queryShowDetailed);
+      renderQueryResults();
+    }
+
+    function addQueryGroup() {
+      const groupId = queryGroupIdCounter++;
+      const group = {
+        id: groupId,
+        logic: 'AND',
+        filters: []
+      };
+      queryGroups.push(group);
+      renderQueryBuilder();
+    }
+
+    function removeQueryGroup(groupId) {
+      queryGroups = queryGroups.filter(g => g.id !== groupId);
+      renderQueryBuilder();
+    }
+
+    function updateGroupLogic(groupId, logic) {
+      const group = queryGroups.find(g => g.id === groupId);
+      if (group) {
+        group.logic = logic;
+      }
+    }
+
+    function addQueryFilter(groupId = null) {
+      const filterId = queryFilterIdCounter++;
+      const filter = {
+        id: filterId,
+        column: ALL_COLUMNS[0].id,
+        op: '>=',
+        value: 0,
+        logic: document.getElementById('default-logic')?.value || 'AND'
+      };
+
+      if (groupId !== null) {
+        const group = queryGroups.find(g => g.id === groupId);
+        if (group) {
+          group.filters.push(filter);
+        }
+      } else {
+        // Add to first group or create a new group if none exist
+        if (queryGroups.length === 0) {
+          addQueryGroup();
+        }
+        queryGroups[0].filters.push(filter);
+      }
+
+      renderQueryBuilder();
+    }
+
+    function removeQueryFilter(groupId, filterId) {
+      const group = queryGroups.find(g => g.id === groupId);
+      if (group) {
+        group.filters = group.filters.filter(f => f.id !== filterId);
+      }
+      renderQueryBuilder();
+    }
+
+    function updateQueryFilter(groupId, filterId, field, value) {
+      const group = queryGroups.find(g => g.id === groupId);
+      if (group) {
+        const filter = group.filters.find(f => f.id === filterId);
+        if (filter) {
+          filter[field] = value;
+        }
+      }
+    }
+
+    function renderQueryBuilder() {
+      const container = document.getElementById('query-groups-container');
+      if (!container) return;
+
+      if (queryGroups.length === 0) {
+        container.innerHTML = '<div style="padding: 12px; color: var(--text-muted); font-size: 0.65rem;">No query groups. Click "+ Add Group" to start building your query.</div>';
+        return;
+      }
+
+      let html = '';
+      queryGroups.forEach((group, groupIndex) => {
+        html += `<div class="query-group">`;
+        html += `<div class="query-group-header">`;
+        html += `<span class="query-group-title">Group ${groupIndex + 1}</span>`;
+        html += `<select class="query-group-logic" onchange="updateGroupLogic(${group.id}, this.value)">`;
+        html += `<option value="AND" ${group.logic === 'AND' ? 'selected' : ''}>AND</option>`;
+        html += `<option value="OR" ${group.logic === 'OR' ? 'selected' : ''}>OR</option>`;
+        html += `</select>`;
+        html += `<button class="query-group-remove" onclick="removeQueryGroup(${group.id})">× Remove Group</button>`;
+        html += `</div>`;
+
+        html += `<div class="query-filters-list">`;
+        if (group.filters.length === 0) {
+          html += `<div style="padding: 8px; color: var(--text-muted); font-size: 0.6rem;">No filters in this group.</div>`;
+        } else {
+          group.filters.forEach((filter, filterIndex) => {
+            html += `<div class="query-filter-item">`;
+
+            // Logic selector (only show for filters after the first)
+            if (filterIndex > 0) {
+              html += `<select class="query-filter-logic" onchange="updateQueryFilter(${group.id}, ${filter.id}, 'logic', this.value)">`;
+              html += `<option value="AND" ${filter.logic === 'AND' ? 'selected' : ''}>AND</option>`;
+              html += `<option value="OR" ${filter.logic === 'OR' ? 'selected' : ''}>OR</option>`;
+              html += `</select>`;
+            } else {
+              html += `<span class="query-filter-logic" style="opacity: 0.3;">—</span>`;
+            }
+
+            // Column selector
+            html += `<select class="query-filter-column" onchange="updateQueryFilter(${group.id}, ${filter.id}, 'column', this.value)">`;
+            ALL_COLUMNS.forEach(col => {
+              html += `<option value="${col.id}" ${filter.column === col.id ? 'selected' : ''}>${col.label}</option>`;
+            });
+            html += `</select>`;
+
+            // Operator selector
+            html += `<select class="query-filter-op" onchange="updateQueryFilter(${group.id}, ${filter.id}, 'op', this.value)">`;
+            html += `<option value=">=" ${filter.op === '>=' ? 'selected' : ''}>≥</option>`;
+            html += `<option value="<=" ${filter.op === '<=' ? 'selected' : ''}>≤</option>`;
+            html += `<option value=">" ${filter.op === '>' ? 'selected' : ''}>&gt;</option>`;
+            html += `<option value="<" ${filter.op === '<' ? 'selected' : ''}>&lt;</option>`;
+            html += `<option value="==" ${filter.op === '==' ? 'selected' : ''}>＝</option>`;
+            html += `<option value="!=" ${filter.op === '!=' ? 'selected' : ''}>≠</option>`;
+            html += `</select>`;
+
+            // Value input
+            html += `<input type="number" class="query-filter-value" value="${filter.value}" onchange="updateQueryFilter(${group.id}, ${filter.id}, 'value', parseFloat(this.value))">`;
+
+            // Remove button
+            html += `<button class="query-filter-remove" onclick="removeQueryFilter(${group.id}, ${filter.id})">×</button>`;
+
+            html += `</div>`;
+          });
+        }
+        html += `</div>`;
+
+        // Add filter button for this group
+        html += `<div style="margin-top: 6px;">`;
+        html += `<button class="tb-btn" style="font-size: 0.55rem;" onclick="addQueryFilter(${group.id})">+ Add Filter to Group</button>`;
+        html += `</div>`;
+
+        html += `</div>`;
+
+        // Show logic connector between groups
+        if (groupIndex < queryGroups.length - 1) {
+          html += `<div style="text-align: center; padding: 4px; color: var(--text-muted); font-size: 0.6rem; font-weight: 600;">AND (between groups)</div>`;
+        }
+      });
+
+      container.innerHTML = html;
+    }
+
+    function executeQuery() {
+      if (queryGroups.length === 0 || queryGroups.every(g => g.filters.length === 0)) {
+        alert('Please add at least one filter to execute a query.');
+        return;
+      }
+
+      // Build list of all hours across all days
+      const allHours = [];
+      Object.values(etDays).forEach(day => {
+        for (let hour = 0; hour < 24; hour++) {
+          if (day.hrs[hour]?.m) {
+            allHours.push({
+              date: day.date,
+              dateObj: new Date(day.date),
+              dow: day.dow,
+              dayNum: day.dayNum,
+              hour: hour,
+              metrics: day.hrs[hour].m,
+              hourData: day.hrs[hour]
+            });
+          }
+        }
+      });
+
+      // Filter hours based on query
+      queryResults = allHours.filter(hourEntry => {
+        // Each group must pass (groups are combined with AND)
+        return queryGroups.every(group => {
+          if (group.filters.length === 0) return true;
+
+          // Evaluate filters within the group
+          const filterResults = group.filters.map(filter => {
+            const val = hourEntry.metrics[filter.column];
+            if (val == null) return false;
+
+            switch (filter.op) {
+              case '>=': return val >= filter.value;
+              case '<=': return val <= filter.value;
+              case '>': return val > filter.value;
+              case '<': return val < filter.value;
+              case '==': return val === filter.value;
+              case '!=': return val !== filter.value;
+              default: return true;
+            }
+          });
+
+          // Combine filters based on group logic
+          if (group.logic === 'OR') {
+            // At least one filter must pass
+            return filterResults.some((result, i) => {
+              if (i === 0) return result;
+              const filter = group.filters[i];
+              return filter.logic === 'OR' ? result : filterResults.slice(0, i + 1).every(r => r);
+            });
+          } else {
+            // All filters must pass (considering individual filter logic)
+            let accumulated = filterResults[0];
+            for (let i = 1; i < filterResults.length; i++) {
+              const filter = group.filters[i];
+              if (filter.logic === 'OR') {
+                accumulated = accumulated || filterResults[i];
+              } else {
+                accumulated = accumulated && filterResults[i];
+              }
+            }
+            return accumulated;
+          }
+        });
+      });
+
+      // Sort results by date (most recent first) and hour
+      queryResults.sort((a, b) => {
+        const dateCmp = b.date.localeCompare(a.date);
+        if (dateCmp !== 0) return dateCmp;
+        return a.hour - b.hour;
+      });
+
+      // Update stats
+      document.getElementById('query-stat-matches').textContent = queryResults.length;
+      const uniqueDays = new Set(queryResults.map(r => r.date));
+      document.getElementById('query-stat-days').textContent = uniqueDays.size;
+
+      // Show results
+      document.getElementById('query-empty-state').style.display = queryResults.length === 0 ? 'flex' : 'none';
+      document.getElementById('query-results-container').style.display = queryResults.length > 0 ? 'block' : 'none';
+
+      renderQueryResults();
+    }
+
+    function clearQuery() {
+      queryGroups = [];
+      queryResults = [];
+      queryGroupIdCounter = 0;
+      queryFilterIdCounter = 0;
+
+      document.getElementById('query-stat-matches').textContent = '0';
+      document.getElementById('query-stat-days').textContent = '0';
+      document.getElementById('query-empty-state').style.display = 'flex';
+      document.getElementById('query-results-container').style.display = 'none';
+
+      addQueryGroup(); // Add one empty group
+      renderQueryBuilder();
+    }
+
+    function renderQueryResults() {
+      if (queryResults.length === 0) return;
+
+      // Render table view
+      renderQueryTableView();
+
+      // Render detailed view
+      if (queryShowDetailed) {
+        document.getElementById('query-detailed-view').style.display = 'block';
+        renderQueryDetailedView();
+      } else {
+        document.getElementById('query-detailed-view').style.display = 'none';
+      }
+    }
+
+    function renderQueryTableView() {
+      const selectedCols = Array.from(querySelectedCols);
+      const lvl = parseInt(document.getElementById('query-level-size')?.value) || 250;
+
+      // Build header
+      let headerHTML = '<tr>';
+      headerHTML += '<th style="min-width:80px;">Date</th>';
+      headerHTML += '<th style="min-width:35px;">Day</th>';
+      headerHTML += '<th style="min-width:30px;">#</th>';
+      headerHTML += '<th style="min-width:60px;">Hour</th>';
+
+      selectedCols.forEach(colId => {
+        const col = ALL_COLUMNS.find(c => c.id === colId);
+        if (col) {
+          headerHTML += `<th>${col.label}</th>`;
+        }
+      });
+      headerHTML += '</tr>';
+      document.getElementById('query-results-head').innerHTML = headerHTML;
+
+      // Build body
+      let bodyHTML = '';
+      queryResults.forEach(result => {
+        bodyHTML += '<tr>';
+        bodyHTML += `<td style="text-align:left;">${result.date}</td>`;
+        bodyHTML += `<td>${DAYS_SHORT[result.dow]}</td>`;
+        bodyHTML += `<td>${result.dayNum}</td>`;
+        bodyHTML += `<td>${formatHourHeader(result.hour)}</td>`;
+
+        selectedCols.forEach(colId => {
+          const val = result.metrics[colId];
+          if (val == null) {
+            bodyHTML += '<td style="color:var(--text-muted)">—</td>';
+          } else {
+            let displayVal = val;
+            let cellStyle = '';
+
+            // Apply formatting based on column type
+            if (colId === 'oc' || colId === 'cdr') {
+              const cls = val >= 0 ? 'up' : 'down';
+              cellStyle = `class="${cls}"`;
+              displayVal = (val >= 0 ? '+' : '') + Math.round(val);
+            } else if (typeof val === 'number') {
+              displayVal = Math.round(val);
+            }
+
+            bodyHTML += `<td ${cellStyle}>${displayVal}</td>`;
+          }
+        });
+
+        bodyHTML += '</tr>';
+      });
+      document.getElementById('query-results-body').innerHTML = bodyHTML;
+    }
+
+    function renderQueryDetailedView() {
+      const lvl = parseInt(document.getElementById('query-level-size')?.value) || 250;
+
+      // Build header (similar to HourView)
+      let headerHTML = '<tr>';
+      headerHTML += '<th rowspan="2" class="hour-cell" style="min-width:80px;">Date</th>';
+      headerHTML += '<th rowspan="2" class="hour-cell" style="min-width:35px;">Day</th>';
+      headerHTML += '<th rowspan="2" class="hour-cell" style="min-width:30px;">#</th>';
+      headerHTML += '<th rowspan="2" class="hour-cell" style="min-width:60px;">Hour</th>';
+      headerHTML += '<th colspan="9" class="group-header">Range &amp; Levels</th>';
+      headerHTML += `<th colspan="${MINS.length}" class="group-header section-header">5-Min Bars</th>`;
+      headerHTML += '</tr><tr>';
+      headerHTML += '<th class="group-border">Rng</th><th>UR</th><th>LR</th><th>#Up</th><th>#Dn</th><th>#Cl</th><th>HMin</th><th>LMin</th><th>O-C</th>';
+      MINS.forEach((m, i) => { headerHTML += `<th class="${i === 0 ? 'group-border section-header' : 'section-header'}">:${m}</th>`; });
+      headerHTML += '</tr>';
+      document.getElementById('query-detailed-head').innerHTML = headerHTML;
+
+      // Calculate stats for gradient coloring
+      const stats = { rng: [], urlr: [], oc: [] };
+      const minStats = { ur: [], lr: [], oc: [] };
+
+      queryResults.forEach(result => {
+        stats.rng.push(result.metrics.rng);
+        stats.urlr.push(result.metrics.ur, result.metrics.lr);
+        stats.oc.push(result.metrics.oc);
+
+        const bars = barsByET[result.date];
+        if (bars) {
+          bars.filter(b => b.etHour === result.hour).forEach(bar => {
+            minStats.ur.push(Math.round(bar.high - bar.open));
+            minStats.lr.push(Math.round(bar.open - bar.low));
+            minStats.oc.push(Math.round(bar.close - bar.open));
+          });
+        }
+      });
+
+      const hStats = {
+        rng: stats.rng.length ? { min: Math.min(...stats.rng), max: Math.max(...stats.rng) } : { min: 0, max: 100 },
+        urlr: stats.urlr.length ? { min: Math.min(...stats.urlr), max: Math.max(...stats.urlr) } : { min: 0, max: 100 },
+        oc: stats.oc.length ? { min: Math.min(...stats.oc), max: Math.max(...stats.oc) } : { min: 0, max: 100 },
+      };
+      const mStats = {
+        urlr: minStats.ur.length ? { min: Math.min(...minStats.ur, ...minStats.lr), max: Math.max(...minStats.ur, ...minStats.lr) } : { min: 0, max: 100 },
+        oc: minStats.oc.length ? { min: Math.min(...minStats.oc), max: Math.max(...minStats.oc) } : { min: 0, max: 100 },
+      };
+
+      // Build body
+      let bodyHTML = '';
+      queryResults.forEach(result => {
+        const hm = result.metrics;
+        const hourData = result.hourData;
+        const bars = barsByET[result.date];
+        const hourBars = {};
+        if (bars) bars.filter(b => b.etHour === result.hour).forEach(b => hourBars[String(b.etMin).padStart(2, '0')] = b);
+
+        bodyHTML += '<tr>';
+        bodyHTML += `<td class="hour-cell" style="text-align:left;">${result.date}</td>`;
+        bodyHTML += `<td class="hour-cell">${DAYS_SHORT[result.dow]}</td>`;
+        bodyHTML += `<td class="hour-cell">${result.dayNum}</td>`;
+        bodyHTML += `<td class="hour-cell">${formatHourHeader(result.hour)}</td>`;
+
+        bodyHTML += `<td class="group-border" style="background:${getOrangeGradient(hm.rng, hStats.rng.min, hStats.rng.max)}">${hm.rng}</td>`;
+        bodyHTML += `<td style="background:${getOrangeGradient(hm.ur, hStats.urlr.min, hStats.urlr.max)}">${hm.ur}</td>`;
+        bodyHTML += `<td style="background:${getOrangeGradient(hm.lr, hStats.urlr.min, hStats.urlr.max)}">${hm.lr}</td>`;
+        bodyHTML += `<td style="color:${hm.up > 0 ? '#a7f3d0' : ''}">${hm.up}</td>`;
+        bodyHTML += `<td style="color:${hm.dn > 0 ? '#fecaca' : ''}">${hm.dn}</td>`;
+        bodyHTML += `<td style="color:${hm.cl > 0 ? '#a7f3d0' : hm.cl < 0 ? '#fecaca' : ''}">${hm.cl > 0 ? '+' + hm.cl : hm.cl}</td>`;
+        bodyHTML += `<td>:${String(hm.hm).padStart(2,'0')}</td>`;
+        bodyHTML += `<td>:${String(hm.lm).padStart(2,'0')}</td>`;
+        bodyHTML += `<td class="${hm.oc >= 0 ? 'up' : 'down'}" style="background:${getRGGradient(hm.oc, hStats.oc.min, hStats.oc.max)}">${hm.oc >= 0 ? '+' : ''}${hm.oc}</td>`;
+
+        // Calculate running O-C for each minute
+        let runningOC = 0;
+        const minOCs = {};
+        MINS.forEach(m => {
+          const bar = hourBars[m];
+          if (bar && hourData) {
+            runningOC = Math.round(bar.close - hourData.o);
+            minOCs[m] = { oc: runningOC, lvl: Math.floor(bar.close / lvl) - Math.floor(hourData.o / lvl) };
+          }
+        });
+
+        MINS.forEach((m, mi) => {
+          const bar = hourBars[m];
+          const borderCls = mi === 0 ? ' group-border' : '';
+          if (bar && hourData) {
+            const ur = Math.round(bar.high - bar.open);
+            const lr = Math.round(bar.open - bar.low);
+            const oc = Math.round(bar.close - bar.open);
+            const lvlUp = Math.max(0, Math.floor(bar.high / lvl) - Math.floor(bar.open / lvl));
+            const lvlDn = Math.max(0, Math.floor(bar.open / lvl) - Math.floor(bar.low / lvl));
+            const lvlCl = Math.floor(bar.close / lvl) - Math.floor(bar.open / lvl);
+            const hrOC = minOCs[m] || { oc: 0, lvl: 0 };
+
+            const hrOCGradient = getRGGradient(hrOC.oc, hStats.oc.min, hStats.oc.max);
+
+            bodyHTML += `<td class="min-cell${borderCls}">
+              <div class="min-grid">
+                <div class="min-grid-top left" style="background:${getOrangeGradient(ur, mStats.urlr.min, mStats.urlr.max)}">${ur}<span class="min-lvl">(${lvlUp})</span></div>
+                <div class="min-grid-top" style="background:${getOrangeGradient(lr, mStats.urlr.min, mStats.urlr.max)}">${lr}<span class="min-lvl">(${lvlDn})</span></div>
+                <div class="min-grid-bottom ${oc >= 0 ? 'up' : 'down'}" style="background:${getRGGradient(oc, mStats.oc.min, mStats.oc.max)}">${oc >= 0 ? '+' : ''}${oc}<span class="min-lvl">(${lvlCl >= 0 ? '+' : ''}${lvlCl})</span></div>
+                <div class="min-grid-row4" style="grid-column:1/3;background:${hrOCGradient};">
+                  <span class="hr-oc ${hrOC.oc >= 0 ? 'up' : 'down'}">${hrOC.oc >= 0 ? '+' : ''}${hrOC.oc}<span class="min-lvl">(${hrOC.lvl >= 0 ? '+' : ''}${hrOC.lvl})</span></span>
+                </div>
+              </div>
+            </td>`;
+          } else {
+            bodyHTML += `<td class="min-cell${borderCls}" style="color:var(--text-muted)">—</td>`;
+          }
+        });
+
+        bodyHTML += '</tr>';
+      });
+
+      document.getElementById('query-detailed-body').innerHTML = bodyHTML;
+    }
+
+    function populateQueryColumnSelector() {
+      const grid = document.getElementById('query-col-grid');
+      if (!grid) return;
+
+      let html = '';
+      ALL_COLUMNS.forEach(col => {
+        const checked = querySelectedCols.has(col.id) ? 'checked' : '';
+        html += `<label class="col-item">
+          <input type="checkbox" ${checked} onchange="toggleQueryCol('${col.id}')">
+          <span class="col-label">${col.label}</span>
+        </label>`;
+      });
+      grid.innerHTML = html;
+    }
+
+    function toggleQueryCol(colId) {
+      if (querySelectedCols.has(colId)) {
+        querySelectedCols.delete(colId);
+      } else {
+        querySelectedCols.add(colId);
+      }
+      renderQueryResults();
+    }
+
+    function setQueryDefaultCols() {
+      querySelectedCols = new Set(['rng', 'ur', 'lr', 'oc', 'cdr']);
+      populateQueryColumnSelector();
+      renderQueryResults();
+    }
+
+    function setQueryAllCols() {
+      querySelectedCols = new Set(ALL_COLUMNS.map(c => c.id));
+      populateQueryColumnSelector();
+      renderQueryResults();
+    }
+
+    function setQueryRangeCols() {
+      querySelectedCols = new Set(['rng', 'ur', 'lr', 'up', 'dn', 'cl', 'hm', 'lm']);
+      populateQueryColumnSelector();
+      renderQueryResults();
+    }
+
+    function setQueryOHLCVCols() {
+      querySelectedCols = new Set(['o', 'hi', 'lo', 'c', 'v']);
+      populateQueryColumnSelector();
+      renderQueryResults();
+    }
+
+    // ==================== END QUERY TAB FUNCTIONS ====================
 
     function toggleColFilterPanel() { document.getElementById('col-filter-panel').classList.toggle('visible'); document.getElementById('btn-col-filter').classList.toggle('active'); }
     function toggleRsiSettings() { document.getElementById('rsi-settings').classList.toggle('visible'); document.getElementById('btn-rsi').classList.toggle('active'); }
