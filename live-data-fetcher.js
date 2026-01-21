@@ -31,6 +31,32 @@ class LiveDataFetcher {
       // Load committed historical data
       await this.loadHistoricalData();
 
+<<<<<<< HEAD
+      // Check if we should skip fetch due to recent sync
+      const lastSync = localStorage.getItem('btc-last-sync');
+      const now = Date.now();
+      if (lastSync) {
+        const timeSinceSync = now - parseInt(lastSync);
+        const fiveMinutes = 5 * 60 * 1000;
+
+        if (timeSinceSync < fiveMinutes) {
+          console.log(`Skipping fetch - last sync ${Math.floor(timeSinceSync / 1000)}s ago`);
+          // Still merge data and show UI, just don't fetch
+          const mergedData = this.getMergedData();
+          this.onDataUpdate(mergedData);
+
+          // Calculate remaining time until next 5-minute mark
+          const remainingTime = fiveMinutes - timeSinceSync;
+          this.startAutoRefresh(remainingTime);
+          this.startTimeUpdates();
+          this.isLive = true;
+          this.updateStatus('live', `Live data active (last: ${this.getLastTimestampFormatted()})`);
+          return;
+        }
+      }
+
+=======
+>>>>>>> parent of 8f5bcc9 (Enhance live data system: persistent banner, sync throttling, editable filters)
       // Fetch live data to fill the gap
       await this.fetchLiveData();
 
@@ -170,13 +196,20 @@ class LiveDataFetcher {
 
   /**
    * Start auto-refresh timer
+   * If initialDelay is provided, waits that long before starting the regular interval
    */
+<<<<<<< HEAD
+  startAutoRefresh(initialDelay = null) {
+    if (!this.enabled) return;
+
+=======
   startAutoRefresh() {
+>>>>>>> parent of 8f5bcc9 (Enhance live data system: persistent banner, sync throttling, editable filters)
     if (this.refreshTimer) {
       clearInterval(this.refreshTimer);
     }
 
-    this.refreshTimer = setInterval(async () => {
+    const refreshFn = async () => {
       console.log('Auto-refreshing live data...');
       this.updateStatus('refreshing', 'Fetching latest data...');
 
@@ -188,9 +221,24 @@ class LiveDataFetcher {
       } catch (error) {
         console.error('Auto-refresh failed:', error);
       }
-    }, this.refreshInterval);
+    };
 
-    console.log(`Auto-refresh enabled (every ${this.refreshInterval / 1000}s)`);
+    // If we have an initial delay (for sync alignment), use setTimeout first
+    if (initialDelay !== null && initialDelay > 0) {
+      console.log(`Auto-refresh scheduled in ${Math.floor(initialDelay / 1000)}s, then every ${this.refreshInterval / 1000}s`);
+
+      setTimeout(() => {
+        // Do the first refresh
+        refreshFn();
+
+        // Then start regular interval
+        this.refreshTimer = setInterval(refreshFn, this.refreshInterval);
+      }, initialDelay);
+    } else {
+      // Start regular interval immediately
+      this.refreshTimer = setInterval(refreshFn, this.refreshInterval);
+      console.log(`Auto-refresh enabled (every ${this.refreshInterval / 1000}s)`);
+    }
   }
 
   /**
