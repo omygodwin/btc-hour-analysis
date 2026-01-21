@@ -2456,25 +2456,39 @@
             hourLabel = formatHourHeader(parseInt(filter.hour));
           }
           const colDef = filter.hour === 'day' ? DAY_TOTAL_COLS.find(c => c.id === filter.col) : ALL_COLUMNS.find(c => c.id === filter.col);
+          const logic = filter.logic || 'AND';
 
           const tag = document.createElement('div');
-          tag.style.cssText = 'display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:rgba(74,222,128,0.15);border:1px solid rgba(74,222,128,0.3);border-radius:6px;margin-bottom:8px;cursor:pointer;';
+          tag.style.cssText = 'display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:rgba(74,222,128,0.15);border:1px solid rgba(74,222,128,0.3);border-radius:6px;margin-bottom:8px;';
+
+          // AND/OR selector
+          const logicSelect = document.createElement('select');
+          logicSelect.style.cssText = 'padding:2px 4px;background:rgba(0,0,0,0.3);border:1px solid rgba(74,222,128,0.3);border-radius:3px;color:var(--accent-green);font-size:0.65rem;margin-right:6px;';
+          logicSelect.innerHTML = `
+            <option value="AND" ${logic === 'AND' ? 'selected' : ''}>AND</option>
+            <option value="OR" ${logic === 'OR' ? 'selected' : ''}>OR</option>
+          `;
+          logicSelect.onchange = () => {
+            updateFilterLogic(idx, logicSelect.value);
+            updateMobileActiveFilters();
+          };
 
           const text = document.createElement('span');
-          text.style.cssText = 'font-size:0.7rem;color:var(--accent-green);';
+          text.style.cssText = 'font-size:0.7rem;color:var(--accent-green);flex:1;cursor:pointer;';
           text.innerHTML = `${hourLabel} ${colDef?.label || filter.col} ${filter.op} <u>${filter.val}</u>`;
           text.title = 'Tap to edit';
           text.onclick = () => editMobileFilter(idx);
 
           const removeBtn = document.createElement('button');
           removeBtn.textContent = '×';
-          removeBtn.style.cssText = 'background:rgba(248,113,113,0.2);border:none;color:var(--accent-red);font-size:1.2rem;width:28px;height:28px;border-radius:50%;cursor:pointer;';
+          removeBtn.style.cssText = 'background:rgba(248,113,113,0.2);border:none;color:var(--accent-red);font-size:1.2rem;width:28px;height:28px;border-radius:50%;cursor:pointer;margin-left:6px;';
           removeBtn.onclick = (e) => {
             e.stopPropagation(); // Prevent edit trigger
             removeColumnFilter(idx);
             updateMobileActiveFilters();
           };
 
+          tag.appendChild(logicSelect);
           tag.appendChild(text);
           tag.appendChild(removeBtn);
           container.appendChild(tag);
@@ -4339,9 +4353,42 @@ function populateDatePicker() {
       return `rgb(${Math.round(13 + t * 154)}, ${Math.round(13 + t * 126)}, ${Math.round(18 + t * 232)})`;
     }
     
-    function getRGGradient(val, min, max) {
+    function getRGGradient(val, min, max, allValues) {
       if (val == null) return '#0d0d12';
       if (val === 0) return '#0d0d12';
+
+      // If allValues is provided, use percentile-based gradient
+      if (allValues && allValues.length > 0) {
+        const sorted = [...allValues].sort((a, b) => a - b);
+
+        if (val > 0) {
+          // For positive values, calculate percentile within positive values
+          const positiveValues = sorted.filter(v => v > 0);
+          if (positiveValues.length === 0) return '#0d0d12';
+
+          // Find position of val in positiveValues
+          const position = positiveValues.findIndex(v => v >= val);
+          const percentile = position >= 0 ? position / positiveValues.length : 1;
+
+          // Map percentile to gradient intensity (0 = transparent, 1 = full green)
+          const t = Math.min(1, percentile);
+          return `rgba(${Math.round(13 + t * 61)}, ${Math.round(13 + t * 209)}, ${Math.round(18 + t * 110)}, ${0.2 + t * 0.8})`;
+        } else {
+          // For negative values, calculate percentile within negative values
+          const negativeValues = sorted.filter(v => v < 0);
+          if (negativeValues.length === 0) return '#0d0d12';
+
+          // Find position of val in negativeValues (reversed, so more negative = higher intensity)
+          const position = negativeValues.findIndex(v => v >= val);
+          const percentile = position >= 0 ? 1 - (position / negativeValues.length) : 0;
+
+          // Map percentile to gradient intensity (0 = transparent, 1 = full red)
+          const t = Math.min(1, percentile);
+          return `rgba(${Math.round(13 + t * 235)}, ${Math.round(13 + t * 100)}, ${Math.round(18 + t * 95)}, ${0.2 + t * 0.8})`;
+        }
+      }
+
+      // Fallback to original min/max based gradient
       if (val > 0) {
         const t = Math.min(1, val / Math.max(max, 1));
         return `rgb(${Math.round(13 + t * 61)}, ${Math.round(13 + t * 209)}, ${Math.round(18 + t * 110)})`;
@@ -4575,6 +4622,7 @@ function populateDatePicker() {
           // Strength metrics
           if (m.buyStr != null) s[h].strength.push(m.buyStr);
           if (m.sellStr != null) s[h].strength.push(m.sellStr);
+          if (m.overallStr != null) s[h].strength.push(m.overallStr);
         });
       });
       const r = {};
@@ -4582,8 +4630,8 @@ function populateDatePicker() {
         r[h] = {};
         Object.keys(s[h]).forEach(k => {
           r[h][k] = s[h][k].length
-            ? { min: Math.min(...s[h][k]), max: Math.max(...s[h][k]) }
-            : { min: 0, max: 100 };
+            ? { min: Math.min(...s[h][k]), max: Math.max(...s[h][k]), values: s[h][k] }
+            : { min: 0, max: 100, values: [] };
         });
       });
       return r;
@@ -4862,7 +4910,14 @@ function populateDatePicker() {
             
             if (col.gradient === 'orange' && stats[col.group]) bg = getOrangeGradient(v, stats[col.group].min, stats[col.group].max);
             else if (col.gradient === 'orange-inv' && stats[col.group]) bg = getOrangeGradientInverted(v, stats[col.group].min, stats[col.group].max);
-            else if (col.gradient === 'rg' && stats[col.group]) bg = getRGGradient(v, stats[col.group].min, stats[col.group].max);
+            else if (col.gradient === 'rg' && stats[col.group]) {
+              // For overallStr (NetStr), use percentile-based gradient
+              if (col.id === 'overallStr' && stats[col.group].values) {
+                bg = getRGGradient(v, stats[col.group].min, stats[col.group].max, stats[col.group].values);
+              } else {
+                bg = getRGGradient(v, stats[col.group].min, stats[col.group].max);
+              }
+            }
             else if (col.gradient === 'orange-col' && cStats?.cdr) bg = getOrangeGradient(v, cStats.cdr.min, cStats.cdr.max);
             else if (col.gradient === 'rg-col' && cStats?.cdrRG) bg = getRGGradient(v, cStats.cdrRG.min, cStats.cdrRG.max);
             else if (col.gradient === 'purple' && stats[col.group]) bg = getPurpleGradient(v, stats[col.group].min, stats[col.group].max);
@@ -6519,7 +6574,7 @@ function populateDatePicker() {
     }
     function loadDateInDayView(date) {
       // Switch to day view tab
-      switchTab('day');
+      switchTab('dayview');
       // Set the date in the dropdown
       const dayViewDateEl = document.getElementById('day-view-date');
       if (dayViewDateEl) {
