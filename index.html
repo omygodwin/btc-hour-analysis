@@ -5314,18 +5314,25 @@ function populateDatePicker() {
 
             // After High/Low with 2-column grid and gradient coloring
             let afterHLRow = '';
-            if (showAfterHL) {
+            if (showAfterHL !== 'off') {
               if (m === '55') {
                 // Show blank for :55 bars (no bar after them)
                 afterHLRow = '<div class="after-metrics-grid"><div class="after-high">—</div><div class="after-low">—</div></div>';
-              } else {
+              } else if (showAfterHL === 'afterhl') {
                 const hhGradient = bar.hhAfterClose != null ? getOrangeGradient(bar.hhAfterClose, afterHLRange.min, afterHLRange.max) : 'transparent';
                 const hlGradient = bar.hlAfterClose != null ? getOrangeGradient(bar.hlAfterClose, afterHLRange.min, afterHLRange.max) : 'transparent';
                 afterHLRow = `<div class="after-metrics-grid"><div class="after-high" style="background:${hhGradient}">+${bar.hhAfterClose ?? 0}</div><div class="after-low" style="background:${hlGradient}">${bar.hlAfterClose >= 0 ? '+' : ''}${bar.hlAfterClose ?? 0}</div></div>`;
+              } else if (showAfterHL === 'hhcll') {
+                const hourData = day.hrs[h];
+                const hhc = Math.round(hourData.h - bar.close);
+                const cll = Math.round(bar.close - hourData.l);
+                const hhcGradient = getOrangeGradient(Math.abs(hhc), afterHLRange.min, afterHLRange.max);
+                const cllGradient = getOrangeGradient(Math.abs(cll), afterHLRange.min, afterHLRange.max);
+                afterHLRow = `<div class="after-metrics-grid"><div class="after-high" style="background:${hhcGradient}">${hhc >= 0 ? '+' : ''}${hhc}</div><div class="after-low" style="background:${cllGradient}">${cll >= 0 ? '+' : ''}${cll}</div></div>`;
               }
             }
             bd += `<td class="min-cell${borderCls}" style="min-height:56px;${rVolHighlight}">
-              <div class="min-grid" style="grid-template-rows:1fr 1fr 1fr 1fr${showAfterHL ? ' auto' : ''};">
+              <div class="min-grid" style="grid-template-rows:1fr 1fr 1fr 1fr${showAfterHL !== 'off' ? ' auto' : ''};">
                 <div class="min-grid-top left" style="background:${getOrangeGradient(ur, mStats.urlr.min, mStats.urlr.max)};${urBorder}">${ur}<span class="min-lvl">(${lvlUp})</span></div>
                 <div class="min-grid-top" style="background:${getOrangeGradient(lr, mStats.urlr.min, mStats.urlr.max)};${lrBorder}">${lr}<span class="min-lvl">(${lvlDn})</span></div>
                 <div class="min-grid-bottom ${oc >= 0 ? 'up' : 'down'}" style="background:${getRGGradient(oc, mStats.oc.min, mStats.oc.max)};border-bottom:1px solid var(--border-medium);${ocBorder}">${oc >= 0 ? '+' : ''}${oc}<span class="min-lvl">(${lvlCl >= 0 ? '+' : ''}${lvlCl})</span><span class="info-btn" data-date="${date}" data-hour="${h}" data-minute="${m}">ⓘ</span></div>
@@ -5767,18 +5774,25 @@ function populateDatePicker() {
 
             // After High/Low with 2-column grid and gradient coloring - Hour View
             let afterHLRow = '';
-            if (showAfterHL) {
+            if (showAfterHL !== 'off') {
               if (m === '55') {
                 // Show blank for :55 bars (no bar after them)
                 afterHLRow = '<div class="after-metrics-grid"><div class="after-high">—</div><div class="after-low">—</div></div>';
-              } else {
+              } else if (showAfterHL === 'afterhl') {
                 const hhGradient = bar.hhAfterClose != null ? getOrangeGradient(bar.hhAfterClose, afterHLRange.min, afterHLRange.max) : 'transparent';
                 const hlGradient = bar.hlAfterClose != null ? getOrangeGradient(bar.hlAfterClose, afterHLRange.min, afterHLRange.max) : 'transparent';
                 afterHLRow = `<div class="after-metrics-grid"><div class="after-high" style="background:${hhGradient}">+${bar.hhAfterClose ?? 0}</div><div class="after-low" style="background:${hlGradient}">${bar.hlAfterClose >= 0 ? '+' : ''}${bar.hlAfterClose ?? 0}</div></div>`;
+              } else if (showAfterHL === 'hhcll') {
+                const hourData = day.hrs[h];
+                const hhc = Math.round(hourData.h - bar.close);
+                const cll = Math.round(bar.close - hourData.l);
+                const hhcGradient = getOrangeGradient(Math.abs(hhc), afterHLRange.min, afterHLRange.max);
+                const cllGradient = getOrangeGradient(Math.abs(cll), afterHLRange.min, afterHLRange.max);
+                afterHLRow = `<div class="after-metrics-grid"><div class="after-high" style="background:${hhcGradient}">${hhc >= 0 ? '+' : ''}${hhc}</div><div class="after-low" style="background:${cllGradient}">${cll >= 0 ? '+' : ''}${cll}</div></div>`;
               }
             }
             bd += `<td class="min-cell${borderCls}" style="min-height:56px;${rVolHighlight}">
-              <div class="min-grid" style="grid-template-rows:1fr 1fr 1fr 1fr${showAfterHL ? ' auto' : ''};">
+              <div class="min-grid" style="grid-template-rows:1fr 1fr 1fr 1fr${showAfterHL !== 'off' ? ' auto' : ''};">
                 <div class="min-grid-top left" style="background:${getOrangeGradient(ur, mStats.urlr.min, mStats.urlr.max)};${urBorder}">${ur}<span class="min-lvl">(${lvlUp})</span></div>
                 <div class="min-grid-top" style="background:${getOrangeGradient(lr, mStats.urlr.min, mStats.urlr.max)};${lrBorder}">${lr}<span class="min-lvl">(${lvlDn})</span></div>
                 <div class="min-grid-bottom ${oc >= 0 ? 'up' : 'down'}" style="background:${getRGGradient(oc, mStats.oc.min, mStats.oc.max)};border-bottom:1px solid var(--border-medium);">${oc >= 0 ? '+' : ''}${oc}<span class="min-lvl">(${lvlCl >= 0 ? '+' : ''}${lvlCl})</span><span class="info-btn" data-date="${day.date}" data-hour="${hour}" data-minute="${m}">ⓘ</span></div>
