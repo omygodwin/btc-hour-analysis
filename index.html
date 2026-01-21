@@ -1714,9 +1714,10 @@
                 <button class="mobile-filter-btn none-btn" onclick="selectNoDates(); updateMobileFilterUI();">Clear Dates</button>
                 <button class="mobile-filter-btn quick" onclick="syncDatesFromFilters(); updateMobileFilterUI();">Sync from Filters</button>
               </div>
-              <div style="font-size:0.7rem;color:var(--text-secondary);">
+              <div style="font-size:0.7rem;color:var(--text-secondary);margin-bottom:8px;">
                 Selected: <span id="mobile-date-count">0</span> dates
               </div>
+              <div id="mobile-date-list" style="max-height:200px;overflow-y:auto;border:1px solid var(--border-medium);border-radius:4px;padding:4px;"></div>
             </div>
           </div>
 
@@ -1830,6 +1831,7 @@
             <div class="mobile-filter-section">
               <h3>Quick Actions</h3>
               <div style="display:flex;flex-direction:column;gap:8px;">
+                <button class="mobile-action-btn-large" onclick="showLegendPopup();">📖 Show Grid Legend</button>
                 <button class="mobile-action-btn-large" onclick="resetAll(); closeMobileFilterModal();">↺ Reset All Filters</button>
                 <button class="mobile-action-btn-large" onclick="setRTH(); closeMobileFilterModal();">🕐 US RTH (9-16, Weekdays)</button>
                 <button class="mobile-action-btn-large" onclick="loadNewFile(); closeMobileFilterModal();">📁 Load New File</button>
@@ -2260,6 +2262,61 @@
       const dateCount = document.getElementById('mobile-date-count');
       if (dateCount) {
         dateCount.textContent = selectedDates.size;
+      }
+
+      // Update mobile date list
+      const mobileDateList = document.getElementById('mobile-date-list');
+      if (mobileDateList && allETDates && allETDates.length > 0) {
+        mobileDateList.innerHTML = '';
+        allETDates.forEach(date => {
+          const dateBtn = document.createElement('button');
+          dateBtn.className = 'mobile-filter-btn';
+          dateBtn.style.margin = '2px';
+          dateBtn.style.fontSize = '0.65rem';
+          dateBtn.textContent = date;
+          dateBtn.onclick = () => {
+            if (selectedDates.has(date)) {
+              selectedDates.delete(date);
+            } else {
+              selectedDates.add(date);
+            }
+            useDateFilter = selectedDates.size > 0;
+            renderTable();
+            render5pmSession();
+            if (typeof renderCalendar === 'function') renderCalendar();
+            updateMobileFilterUI();
+          };
+          if (selectedDates.has(date)) dateBtn.classList.add('active');
+          mobileDateList.appendChild(dateBtn);
+        });
+      }
+
+      // Update hour dropdowns (ensure they're populated with all 24 hours)
+      const mobileHourFrom = document.getElementById('mobile-hour-from');
+      const mobileHourTo = document.getElementById('mobile-hour-to');
+      if (mobileHourFrom && mobileHourFrom.options.length === 0) {
+        // Populate with all 24 hours
+        for (let h = 0; h < 24; h++) {
+          const ampm = h >= 12 ? 'PM' : 'AM';
+          const disp = h === 0 ? 12 : h > 12 ? h - 12 : h;
+          const option = document.createElement('option');
+          option.value = h;
+          option.textContent = `${disp}${ampm}`;
+          mobileHourFrom.appendChild(option);
+        }
+        mobileHourFrom.value = hourFrom;
+      }
+      if (mobileHourTo && mobileHourTo.options.length === 0) {
+        // Populate with all 24 hours
+        for (let h = 0; h < 24; h++) {
+          const ampm = h >= 12 ? 'PM' : 'AM';
+          const disp = h === 0 ? 12 : h > 12 ? h - 12 : h;
+          const option = document.createElement('option');
+          option.value = h;
+          option.textContent = `${disp}${ampm}`;
+          mobileHourTo.appendChild(option);
+        }
+        mobileHourTo.value = hourTo;
       }
 
       // Update column grid
