@@ -17,29 +17,21 @@ class LiveDataFetcher {
     this.lastTimestamp = null;
     this.isLive = false;
     this.refreshTimer = null;
-    this.timeUpdateTimer = null;
     this.failureCount = 0;
     this.maxFailures = 3;
-    this.enabled = options.enabled !== false; // Allow disabling via options
   }
 
   /**
    * Initialize and start live data fetching
    */
   async start() {
-    // Check if live data is enabled
-    if (!this.enabled) {
-      console.log('Live data disabled by user');
-      this.updateStatus('disabled', 'Live data disabled');
-      return;
-    }
-
     this.updateStatus('loading', 'Loading historical data...');
 
     try {
       // Load committed historical data
       await this.loadHistoricalData();
 
+<<<<<<< HEAD
       // Check if we should skip fetch due to recent sync
       const lastSync = localStorage.getItem('btc-last-sync');
       const now = Date.now();
@@ -63,19 +55,17 @@ class LiveDataFetcher {
         }
       }
 
+=======
+>>>>>>> parent of 8f5bcc9 (Enhance live data system: persistent banner, sync throttling, editable filters)
       // Fetch live data to fill the gap
       await this.fetchLiveData();
-
-      // Store sync time
-      localStorage.setItem('btc-last-sync', now.toString());
 
       // Merge and notify
       const mergedData = this.getMergedData();
       this.onDataUpdate(mergedData);
 
-      // Set up auto-refresh and time updates
+      // Set up auto-refresh
       this.startAutoRefresh();
-      this.startTimeUpdates();
 
       this.isLive = true;
       this.updateStatus('live', `Live data active (last: ${this.getLastTimestampFormatted()})`);
@@ -208,9 +198,13 @@ class LiveDataFetcher {
    * Start auto-refresh timer
    * If initialDelay is provided, waits that long before starting the regular interval
    */
+<<<<<<< HEAD
   startAutoRefresh(initialDelay = null) {
     if (!this.enabled) return;
 
+=======
+  startAutoRefresh() {
+>>>>>>> parent of 8f5bcc9 (Enhance live data system: persistent banner, sync throttling, editable filters)
     if (this.refreshTimer) {
       clearInterval(this.refreshTimer);
     }
@@ -221,7 +215,6 @@ class LiveDataFetcher {
 
       try {
         await this.fetchLiveData();
-        localStorage.setItem('btc-last-sync', Date.now().toString());
         const mergedData = this.getMergedData();
         this.onDataUpdate(mergedData);
         this.updateStatus('live', `Live data active (last: ${this.getLastTimestampFormatted()})`);
@@ -249,24 +242,6 @@ class LiveDataFetcher {
   }
 
   /**
-   * Start time update timer (updates "x mins ago" every minute)
-   */
-  startTimeUpdates() {
-    if (this.timeUpdateTimer) {
-      clearInterval(this.timeUpdateTimer);
-    }
-
-    // Update every 30 seconds
-    this.timeUpdateTimer = setInterval(() => {
-      if (this.isLive) {
-        this.updateStatus('live', `Live data active (last: ${this.getLastTimestampFormatted()})`);
-      }
-    }, 30 * 1000);
-
-    console.log('Time updates enabled (every 30s)');
-  }
-
-  /**
    * Stop auto-refresh
    */
   stopAutoRefresh() {
@@ -274,11 +249,6 @@ class LiveDataFetcher {
       clearInterval(this.refreshTimer);
       this.refreshTimer = null;
       console.log('Auto-refresh stopped');
-    }
-    if (this.timeUpdateTimer) {
-      clearInterval(this.timeUpdateTimer);
-      this.timeUpdateTimer = null;
-      console.log('Time updates stopped');
     }
   }
 
@@ -295,9 +265,6 @@ class LiveDataFetcher {
 
       // Fetch latest live data
       await this.fetchLiveData();
-
-      // Store sync time
-      localStorage.setItem('btc-last-sync', Date.now().toString());
 
       // Merge and notify
       const mergedData = this.getMergedData();
@@ -385,34 +352,11 @@ class LiveDataFetcher {
   }
 
   /**
-   * Enable live data updates
-   */
-  enable() {
-    this.enabled = true;
-    localStorage.setItem('btc-live-data-enabled', 'true');
-    if (!this.isLive) {
-      this.start();
-    }
-  }
-
-  /**
-   * Disable live data updates
-   */
-  disable() {
-    this.enabled = false;
-    localStorage.setItem('btc-live-data-enabled', 'false');
-    this.stopAutoRefresh();
-    this.isLive = false;
-    this.updateStatus('disabled', 'Live data disabled');
-  }
-
-  /**
    * Get status
    */
   getStatus() {
     return {
       isLive: this.isLive,
-      enabled: this.enabled,
       liveBarCount: this.liveData.length,
       historicalBarCount: this.historicalData.length,
       lastTimestamp: this.lastTimestamp,
