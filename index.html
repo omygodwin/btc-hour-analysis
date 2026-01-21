@@ -1014,7 +1014,11 @@
 
 /* Live Status Indicator */
 .live-status-container {
-  margin-top: 10px;
+  position: fixed;
+  top: 65px;
+  right: 20px;
+  margin: 0;
+  z-index: 1001;
 }
 
 .live-status-indicator {
@@ -1068,18 +1072,9 @@
   color: var(--text-primary);
 }
 
-/* Persist live status across tabs - fixed position */
-.live-status-container {
-  position: fixed;
-  top: 20px;
-  right: 20px;
-  margin: 0;
-  z-index: 1001;
-}
-
 @media (max-width: 768px) {
   .live-status-container {
-    top: 10px;
+    top: 55px;
     right: 10px;
   }
   .live-status-indicator {
@@ -1103,17 +1098,10 @@
 
 @media (max-width: 768px) {
   .live-status-indicator .live-text-full {
-    display: none;
+    display: none !important;
   }
   .live-status-indicator .live-text-short {
-    display: inline;
-  }
-  /* Show full text on tap/active */
-  .live-status-indicator:active .live-text-full {
-    display: inline;
-  }
-  .live-status-indicator:active .live-text-short {
-    display: none;
+    display: inline !important;
   }
 }
 </style>
@@ -6152,9 +6140,20 @@ function populateDatePicker() {
       filteredData.forEach(day => {
         bd += '<tr>';
 
-        // Display the day's date normally
-        bd += `<td class="sticky-col date-cell" style="left:0;min-width:65px;cursor:pointer;" onclick="loadDateInDayView('${day.date}')" title="Click to view in Day View">${day.date}</td>`;
-        bd += `<td class="sticky-col day-cell" style="left:65px;min-width:28px">${DAYS_SHORT[day.dow]}</td>`;
+        // Determine what date to display for the 5PM session
+        // If we're viewing the latest session and it's after 5PM, show tomorrow's date
+        let displayDate = day.date;
+        let displayDow = day.dow;
+        if (day === filteredData[0] && day.date === currentDateStr && currentHour >= 17) {
+          // After 5PM, this session represents tomorrow's trading day
+          const tomorrow = new Date(now);
+          tomorrow.setDate(tomorrow.getDate() + 1);
+          displayDate = tomorrow.toISOString().split('T')[0];
+          displayDow = tomorrow.getDay();
+        }
+
+        bd += `<td class="sticky-col date-cell" style="left:0;min-width:65px;cursor:pointer;" onclick="loadDateInDayView('${day.date}')" title="Click to view in Day View">${displayDate}</td>`;
+        bd += `<td class="sticky-col day-cell" style="left:65px;min-width:28px">${DAYS_SHORT[displayDow]}</td>`;
         
         // 5PM session totals
         bd += `<td class="sticky-col day-total-cell" style="left:93px;background:${getOrangeGradient(day.d5pmUR, pm5Stats.urlr.min, pm5Stats.urlr.max)}">${day.d5pmUR?.toLocaleString() ?? '—'}</td>`;
@@ -6702,9 +6701,10 @@ function populateDatePicker() {
 
   // Improved info tooltip behavior: click toggles popup on mobile; clicking outside closes any open popups
   document.addEventListener('click', function(e){
-    // Check for info-btn clicks (mobile only, desktop uses hover)
+    // Check for info-btn clicks (works on both mobile and desktop)
     const btn = e.target.closest && e.target.closest('.info-btn');
-    if(btn && isMobile){
+    if(btn){
+      e.stopPropagation();
       const date = btn.getAttribute('data-date');
       const hour = parseInt(btn.getAttribute('data-hour'));
       const minute = btn.getAttribute('data-minute');
@@ -6825,7 +6825,7 @@ function populateDatePicker() {
     let currentInfoPanel = null;
 
     document.addEventListener('mouseover', function(e) {
-      const minGrid = e.target.closest && e.target.closest('.min-grid-wrapper');
+      const minGrid = e.target.closest && e.target.closest('.min-grid');
       if (minGrid) {
         const btn = minGrid.querySelector('.info-btn');
         if (btn) {
@@ -6927,7 +6927,7 @@ function populateDatePicker() {
     });
 
     document.addEventListener('mouseout', function(e) {
-      const minGrid = e.target.closest && e.target.closest('.min-grid-wrapper');
+      const minGrid = e.target.closest && e.target.closest('.min-grid');
       if (minGrid) {
         clearTimeout(hoverTimeout);
         // Only remove if not hovering over the info panel itself
@@ -6965,6 +6965,13 @@ function populateDatePicker() {
 
   // Ensure floating mobile button opens modal
   document.getElementById('mobile-menu-btn')?.addEventListener('click', toggleMobileFilters);
+
+  // Make live status indicator clickable to trigger manual refresh
+  document.getElementById('live-status')?.addEventListener('click', function() {
+    if (typeof manualRefresh === 'function') {
+      manualRefresh();
+    }
+  });
 </script>
 
 
@@ -7069,11 +7076,7 @@ function syncUIFromState(root=document) {
     btn.classList.toggle('active', FilterState.dayTotals.has(d));
   });
 
-  // Hours
-  const hf = root.querySelector('#hour-from');
-  const ht = root.querySelector('#hour-to');
-  if (hf) hf.value = FilterState.hours.from ?? '';
-  if (ht) ht.value = FilterState.hours.to ?? '';
+  // Hours are managed by hourFrom/hourTo variables and updateHourRange() function
 }
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -7089,11 +7092,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (btn.dataset.daytotal) setFilter('dayTotals', btn.dataset.daytotal);
   });
 
-  // Wire hour selectors
-  const hf = document.querySelector('#hour-from');
-  const ht = document.querySelector('#hour-to');
-  hf?.addEventListener('change', e => setFilter('hours', { from: e.target.value }, 'merge'));
-  ht?.addEventListener('change', e => setFilter('hours', { to: e.target.value }, 'merge'));
+  // Hour selectors use onchange="updateHourRange()" in HTML
 
   syncUIFromState();
 });
