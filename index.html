@@ -4350,7 +4350,12 @@ function populateDatePicker() {
     function getPurpleGradient(val, min, max) {
       if (val == null || max === min) return '#0d0d12';
       const t = Math.max(0, Math.min(1, (val - min) / (max - min)));
-      return `rgb(${Math.round(13 + t * 154)}, ${Math.round(13 + t * 126)}, ${Math.round(18 + t * 232)})`;
+
+      // Use power curve to emphasize extremes
+      // Low values stay darker, high values become more vibrant purple
+      const curved = Math.pow(t, 1.8);
+
+      return `rgb(${Math.round(13 + curved * 154)}, ${Math.round(13 + curved * 126)}, ${Math.round(18 + curved * 232)})`;
     }
     
     function getRGGradient(val, min, max, allValues) {
