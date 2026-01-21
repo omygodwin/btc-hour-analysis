@@ -289,7 +289,21 @@
     .stat-val { font-family: var(--font-family); font-size: 0.85rem; font-weight: 600; color: var(--accent-btc); }
     .stat-lbl { font-size: 0.45rem; text-transform: uppercase; color: var(--text-muted); }
     
-    .toolbar { display: flex; gap: 4px; padding: 5px 16px; background: var(--bg-secondary); border-bottom: 1px solid var(--border-subtle); flex-wrap: wrap; align-items: center; flex-shrink: 0; }
+    .toolbar { display: none; } /* Hidden - filters now in floating button */
+
+    /* Hide all desktop filter panels - now accessed via floating button */
+    #filters-panel,
+    #col-filter-panel,
+    #dt-col-selector,
+    #col-selector,
+    #rsi-settings,
+    .filters,
+    .col-selector,
+    .dt-col-selector,
+    .col-filter-panel,
+    .rsi-settings {
+      display: none !important;
+    }
     
     .tb-btn { display: flex; align-items: center; gap: 3px; padding: 3px 7px; background: rgba(255,255,255,0.04); border: 1px solid var(--border-medium); border-radius: 3px; color: var(--text-secondary); font-size: 0.6rem; font-family: 'Inter', sans-serif; cursor: pointer; transition: all 0.15s; }
     .tb-btn:hover { background: rgba(255,255,255,0.08); color: var(--text-primary); }
@@ -715,28 +729,30 @@
     }
     
     /* Mobile Menu Toggle */
-    .mobile-menu-btn { display: none; }
-    @media (max-width: 768px) {
-      .mobile-menu-btn {
-        display: flex;
-        position: fixed;
-        bottom: 16px;
-        right: 16px;
-        z-index: 1000;
-        width: 56px;
-        height: 56px;
-        border-radius: 50%;
-        background: var(--accent-btc);
-        color: white;
-        border: none;
-        align-items: center;
-        justify-content: center;
-        font-size: 1.5rem;
-        box-shadow: 0 4px 12px rgba(247,147,26,0.4);
-        cursor: pointer;
-      }
-      .mobile-menu-btn:active { transform: scale(0.95); }
+    /* Global Filter Button - Always visible on all screen sizes */
+    .mobile-menu-btn {
+      display: flex;
+      position: fixed;
+      bottom: 16px;
+      right: 16px;
+      z-index: 1000;
+      width: 56px;
+      height: 56px;
+      border-radius: 50%;
+      background: var(--accent-btc);
+      color: white;
+      border: none;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.5rem;
+      box-shadow: 0 4px 12px rgba(247,147,26,0.4);
+      cursor: pointer;
+      transition: transform 0.2s;
     }
+    .mobile-menu-btn:hover {
+      box-shadow: 0 6px 16px rgba(247,147,26,0.5);
+    }
+    .mobile-menu-btn:active { transform: scale(0.95); }
 
     /* Mobile Filter Modal */
     .mobile-filter-modal {
@@ -764,6 +780,12 @@
       display: flex;
       flex-direction: column;
       box-shadow: 0 12px 48px rgba(0,0,0,0.9);
+    }
+    /* Desktop: Constrain modal width for better UX */
+    @media (min-width: 769px) {
+      .mobile-filter-content {
+        max-width: 800px;
+      }
     }
     .mobile-filter-header {
       display: flex;
@@ -1611,9 +1633,6 @@
         </table>
       </div>
     </div>
-    
-    <!-- Mobile Menu Button -->
-    <button class="mobile-menu-btn" onclick="toggleMobileFilterModal()">☰</button>
 
     <!-- Mobile Filter Modal -->
     <div class="mobile-filter-modal" id="mobile-filter-modal">
@@ -1902,6 +1921,9 @@
       </div>
     </div>
   </div>
+
+  <!-- Global Filter Button - Visible on all tabs -->
+  <button class="mobile-menu-btn" onclick="toggleMobileFilterModal()">☰</button>
 
   <script>
     // ==================== CONSTANTS ====================
@@ -6399,19 +6421,19 @@ function populateDatePicker() {
     function toggleColFilterPanel() { document.getElementById('col-filter-panel').classList.toggle('visible'); document.getElementById('btn-col-filter').classList.toggle('active'); }
     function toggleRsiSettings() { document.getElementById('rsi-settings').classList.toggle('visible'); document.getElementById('btn-rsi').classList.toggle('active'); }
     
-    function toggleYear(y) { selectedYears.has(y) ? selectedYears.delete(y) : selectedYears.add(y); document.querySelector(`[data-year="${y}"]`).classList.toggle('active'); useDateFilter = false; selectedDates.clear(); updateDatePickerUI(); renderTable(); }
-    function toggleMonth(m) { selectedMonths.has(m) ? selectedMonths.delete(m) : selectedMonths.add(m); document.querySelector(`[data-month="${m}"]`).classList.toggle('active'); useDateFilter = false; selectedDates.clear(); updateDatePickerUI(); renderTable(); }
-    function toggleDay(d) { selectedDays.has(d) ? selectedDays.delete(d) : selectedDays.add(d); document.querySelector(`[data-day="${d}"]`).classList.toggle('active'); useDateFilter = false; selectedDates.clear(); updateDatePickerUI(); renderTable(); }
-    function toggleOcc(o) { selectedOccs.has(o) ? selectedOccs.delete(o) : selectedOccs.add(o); document.querySelector(`[data-occ="${o}"]`).classList.toggle('active'); useDateFilter = false; selectedDates.clear(); updateDatePickerUI(); renderTable(); }
+    function toggleYear(y) { selectedYears.has(y) ? selectedYears.delete(y) : selectedYears.add(y); document.querySelector(`[data-year="${y}"]`).classList.toggle('active'); useDateFilter = false; selectedDates.clear(); updateDatePickerUI(); renderTable(); render5pmSession(); if(typeof renderCalendar === 'function') renderCalendar(); updateMobileFilterUI(); }
+    function toggleMonth(m) { selectedMonths.has(m) ? selectedMonths.delete(m) : selectedMonths.add(m); document.querySelector(`[data-month="${m}"]`).classList.toggle('active'); useDateFilter = false; selectedDates.clear(); updateDatePickerUI(); renderTable(); render5pmSession(); if(typeof renderCalendar === 'function') renderCalendar(); updateMobileFilterUI(); }
+    function toggleDay(d) { selectedDays.has(d) ? selectedDays.delete(d) : selectedDays.add(d); document.querySelector(`[data-day="${d}"]`).classList.toggle('active'); useDateFilter = false; selectedDates.clear(); updateDatePickerUI(); renderTable(); render5pmSession(); if(typeof renderCalendar === 'function') renderCalendar(); updateMobileFilterUI(); }
+    function toggleOcc(o) { selectedOccs.has(o) ? selectedOccs.delete(o) : selectedOccs.add(o); document.querySelector(`[data-occ="${o}"]`).classList.toggle('active'); useDateFilter = false; selectedDates.clear(); updateDatePickerUI(); renderTable(); render5pmSession(); if(typeof renderCalendar === 'function') renderCalendar(); updateMobileFilterUI(); }
     
-    function setNoMonths() { selectedMonths.clear(); document.querySelectorAll('[data-month]').forEach(b => b.classList.remove('active')); useDateFilter = false; selectedDates.clear(); updateDatePickerUI(); renderTable(); }
-    function setNoDays() { selectedDays.clear(); document.querySelectorAll('[data-day]').forEach(b => b.classList.remove('active')); useDateFilter = false; selectedDates.clear(); updateDatePickerUI(); renderTable(); }
-    function setWeekdays() { selectedDays = new Set([1,2,3,4,5]); document.querySelectorAll('[data-day]').forEach(b => b.classList.toggle('active', selectedDays.has(+b.dataset.day))); useDateFilter = false; selectedDates.clear(); updateDatePickerUI(); renderTable(); }
-    function setWeekend() { selectedDays = new Set([0,6]); document.querySelectorAll('[data-day]').forEach(b => b.classList.toggle('active', selectedDays.has(+b.dataset.day))); useDateFilter = false; selectedDates.clear(); updateDatePickerUI(); renderTable(); }
-    function setQ1() { selectedMonths = new Set([1,2,3]); document.querySelectorAll('[data-month]').forEach(b => b.classList.toggle('active', selectedMonths.has(+b.dataset.month))); useDateFilter = false; selectedDates.clear(); updateDatePickerUI(); renderTable(); }
-    function setQ2() { selectedMonths = new Set([4,5,6]); document.querySelectorAll('[data-month]').forEach(b => b.classList.toggle('active', selectedMonths.has(+b.dataset.month))); useDateFilter = false; selectedDates.clear(); updateDatePickerUI(); renderTable(); }
-    function setQ3() { selectedMonths = new Set([7,8,9]); document.querySelectorAll('[data-month]').forEach(b => b.classList.toggle('active', selectedMonths.has(+b.dataset.month))); useDateFilter = false; selectedDates.clear(); updateDatePickerUI(); renderTable(); }
-    function setQ4() { selectedMonths = new Set([10,11,12]); document.querySelectorAll('[data-month]').forEach(b => b.classList.toggle('active', selectedMonths.has(+b.dataset.month))); useDateFilter = false; selectedDates.clear(); updateDatePickerUI(); renderTable(); }
+    function setNoMonths() { selectedMonths.clear(); document.querySelectorAll('[data-month]').forEach(b => b.classList.remove('active')); useDateFilter = false; selectedDates.clear(); updateDatePickerUI(); renderTable(); render5pmSession(); if(typeof renderCalendar === 'function') renderCalendar(); updateMobileFilterUI(); }
+    function setNoDays() { selectedDays.clear(); document.querySelectorAll('[data-day]').forEach(b => b.classList.remove('active')); useDateFilter = false; selectedDates.clear(); updateDatePickerUI(); renderTable(); render5pmSession(); if(typeof renderCalendar === 'function') renderCalendar(); updateMobileFilterUI(); }
+    function setWeekdays() { selectedDays = new Set([1,2,3,4,5]); document.querySelectorAll('[data-day]').forEach(b => b.classList.toggle('active', selectedDays.has(+b.dataset.day))); useDateFilter = false; selectedDates.clear(); updateDatePickerUI(); renderTable(); render5pmSession(); if(typeof renderCalendar === 'function') renderCalendar(); updateMobileFilterUI(); }
+    function setWeekend() { selectedDays = new Set([0,6]); document.querySelectorAll('[data-day]').forEach(b => b.classList.toggle('active', selectedDays.has(+b.dataset.day))); useDateFilter = false; selectedDates.clear(); updateDatePickerUI(); renderTable(); render5pmSession(); if(typeof renderCalendar === 'function') renderCalendar(); updateMobileFilterUI(); }
+    function setQ1() { selectedMonths = new Set([1,2,3]); document.querySelectorAll('[data-month]').forEach(b => b.classList.toggle('active', selectedMonths.has(+b.dataset.month))); useDateFilter = false; selectedDates.clear(); updateDatePickerUI(); renderTable(); render5pmSession(); if(typeof renderCalendar === 'function') renderCalendar(); updateMobileFilterUI(); }
+    function setQ2() { selectedMonths = new Set([4,5,6]); document.querySelectorAll('[data-month]').forEach(b => b.classList.toggle('active', selectedMonths.has(+b.dataset.month))); useDateFilter = false; selectedDates.clear(); updateDatePickerUI(); renderTable(); render5pmSession(); if(typeof renderCalendar === 'function') renderCalendar(); updateMobileFilterUI(); }
+    function setQ3() { selectedMonths = new Set([7,8,9]); document.querySelectorAll('[data-month]').forEach(b => b.classList.toggle('active', selectedMonths.has(+b.dataset.month))); useDateFilter = false; selectedDates.clear(); updateDatePickerUI(); renderTable(); render5pmSession(); if(typeof renderCalendar === 'function') renderCalendar(); updateMobileFilterUI(); }
+    function setQ4() { selectedMonths = new Set([10,11,12]); document.querySelectorAll('[data-month]').forEach(b => b.classList.toggle('active', selectedMonths.has(+b.dataset.month))); useDateFilter = false; selectedDates.clear(); updateDatePickerUI(); renderTable(); render5pmSession(); if(typeof renderCalendar === 'function') renderCalendar(); updateMobileFilterUI(); }
     
     function updateHourRange() {
       hourFrom = +document.getElementById('hour-from').value;
@@ -6423,6 +6445,8 @@ function populateDatePicker() {
       if (mobileTo) mobileTo.value = hourTo;
       renderTable();
       render5pmSession();
+      if(typeof renderCalendar === 'function') renderCalendar();
+      updateMobileFilterUI();
     }
     function setHours(f, t) {
       hourFrom = f;
@@ -6435,17 +6459,23 @@ function populateDatePicker() {
       if (mobileTo) mobileTo.value = t;
       renderTable();
       render5pmSession();
+      if(typeof renderCalendar === 'function') renderCalendar();
+      updateMobileFilterUI();
     }
     
     function toggleColumn(id) {
       visibleColumns.has(id) ? visibleColumns.delete(id) : visibleColumns.add(id);
       renderTable();
+      render5pmSession();
+      if(typeof renderCalendar === 'function') renderCalendar();
       // Update mobile UI if modal is open
       if (mobileFilterModalOpen) updateMobileColumnGrid();
     }
     function toggleDTCol(id) {
       visibleDTCols.has(id) ? visibleDTCols.delete(id) : visibleDTCols.add(id);
       renderTable();
+      render5pmSession();
+      if(typeof renderCalendar === 'function') renderCalendar();
       // Update mobile UI if modal is open
       if (mobileFilterModalOpen) updateMobileDayTotalsGrid();
     }
@@ -6502,8 +6532,11 @@ function populateDatePicker() {
 
 <!-- Mobile Filters Modal + Floating Button (injected) -->
 <style>
-  /* Mobile Filters Modal */
-  .mobile-filters-modal { display:none; position:fixed; inset:0; z-index:1400; align-items:flex-end; justify-content:center; pointer-events:none; }
+  /* Hide duplicate NEW mobile filters modal */
+  .mobile-filters-modal { display:none !important; }
+
+  /* OLD Mobile Filters Modal - now used globally */
+  #old-mobile-filters-modal { display:none; position:fixed; inset:0; z-index:1400; align-items:flex-end; justify-content:center; pointer-events:none; }
   .mobile-filters-modal.visible { display:flex; pointer-events:auto; }
   .mobile-filters-backdrop { position:absolute; inset:0; background:linear-gradient(90deg, rgba(0,0,0,0.45), rgba(0,0,0,0.55)); backdrop-filter: blur(4px); }
   .mobile-filters-panel {
@@ -6538,27 +6571,24 @@ function populateDatePicker() {
   .mobile-filters-modal .f-btn.none-btn { background:rgba(248,113,113,0.12); border-color:rgba(248,113,113,0.22);}
   .mobile-filters-modal .f-btn.quick { background:rgba(100,149,237,0.12); border-color:rgba(100,149,237,0.18);}
 
-  /* Floating mobile menu button (improved) */
-  .mobile-menu-btn { display:none; }
-  @media (max-width: 768px) {
-    .mobile-menu-btn {
-      display:flex;
-      position:fixed;
-      bottom:20px;
-      right:18px;
-      z-index:1500;
-      width:56px;
-      height:56px;
-      border-radius:50%;
-      background:var(--accent-btc);
-      color:white;
-      border:none;
-      align-items:center;
-      justify-content:center;
-      font-size:1.25rem;
-      box-shadow: 0 10px 30px rgba(247,147,26,0.35);
-      cursor:pointer;
-    }
+  /* Floating menu button (visible on all screen sizes) */
+  .mobile-menu-btn {
+    display:flex;
+    position:fixed;
+    bottom:20px;
+    right:18px;
+    z-index:1500;
+    width:56px;
+    height:56px;
+    border-radius:50%;
+    background:var(--accent-btc);
+    color:white;
+    border:none;
+    align-items:center;
+    justify-content:center;
+    font-size:1.25rem;
+    box-shadow: 0 10px 30px rgba(247,147,26,0.35);
+    cursor:pointer;
   }
 
   /* Mobile tab nav: make it fixed to bottom and full-width for a modern look */
@@ -6588,15 +6618,9 @@ function populateDatePicker() {
   }
 </style>
 
-<!-- Floating mobile menu button -->
-<button id="mobile-menu-btn" class="mobile-menu-btn" aria-label="Open Filters" title="Open Filters">
-  <!-- funnel icon (SVG) -->
-  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg">
-    <path d="M3 5h18M6 12h12M10 19h4" stroke="white" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
-  </svg>
-</button>
+<!-- Duplicate button removed - using global button instead -->
 
-<!-- Mobile modal container -->
+<!-- Mobile modal container (OLD system - hidden) -->
 <div id="mobile-filters-modal" class="mobile-filters-modal" aria-hidden="true">
   <div class="mobile-filters-backdrop" onclick="toggleMobileFilters()"></div>
   <div class="mobile-filters-panel" role="dialog" aria-modal="true" aria-labelledby="mobile-filters-title">
