@@ -366,7 +366,7 @@
     .dt-col-selector,
     .col-filter-panel,
     .rsi-settings {
-      display: none !important;
+      display: none;
     }
     
     .tb-btn { display: flex; align-items: center; gap: 3px; padding: 3px 7px; background: rgba(255,255,255,0.04); border: 1px solid var(--border-medium); border-radius: 3px; color: var(--text-secondary); font-size: 0.6rem; font-family: 'Inter', sans-serif; cursor: pointer; transition: all 0.15s; }
@@ -1236,12 +1236,9 @@
     <!-- Overview Tab -->
     <div id="tab-overview" class="tab-content active">
       <header class="header">
-        <div style="display: flex; align-items: center;">
-          <div>
-            <h1><span class="btc-sym">₿</span> BTC Hourly Analysis</h1>
-            <span class="sub">5-Min Data • Level Analysis • Ultimate RSI • Eastern Time</span>
-          </div>
-          <span class="live-indicator" onclick="manualRefresh()" title="Click to refresh live data">Live</span>
+        <div>
+          <h1><span class="btc-sym">₿</span> BTC Hourly Analysis</h1>
+          <span class="sub">5-Min Data • Level Analysis • Ultimate RSI • Eastern Time</span>
         </div>
         <div class="header-stats">
           <div class="stat"><span class="stat-val" id="stat-days">0</span><span class="stat-lbl">Days</span></div>
@@ -2277,16 +2274,15 @@
       const yearContainer = document.getElementById('mobile-year-filters');
       if (yearContainer) {
         yearContainer.innerHTML = '';
-        const years = [...selectedYears].sort((a, b) => a.localeCompare(b));
-        years.forEach(year => {
+        availableYears.forEach(year => {
           const btn = document.createElement('button');
-          btn.className = 'mobile-filter-btn active';
+          btn.className = 'mobile-filter-btn';
           btn.textContent = year;
           btn.onclick = () => {
             toggleYear(year);
             updateMobileFilterUI();
           };
-          if (!selectedYears.has(year)) btn.classList.remove('active');
+          if (selectedYears.has(year)) btn.classList.add('active');
           yearContainer.appendChild(btn);
         });
       }
@@ -4011,12 +4007,12 @@
         if (el) el.innerHTML += `<option value="${h}" ${(id==='hour-from'&&h===0)||(id==='hour-to'&&h===23)||(id==='mobile-hour-from'&&h===0)||(id==='mobile-hour-to'&&h===23)||(id==='day-hl-from'&&h===9)||(id==='day-hl-to'&&h===15)||(id==='oc-close-hour'&&h===16)||(id==='mobile-oc-close-hour'&&h===16)||(id==='calendar-close-hour'&&h===16)?'selected':''}>${disp}${ampm}</option>`;
       });
     });
-    document.getElementById('hour-from').value = 0;
-    document.getElementById('hour-to').value = 23;
+    document.getElementById('hour-from').value = hourFrom;
+    document.getElementById('hour-to').value = hourTo;
     const mobileHourFrom = document.getElementById('mobile-hour-from');
     const mobileHourTo = document.getElementById('mobile-hour-to');
-    if (mobileHourFrom) mobileHourFrom.value = 0;
-    if (mobileHourTo) mobileHourTo.value = 23;
+    if (mobileHourFrom) mobileHourFrom.value = hourFrom;
+    if (mobileHourTo) mobileHourTo.value = hourTo;
 
     // Set day highlight dropdowns to default 9am-3pm
     const dayHlFromEl = document.getElementById('day-hl-from');
@@ -6885,16 +6881,16 @@ function populateDatePicker() {
     }
     // Alias for mobile compatibility
     function toggleDayTotalCol(id) { toggleDTCol(id); }
-    function showAllDTCols() { visibleDTCols = new Set(DAY_TOTAL_COLS.map(c => c.id)); document.querySelectorAll('[data-dtcol]').forEach(cb => cb.checked = true); renderTable(); }
-    function hideAllDTCols() { visibleDTCols.clear(); document.querySelectorAll('[data-dtcol]').forEach(cb => cb.checked = false); renderTable(); }
-    function defaultDTCols() { visibleDTCols = new Set(DAY_TOTAL_COLS.filter(c => c.default).map(c => c.id)); document.querySelectorAll('[data-dtcol]').forEach(cb => cb.checked = visibleDTCols.has(cb.dataset.dtcol)); renderTable(); }
-    
-    function setDefaultCols() { visibleColumns = new Set(ALL_COLUMNS.filter(c => c.default).map(c => c.id)); document.querySelectorAll('#col-grid input').forEach((cb, i) => cb.checked = ALL_COLUMNS[i].default); renderTable(); }
-    function setAllCols() { visibleColumns = new Set(ALL_COLUMNS.map(c => c.id)); document.querySelectorAll('#col-grid input').forEach(cb => cb.checked = true); renderTable(); }
-    function setNoCols() { visibleColumns = new Set([]); document.querySelectorAll('#col-grid input').forEach(cb => cb.checked = false); renderTable(); }
-    function setRangeCols() { visibleColumns = new Set(['rng','ur','lr','mxr','mxrRk','rngRk']); document.querySelectorAll('#col-grid input').forEach((cb, i) => cb.checked = visibleColumns.has(ALL_COLUMNS[i].id)); renderTable(); }
-    function setOHLCVCols() { visibleColumns = new Set(['o','hi','lo','c','v']); document.querySelectorAll('#col-grid input').forEach((cb, i) => cb.checked = visibleColumns.has(ALL_COLUMNS[i].id)); renderTable(); }
-    function setRSICols() { visibleColumns = new Set(['rsiMax','rsiMin','rsiAvg','rsiOpen','rsiClose','rsiDelta','rsiOBmin','rsiOSmin','sigMax','sigMin','sigAvg','obos']); document.querySelectorAll('#col-grid input').forEach((cb, i) => cb.checked = visibleColumns.has(ALL_COLUMNS[i].id)); renderTable(); }
+    function showAllDTCols() { visibleDTCols = new Set(DAY_TOTAL_COLS.map(c => c.id)); document.querySelectorAll('[data-dtcol]').forEach(cb => cb.checked = true); renderTable(); updateMobileDayTotalsGrid(); }
+    function hideAllDTCols() { visibleDTCols.clear(); document.querySelectorAll('[data-dtcol]').forEach(cb => cb.checked = false); renderTable(); updateMobileDayTotalsGrid(); }
+    function defaultDTCols() { visibleDTCols = new Set(DAY_TOTAL_COLS.filter(c => c.default).map(c => c.id)); document.querySelectorAll('[data-dtcol]').forEach(cb => cb.checked = visibleDTCols.has(cb.dataset.dtcol)); renderTable(); updateMobileDayTotalsGrid(); }
+
+    function setDefaultCols() { visibleColumns = new Set(ALL_COLUMNS.filter(c => c.default).map(c => c.id)); document.querySelectorAll('#col-grid input').forEach((cb, i) => cb.checked = ALL_COLUMNS[i].default); renderTable(); updateMobileColumnGrid(); }
+    function setAllCols() { visibleColumns = new Set(ALL_COLUMNS.map(c => c.id)); document.querySelectorAll('#col-grid input').forEach(cb => cb.checked = true); renderTable(); updateMobileColumnGrid(); }
+    function setNoCols() { visibleColumns = new Set([]); document.querySelectorAll('#col-grid input').forEach(cb => cb.checked = false); renderTable(); updateMobileColumnGrid(); }
+    function setRangeCols() { visibleColumns = new Set(['rng','ur','lr','mxr','mxrRk','rngRk']); document.querySelectorAll('#col-grid input').forEach((cb, i) => cb.checked = visibleColumns.has(ALL_COLUMNS[i].id)); renderTable(); updateMobileColumnGrid(); }
+    function setOHLCVCols() { visibleColumns = new Set(['o','hi','lo','c','v']); document.querySelectorAll('#col-grid input').forEach((cb, i) => cb.checked = visibleColumns.has(ALL_COLUMNS[i].id)); renderTable(); updateMobileColumnGrid(); }
+    function setRSICols() { visibleColumns = new Set(['rsiMax','rsiMin','rsiAvg','rsiOpen','rsiClose','rsiDelta','rsiOBmin','rsiOSmin','sigMax','sigMin','sigAvg','obos']); document.querySelectorAll('#col-grid input').forEach((cb, i) => cb.checked = visibleColumns.has(ALL_COLUMNS[i].id)); renderTable(); updateMobileColumnGrid(); }
     
     function resetAll() {
       selectedYears = new Set(availableYears);
