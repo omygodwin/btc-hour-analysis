@@ -1678,6 +1678,21 @@
             <button class="f-btn quick" onclick="setPm5Weekdays()">Weekdays</button>
           </div>
         </div>
+
+        <div class="filter-group">
+          <h3>Specific Dates</h3>
+          <div class="date-picker-container" style="position:relative;">
+            <button class="date-picker-btn" onclick="togglePm5DatePicker()">📅 Dates (<span id="pm5-date-count">0</span>)</button>
+            <div id="pm5-date-picker-dropdown" class="date-picker-dropdown">
+              <div class="date-picker-actions">
+                <button onclick="selectAllPm5Dates()">All</button>
+                <button onclick="selectNoPm5Dates()">Clear</button>
+                <button onclick="syncPm5DatesFromFilters()">Sync</button>
+              </div>
+              <div class="date-list" id="pm5-date-list"></div>
+            </div>
+          </div>
+        </div>
       </div>
 
       <div class="table-container">
@@ -3037,10 +3052,12 @@
 
     // Populate PM5 column grid (using subset of ALL_COLUMNS that make sense for hourly data)
     const pm5ColGrid = document.getElementById('pm5-col-grid');
-    ALL_COLUMNS.forEach(col => {
-      const isDefault = pm5VisibleColumns.has(col.id);
-      pm5ColGrid.innerHTML += `<label class="col-item" title="${col.desc}"><input type="checkbox" ${isDefault ? 'checked' : ''} onchange="togglePm5Column('${col.id}')"><span class="col-label">${col.label}</span><span class="col-desc">${col.desc}</span></label>`;
-    });
+    if (pm5ColGrid) {
+      ALL_COLUMNS.forEach(col => {
+        const isDefault = pm5VisibleColumns.has(col.id);
+        pm5ColGrid.innerHTML += `<label class="col-item" title="${col.desc}"><input type="checkbox" ${isDefault ? 'checked' : ''} onchange="togglePm5Column('${col.id}')"><span class="col-label">${col.label}</span><span class="col-desc">${col.desc}</span></label>`;
+      });
+    }
 
     document.addEventListener('click', (e) => {
       const dd = document.getElementById('date-picker-dropdown');
@@ -4177,6 +4194,7 @@
       ).join('');
 
       populateDatePicker();
+      populatePm5DatePicker();
       computeEstablishedHours();
       computeRelativeVolume();
 
@@ -6615,6 +6633,7 @@ function populateDatePicker() {
         const isActive = pm5SelectedDays.has(+b.dataset.pm5Day);
         b.classList.toggle('active', isActive);
       });
+      updatePm5DatePickerUI();
       render5pmSession();
     }
 
@@ -6646,7 +6665,77 @@ function populateDatePicker() {
       updateDatePickerUI();
       renderTable();
     }
-    
+
+    // PM5 Date Picker Functions
+    function populatePm5DatePicker() {
+      document.getElementById('pm5-date-list').innerHTML = allETDates.map(d =>
+        `<div class="date-item ${pm5SelectedDates.has(d) ? 'selected' : ''}" data-date="${d}" onclick="togglePm5Date('${d}')">${d}</div>`
+      ).join('');
+      updatePm5DateCount();
+    }
+
+    function togglePm5DatePicker() {
+      const dropdown = document.getElementById('pm5-date-picker-dropdown');
+      dropdown.classList.toggle('visible');
+      // Close when clicking outside
+      if (dropdown.classList.contains('visible')) {
+        setTimeout(() => {
+          const closeOnClick = (e) => {
+            if (!dropdown.contains(e.target) && !e.target.closest('.date-picker-btn')) {
+              dropdown.classList.remove('visible');
+              document.removeEventListener('click', closeOnClick);
+            }
+          };
+          document.addEventListener('click', closeOnClick);
+        }, 0);
+      }
+    }
+
+    function togglePm5Date(d) {
+      pm5SelectedDates.has(d) ? pm5SelectedDates.delete(d) : pm5SelectedDates.add(d);
+      pm5UseDateFilter = pm5SelectedDates.size > 0;
+      updatePm5DatePickerUI();
+      render5pmSession();
+    }
+
+    function selectAllPm5Dates() {
+      pm5SelectedDates = new Set(allETDates);
+      pm5UseDateFilter = true;
+      updatePm5DatePickerUI();
+      render5pmSession();
+    }
+
+    function selectNoPm5Dates() {
+      pm5SelectedDates.clear();
+      pm5UseDateFilter = false;
+      updatePm5DatePickerUI();
+      render5pmSession();
+    }
+
+    function syncPm5DatesFromFilters() {
+      pm5SelectedDates.clear();
+      Object.values(etDays).forEach(d => {
+        if (pm5SelectedYears.has(d.date.slice(0,4)) && pm5SelectedMonths.has(d.month) &&
+            pm5SelectedDays.has(d.dow) && pm5SelectedOccs.has(d.occ) && d.d5pmOpen != null)
+          pm5SelectedDates.add(d.date);
+      });
+      pm5UseDateFilter = true;
+      updatePm5DatePickerUI();
+      render5pmSession();
+    }
+
+    function updatePm5DatePickerUI() {
+      document.querySelectorAll('#pm5-date-list .date-item').forEach(el =>
+        el.classList.toggle('selected', pm5SelectedDates.has(el.dataset.date))
+      );
+      updatePm5DateCount();
+    }
+
+    function updatePm5DateCount() {
+      const countEl = document.getElementById('pm5-date-count');
+      if (countEl) countEl.textContent = pm5SelectedDates.size;
+    }
+
     function togglePm5Cumulative() {
       pm5ShowCumulative = !pm5ShowCumulative;
       document.getElementById('btn-pm5-cum').classList.toggle('active', pm5ShowCumulative);
