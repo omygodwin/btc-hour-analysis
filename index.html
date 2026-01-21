@@ -1950,8 +1950,10 @@
       { id: 'cdrD', label: 'CDD', desc: 'Cum Day Dn', default: false, gradient: 'orange-col', group: 'cdr' },
       { id: 'mxcd', label: 'MxCD', desc: 'Max Cum D', default: true, gradient: 'orange-col', group: 'mxcd' },
       { id: 'cdr', label: 'CDR', desc: 'Cum Day Rng', default: true, gradient: 'rg-col', group: 'cdrRG' },
-      { id: 'hm', label: 'HMin', desc: 'High Min', default: false, gradient: null },
-      { id: 'lm', label: 'LMin', desc: 'Low Min', default: false, gradient: null },
+      { id: 'hm', label: 'HMin', desc: 'High Min', default: false, gradient: 'minute' },
+      { id: 'lm', label: 'LMin', desc: 'Low Min', default: false, gradient: 'minute' },
+      { id: 'maxRngBarMin', label: 'MxRBm', desc: 'Max Range Bar Minute', default: false, gradient: 'minute', group: 'maxrngbar' },
+      { id: 'maxRngBarVal', label: 'MxRBv', desc: 'Max Range Bar Value', default: false, gradient: 'orange', group: 'maxrngbar' },
       { id: 'o', label: 'Open', desc: 'Open', default: false, gradient: null },
       { id: 'hi', label: 'High', desc: 'High', default: false, gradient: null },
       { id: 'lo', label: 'Low', desc: 'Low', default: false, gradient: null },
@@ -1989,7 +1991,7 @@
       // Bar count metrics
       { id: 'cumGreenBars', label: 'CumG', desc: 'Cumulative green bars', default: false, gradient: 'orange', group: 'bars' },
       { id: 'cumRedBars', label: 'CumR', desc: 'Cumulative red bars', default: false, gradient: 'orange', group: 'bars' },
-      { id: 'barDelta', label: 'BarΔ', desc: 'Bar delta (red - green)', default: false, gradient: 'rg', group: 'bars' },
+      { id: 'barDelta', label: 'BarΔ', desc: 'Bar delta (red - green)', default: false, gradient: 'rg-col', group: 'bars' },
       { id: 'rthCumGreenBars', label: 'RTHG', desc: 'RTH cumulative green bars', default: false, gradient: 'orange', group: 'bars' },
       { id: 'rthCumRedBars', label: 'RTHR', desc: 'RTH cumulative red bars', default: false, gradient: 'orange', group: 'bars' },
       { id: 'rthBarDelta', label: 'RTHBarΔ', desc: 'RTH bar delta (red - green)', default: false, gradient: 'rg', group: 'bars' },
@@ -1999,60 +2001,60 @@
       { id: 'oc3040', label: 'OC3040', desc: ':40 close - :30 open', default: false, gradient: 'rg', group: 'interval' },
       { id: 'oc4555', label: 'OC4555', desc: ':55 close - :45 open', default: false, gradient: 'rg', group: 'interval' },
       // After bar metrics (last bar where threshold exceeded)
-      { id: 'lastAfterHiBarMin', label: 'LAHm', desc: 'Last bar with after high > threshold', default: false, gradient: null, group: 'afterbar' },
-      { id: 'lastAfterLoBarMin', label: 'LALm', desc: 'Last bar with after low > threshold', default: false, gradient: null, group: 'afterbar' },
+      { id: 'lastAfterHiBarMin', label: 'LAHm', desc: 'Last bar with after high > threshold', default: false, gradient: 'minute', group: 'afterbar' },
+      { id: 'lastAfterLoBarMin', label: 'LALm', desc: 'Last bar with after low > threshold', default: false, gradient: 'minute', group: 'afterbar' },
       // :40 bar after bar metrics
       { id: 'bar40AfterHi', label: 'B40AH', desc: ':40 bar after high', default: false, gradient: 'orange', group: 'afterbar' },
       { id: 'bar40AfterLo', label: 'B40AL', desc: ':40 bar after low', default: false, gradient: 'orange', group: 'afterbar' },
     ];
     
     const DAY_TOTAL_COLS = [
-      { id: 'dRng', label: 'DRng', desc: 'Day Range', default: true },
-      { id: 'dUR', label: 'DUR', desc: 'Day Up Rng', default: true },
-      { id: 'dLR', label: 'DLR', desc: 'Day Low Rng', default: true },
-      { id: 'dOC', label: 'DO-C', desc: 'Day O-C', default: true },
-      { id: 'dOCH', label: 'O-CH', desc: 'O-C to Hour', default: false },
+      { id: 'dRng', label: 'DRng', desc: 'Day Range', default: true, gradient: 'orange' },
+      { id: 'dUR', label: 'DUR', desc: 'Day Up Rng', default: true, gradient: 'orange' },
+      { id: 'dLR', label: 'DLR', desc: 'Day Low Rng', default: true, gradient: 'orange' },
+      { id: 'dOC', label: 'DO-C', desc: 'Day O-C', default: true, gradient: 'rg' },
+      { id: 'dOCH', label: 'O-CH', desc: 'O-C to Hour', default: false, gradient: 'rg' },
       { id: 'dHiHr', label: 'HiHr', desc: 'High Hour', default: false },
       { id: 'dLoHr', label: 'LoHr', desc: 'Low Hour', default: false },
       { id: 'dRthHiHr', label: 'RTHHi', desc: 'RTH High Hour (9a-3p)', default: false },
       { id: 'dRthLoHr', label: 'RTHLo', desc: 'RTH Low Hour (9a-3p)', default: false },
-      { id: 'dDD', label: 'DD', desc: 'Drawdown', default: false },
-      { id: 'dRev', label: 'Rev', desc: 'Reversal', default: false },
+      { id: 'dDD', label: 'DD', desc: 'Drawdown', default: false, gradient: 'orange' },
+      { id: 'dRev', label: 'Rev', desc: 'Reversal', default: false, gradient: 'orange' },
       { id: 'dVol', label: 'Vol', desc: 'Total Volume', default: false },
-      { id: 'dRsiMed', label: 'RSIm', desc: 'Median RSI', default: false },
+      { id: 'dRsiMed', label: 'RSIm', desc: 'Median RSI', default: false, gradient: 'purple' },
       { id: 'dOpen', label: 'Open', desc: 'Open', default: false },
       { id: 'dHigh', label: 'High', desc: 'High', default: false },
       { id: 'dLow', label: 'Low', desc: 'Low', default: false },
       { id: 'dClose', label: 'Close', desc: 'Close', default: false },
       // 5PM Session metrics
-      { id: 'd5pmUR', label: '5pUR', desc: '5PM Up Range', default: false },
-      { id: 'd5pmLR', label: '5pLR', desc: '5PM Low Range', default: false },
-      { id: 'd5pmMx', label: '5pMx', desc: '5PM Max Range', default: false },
-      { id: 'd5pmOC', label: '5pOC', desc: '5PM Open-Close', default: false },
+      { id: 'd5pmUR', label: '5pUR', desc: '5PM Up Range', default: false, gradient: 'orange' },
+      { id: 'd5pmLR', label: '5pLR', desc: '5PM Low Range', default: false, gradient: 'orange' },
+      { id: 'd5pmMx', label: '5pMx', desc: '5PM Max Range', default: false, gradient: 'orange' },
+      { id: 'd5pmOC', label: '5pOC', desc: '5PM Open-Close', default: false, gradient: 'rg' },
       // Weekly metrics
-      { id: 'wUR', label: 'WUR', desc: 'Weekly Up Range', default: false },
-      { id: 'wLR', label: 'WLR', desc: 'Weekly Low Range', default: false },
-      { id: 'wMx', label: 'WMx', desc: 'Weekly Max Range', default: false },
-      { id: 'wOC', label: 'WOC', desc: 'Weekly Open-Close', default: false },
+      { id: 'wUR', label: 'WUR', desc: 'Weekly Up Range', default: false, gradient: 'orange' },
+      { id: 'wLR', label: 'WLR', desc: 'Weekly Low Range', default: false, gradient: 'orange' },
+      { id: 'wMx', label: 'WMx', desc: 'Weekly Max Range', default: false, gradient: 'orange' },
+      { id: 'wOC', label: 'WOC', desc: 'Weekly Open-Close', default: false, gradient: 'rg' },
       // Extra day-level helpers
       { id: 'dOW', label: 'Day', desc: 'Day of Week (0=Sun)', default: false },
       { id: 'dDayNum', label: 'Day#', desc: 'Day number in month', default: false },
-      { id: 'dUpEstHr', label: 'UpEst', desc: 'Hour Up % Established', default: false },
-      { id: 'dDnEstHr', label: 'DnEst', desc: 'Hour Down % Established', default: false },
-      { id: 'dRangeEstHr', label: 'RngEst', desc: 'Hour Range % Established', default: false },
-      { id: 'dHourlyMaxRng', label: 'HMaxR', desc: 'Hourly Max Range', default: false },
+      { id: 'dUpEstHr', label: 'UpEst', desc: 'Hour Up % Established', default: false, gradient: 'esthr' },
+      { id: 'dDnEstHr', label: 'DnEst', desc: 'Hour Down % Established', default: false, gradient: 'esthr' },
+      { id: 'dRangeEstHr', label: 'RngEst', desc: 'Hour Range % Established', default: false, gradient: 'esthr' },
+      { id: 'dHourlyMaxRng', label: 'HMaxR', desc: 'Hourly Max Range', default: false, gradient: 'orange' },
       // ===== RELATIVE VOLUME (DAY) =====
-      { id: 'dRelVol', label: 'dRV', desc: 'Day Relative Volume (30d)', default: false },
-      { id: 'dRelVolDOW', label: 'dRV-DOW', desc: 'Day Relative Volume (DOW)', default: false },
+      { id: 'dRelVol', label: 'dRV', desc: 'Day Relative Volume (30d)', default: false, gradient: 'purple' },
+      { id: 'dRelVolDOW', label: 'dRV-DOW', desc: 'Day Relative Volume (DOW)', default: false, gradient: 'purple' },
       // RTH RSI
-      { id: 'dRthRsiAvg', label: 'RTHRSIμ', desc: 'RTH Average RSI (9a-3p)', default: false },
+      { id: 'dRthRsiAvg', label: 'RTHRSIμ', desc: 'RTH Average RSI (9a-3p)', default: false, gradient: 'purple' },
       // Bar count metrics for day totals
-      { id: 'dCumGreenBars', label: 'DGreen', desc: 'Day cumulative green bars', default: false },
-      { id: 'dCumRedBars', label: 'DRed', desc: 'Day cumulative red bars', default: false },
-      { id: 'dBarDelta', label: 'DBarΔ', desc: 'Day bar delta (red - green)', default: false },
-      { id: 'dRthCumGreenBars', label: 'RTHGreen', desc: 'RTH cumulative green bars', default: false },
-      { id: 'dRthCumRedBars', label: 'RTHRed', desc: 'RTH cumulative red bars', default: false },
-      { id: 'dRthBarDelta', label: 'RTHBarΔ', desc: 'RTH bar delta (red - green)', default: false },
+      { id: 'dCumGreenBars', label: 'DGreen', desc: 'Day cumulative green bars', default: false, gradient: 'orange' },
+      { id: 'dCumRedBars', label: 'DRed', desc: 'Day cumulative red bars', default: false, gradient: 'orange' },
+      { id: 'dBarDelta', label: 'DBarΔ', desc: 'Day bar delta (red - green)', default: false, gradient: 'rg' },
+      { id: 'dRthCumGreenBars', label: 'RTHGreen', desc: 'RTH cumulative green bars', default: false, gradient: 'orange' },
+      { id: 'dRthCumRedBars', label: 'RTHRed', desc: 'RTH cumulative red bars', default: false, gradient: 'orange' },
+      { id: 'dRthBarDelta', label: 'RTHBarΔ', desc: 'RTH bar delta (red - green)', default: false, gradient: 'rg' },
     ];
     
     // ==================== STATE ====================
@@ -3306,17 +3308,50 @@
           const hourGreenBars = hd.greenBars || 0;
           const hourRedBars = hourBars.length - hourGreenBars;
 
+          // Calculate max range bar minute (minute with max UR or LR value)
+          let maxRngBarMin = null, maxRngBarVal = null;
+          if (hourBars.length > 0) {
+            let maxUR = -Infinity, maxLR = -Infinity;
+            let maxURMin = null, maxLRMin = null;
+
+            hourBars.forEach(bar => {
+              const ur = Math.round(bar.high - bar.open);
+              const lr = Math.round(bar.open - bar.low);
+
+              if (ur > maxUR) {
+                maxUR = ur;
+                maxURMin = bar.etMin;
+              }
+              if (lr > maxLR) {
+                maxLR = lr;
+                maxLRMin = bar.etMin;
+              }
+            });
+
+            // Return whichever is larger (UR or LR)
+            if (maxUR >= maxLR) {
+              maxRngBarMin = maxURMin;
+              maxRngBarVal = maxUR;
+            } else {
+              maxRngBarMin = maxLRMin;
+              maxRngBarVal = maxLR;
+            }
+          }
+
           hd.m = {
             rng: Math.round(hd.h - hd.l),
             ur: Math.round(hd.h - hd.o),
             lr: Math.round(hd.o - hd.l),
             up: calcLvlUp(hd.o, hd.h),
             dn: calcLvlDn(hd.o, hd.l),
+            totl: calcLvlUp(hd.o, hd.h) + calcLvlDn(hd.o, hd.l),
             cl: calcLvlCl(hd.o, hd.c),
             oc: Math.round(hd.c - hd.o),
             oc25,
             oc55,
             hm: hd.hm, lm: hd.lm,
+            maxRngBarMin,
+            maxRngBarVal,
             o: Math.round(hd.o), hi: Math.round(hd.h), lo: Math.round(hd.l), c: Math.round(hd.c),
             v: Math.round(hd.v * 100) / 100,
             cdr: day.dO ? Math.round(hd.c - day.dO) : null,
@@ -4393,7 +4428,7 @@ function populateDatePicker() {
     }
     
     function calcDayTotalsStats(data) {
-      const s = { drng: [], durdlr: [], doc: [], doch: [], ddd: [], drev: [], d5pm: [], d5pmoc: [], weekly: [], woc: [], dRelVol: [] };
+      const s = { drng: [], durdlr: [], doc: [], doch: [], ddd: [], drev: [], d5pm: [], d5pmoc: [], weekly: [], woc: [], dRelVol: [], dRsi: [], dBars: [], dBarDelta: [], dHourlyMaxRng: [] };
       data.forEach(d => {
         if (d.dRng != null) s.drng.push(d.dRng);
         if (d.dUR != null) s.durdlr.push(d.dUR);
@@ -4414,6 +4449,19 @@ function populateDatePicker() {
         // Relative volume metrics
         if (d.dRelVol != null) s.dRelVol.push(d.dRelVol);
         if (d.dRelVolDOW != null) s.dRelVol.push(d.dRelVolDOW);
+        // RSI metrics
+        if (d.dRsiMed != null) s.dRsi.push(d.dRsiMed);
+        if (d.dRthRsiAvg != null) s.dRsi.push(d.dRthRsiAvg);
+        // Bar count metrics
+        if (d.dCumGreenBars != null) s.dBars.push(d.dCumGreenBars);
+        if (d.dCumRedBars != null) s.dBars.push(d.dCumRedBars);
+        if (d.dRthCumGreenBars != null) s.dBars.push(d.dRthCumGreenBars);
+        if (d.dRthCumRedBars != null) s.dBars.push(d.dRthCumRedBars);
+        // Bar delta metrics
+        if (d.dBarDelta != null) s.dBarDelta.push(d.dBarDelta);
+        if (d.dRthBarDelta != null) s.dBarDelta.push(d.dRthBarDelta);
+        // Hourly max range
+        if (d.dHourlyMaxRng != null) s.dHourlyMaxRng.push(d.dHourlyMaxRng);
       });
       return {
         drng: s.drng.length ? { min: Math.min(...s.drng), max: Math.max(...s.drng) } : { min: 0, max: 0 },
@@ -4426,6 +4474,10 @@ function populateDatePicker() {
         weekly: s.weekly.length ? { min: Math.min(...s.weekly), max: Math.max(...s.weekly) } : { min: 0, max: 5000 },
         woc: s.woc.length ? { min: Math.min(...s.woc), max: Math.max(...s.woc) } : { min: -2000, max: 2000 },
         dRelVol: s.dRelVol.length ? { min: Math.min(...s.dRelVol), max: Math.max(...s.dRelVol) } : { min: 0, max: 2 },
+        dRsi: s.dRsi.length ? { min: Math.min(...s.dRsi), max: Math.max(...s.dRsi) } : { min: 0, max: 100 },
+        dBars: s.dBars.length ? { min: Math.min(...s.dBars), max: Math.max(...s.dBars) } : { min: 0, max: 288 },
+        dBarDelta: s.dBarDelta.length ? { min: Math.min(...s.dBarDelta), max: Math.max(...s.dBarDelta) } : { min: -144, max: 144 },
+        dHourlyMaxRng: s.dHourlyMaxRng.length ? { min: Math.min(...s.dHourlyMaxRng), max: Math.max(...s.dHourlyMaxRng) } : { min: 0, max: 2000 },
       };
     }
     
@@ -4586,8 +4638,25 @@ function populateDatePicker() {
             else if (c.id === 'dRelVol' || c.id === 'dRelVolDOW') {
               bg = getPurpleGradient(val, dtStats.dRelVol?.min || 0, dtStats.dRelVol?.max || 2);
             }
+            // RSI metrics (purple gradient)
+            else if (c.id === 'dRsiMed' || c.id === 'dRthRsiAvg') {
+              bg = getPurpleGradient(val, dtStats.dRsi?.min || 0, dtStats.dRsi?.max || 100);
+            }
+            // Bar count metrics (orange gradient)
+            else if (c.id === 'dCumGreenBars' || c.id === 'dCumRedBars' || c.id === 'dRthCumGreenBars' || c.id === 'dRthCumRedBars') {
+              bg = getOrangeGradient(val, dtStats.dBars?.min || 0, dtStats.dBars?.max || 288);
+            }
+            // Bar delta metrics (red-green gradient)
+            else if (c.id === 'dBarDelta' || c.id === 'dRthBarDelta') {
+              bg = getRGGradient(val, dtStats.dBarDelta?.min || -144, dtStats.dBarDelta?.max || 144);
+              cls += val >= 0 ? ' up' : ' down';
+            }
+            // Hourly max range
+            else if (c.id === 'dHourlyMaxRng') {
+              bg = getOrangeGradient(val, dtStats.dHourlyMaxRng?.min || 0, dtStats.dHourlyMaxRng?.max || 2000);
+            }
 
-            const fmtVal = typeof val === 'number' ? ((['dOC','dOCH','d5pmOC','wOC'].includes(c.id) ? (val >= 0 ? '+' : '') : '') + val.toLocaleString()) : val;
+            const fmtVal = typeof val === 'number' ? ((['dOC','dOCH','d5pmOC','wOC','dBarDelta','dRthBarDelta'].includes(c.id) ? (val >= 0 ? '+' : '') : '') + val.toLocaleString()) : val;
             bd += `<td class="sticky-col ${cls}" style="left:${pos}px;min-width:${w}px;background:${bg}${isLast?';border-right:2px solid rgba(100,149,237,0.3)':''}${extraStyle}">${fmtVal ?? '—'}</td>`;
             pos += w;
           });
@@ -4635,6 +4704,8 @@ function populateDatePicker() {
             else if (col.gradient === 'orange-col' && cStats?.cdr) bg = getOrangeGradient(v, cStats.cdr.min, cStats.cdr.max);
             else if (col.gradient === 'rg-col' && cStats?.cdrRG) bg = getRGGradient(v, cStats.cdrRG.min, cStats.cdrRG.max);
             else if (col.gradient === 'purple' && stats[col.group]) bg = getPurpleGradient(v, stats[col.group].min, stats[col.group].max);
+            else if (col.gradient === 'minute') bg = getMinuteGradient(v);
+            else if (col.gradient === 'esthr') bg = getEstablishedHourGradient(v);
             
             if (col.id === 'mxcd' && cStats?.mxcd) bg = getOrangeGradient(v, cStats.mxcd.min, cStats.mxcd.max);
             // Weekly cumulative gradients
@@ -5935,18 +6006,34 @@ function populateDatePicker() {
 
     function render5pmSession() {
       const data = getPm5FilteredData();
+
+      // Apply column filters
+      const filteredData = applyColumnFilters(data);
+
       const lvl = parseInt(document.getElementById('pm5-level-size').value) || 250;
       const gMode = document.getElementById('pm5-gradient-mode').value;
-      
-      document.getElementById('pm5-stat-days').textContent = data.length;
-      
+
+      document.getElementById('pm5-stat-days').textContent = filteredData.length;
+
       // Hours in 5PM session order: 17,18,19,20,21,22,23,0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16
-      const PM5_HOURS = [17,18,19,20,21,22,23,0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16];
+      const ALL_PM5_HOURS = [17,18,19,20,21,22,23,0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16];
+
+      // Apply hour filter (from overview tab)
+      const PM5_HOURS = ALL_PM5_HOURS.filter(h => {
+        // Convert to 0-23 range for comparison
+        if (hourFrom <= hourTo) {
+          return h >= hourFrom && h <= hourTo;
+        } else {
+          // Wrap-around case (e.g., from 22 to 2)
+          return h >= hourFrom || h <= hourTo;
+        }
+      });
+
       document.getElementById('pm5-stat-hours').textContent = PM5_HOURS.length;
       
       // Calculate stats for gradients
       const stats5pm = { ur: [], lr: [], oc: [], rng: [], cum: [], cumRG: [] };
-      data.forEach(d => {
+      filteredData.forEach(d => {
         if (d.d5pmUR != null) stats5pm.ur.push(d.d5pmUR);
         if (d.d5pmLR != null) stats5pm.lr.push(d.d5pmLR);
         if (d.d5pmOC != null) stats5pm.oc.push(d.d5pmOC);
@@ -6001,9 +6088,27 @@ function populateDatePicker() {
       
       // Build body
       let bd = '';
-      data.forEach(day => {
+
+      // Determine if we should show "tomorrow's date" for current session
+      const now = new Date();
+      const currentHour = now.getHours();
+      const showTomorrowDate = currentHour >= 17; // Between 5PM and midnight
+
+      filteredData.forEach(day => {
         bd += '<tr>';
-        bd += `<td class="sticky-col date-cell" style="left:0;min-width:65px;cursor:pointer;" onclick="loadDateInDayView('${day.date}')" title="Click to view in Day View">${day.date}</td>`;
+
+        // If we're viewing the most recent day and it's after 5PM, show tomorrow's date
+        const isLatestDay = day === filteredData[0];
+        let displayDate = day.date;
+
+        if (isLatestDay && showTomorrowDate) {
+          // Calculate tomorrow's date
+          const dayDate = new Date(day.date + 'T12:00:00Z');
+          dayDate.setUTCDate(dayDate.getUTCDate() + 1);
+          displayDate = dayDate.toISOString().split('T')[0];
+        }
+
+        bd += `<td class="sticky-col date-cell" style="left:0;min-width:65px;cursor:pointer;" onclick="loadDateInDayView('${day.date}')" title="Click to view in Day View">${displayDate}${isLatestDay && showTomorrowDate ? ' (tmrw)' : ''}</td>`;
         bd += `<td class="sticky-col day-cell" style="left:65px;min-width:28px">${DAYS_SHORT[day.dow]}</td>`;
         
         // 5PM session totals
@@ -6244,6 +6349,7 @@ function populateDatePicker() {
       if (mobileFrom) mobileFrom.value = hourFrom;
       if (mobileTo) mobileTo.value = hourTo;
       renderTable();
+      render5pmSession();
     }
     function setHours(f, t) {
       hourFrom = f;
@@ -6255,6 +6361,7 @@ function populateDatePicker() {
       if (mobileFrom) mobileFrom.value = f;
       if (mobileTo) mobileTo.value = t;
       renderTable();
+      render5pmSession();
     }
     
     function toggleColumn(id) {
