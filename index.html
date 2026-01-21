@@ -3383,7 +3383,24 @@
             // Find first and last bars with RSI values
             const barsWithRSI = hourBars.filter(b => b.rsi != null);
             if (barsWithRSI.length > 0) {
-              rsiOpen = barsWithRSI[0].rsi;
+              // RSI open should be the RSI close from the previous 5-minute bar (:55 from previous hour)
+              // This ensures RSI open equals the previous bar's close since nothing happened in that instant
+              let prevBar = null;
+              if (hrNum > 0) {
+                // Look for :55 bar in previous hour of same day
+                prevBar = dayBars.find(b => b.etHour === hrNum - 1 && b.etMin === 55);
+              } else {
+                // hrNum === 0, look at previous day's hour 23, minute 55
+                const prevDateIdx = allETDates.indexOf(day.date) + 1;
+                const prevDate = prevDateIdx < allETDates.length ? allETDates[prevDateIdx] : null;
+                if (prevDate) {
+                  const prevDayBars = barsByET[prevDate] || [];
+                  prevBar = prevDayBars.find(b => b.etHour === 23 && b.etMin === 55);
+                }
+              }
+
+              // Use previous bar's RSI if available, otherwise fall back to first bar's RSI
+              rsiOpen = prevBar && prevBar.rsi != null ? prevBar.rsi : barsWithRSI[0].rsi;
               rsiClose = barsWithRSI[barsWithRSI.length - 1].rsi;
               rsiDelta = rsiOpen - rsiClose;
             }
