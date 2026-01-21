@@ -1232,7 +1232,18 @@
       <button class="tab-btn" onclick="switchTab('hourview')">🕐 Hour View</button>
       <button class="tab-btn" onclick="switchTab('calendar')">🗓 Calendar</button>
     </nav>
-    
+
+    <!-- Live Status Indicator - Fixed position, visible across all tabs -->
+    <div class="live-status-container">
+      <div class="live-status-indicator" id="live-status">
+        <span class="live-dot"></span>
+        <span class="live-text">
+          <span class="live-text-short">Live</span>
+          <span class="live-text-full">Initializing...</span>
+        </span>
+      </div>
+    </div>
+
     <!-- Overview Tab -->
     <div id="tab-overview" class="tab-content active">
       <header class="header">
@@ -1246,17 +1257,6 @@
           <div class="stat"><span class="stat-val" id="stat-cols">7</span><span class="stat-lbl">Cols</span></div>
         </div>
       </header>
-
-      <!-- Live Status Indicator - Fixed position, visible across all tabs -->
-      <div class="live-status-container">
-        <div class="live-status-indicator" id="live-status">
-          <span class="live-dot"></span>
-          <span class="live-text">
-            <span class="live-text-short">Live</span>
-            <span class="live-text-full">Initializing...</span>
-          </span>
-        </div>
-      </div>
 
       <div class="toolbar">
         <button class="tb-btn mobile-hide" id="btn-filters" onclick="toggleFilters()">⚙ Filters</button>
@@ -2458,7 +2458,7 @@
 
         const checkbox = document.createElement('input');
         checkbox.type = 'checkbox';
-        checkbox.checked = visibleDayTotalCols.has(col.id);
+        checkbox.checked = visibleDTCols.has(col.id);
         checkbox.style.accentColor = 'var(--accent-blue)';
         checkbox.onclick = (e) => e.stopPropagation();
         checkbox.onchange = () => {
@@ -2752,6 +2752,7 @@
               console.log('✓ Data refreshed and UI updated');
             } else {
               // First load - initialize UI
+              populateHourSelects();
               populateFilterSelects();
               document.getElementById('loading-screen').style.display = 'none';
               document.getElementById('app').classList.add('visible');
@@ -2941,6 +2942,7 @@
           calculateRSI();
           calculateBarMetrics();
           processDataET();
+          populateHourSelects();
           populateFilterSelects();
           document.getElementById('loading-screen').style.display = 'none';
           document.getElementById('app').classList.add('visible');
@@ -2979,6 +2981,7 @@
             calculateRSI();
             calculateBarMetrics();
             processDataET();
+            populateHourSelects();
             populateFilterSelects();
             document.getElementById('loading-screen').style.display = 'none';
             document.getElementById('app').classList.add('visible');
@@ -3997,28 +4000,36 @@
       computeRelativeVolume();
     }
 
-    realHours = buildRealHours(Object.values(etDays));
+    function populateHourSelects() {
+      realHours = buildRealHours(Object.values(etDays));
 
-    realHours.forEach(h => {
-      const ampm = h >= 12 ? 'PM' : 'AM';
-      const disp = h === 0 ? 12 : h > 12 ? h - 12 : h;
+      // Clear existing options first
       ['hour-from', 'hour-to', 'mobile-hour-from', 'mobile-hour-to', 'day-hl-from', 'day-hl-to', 'oc-close-hour', 'mobile-oc-close-hour', 'calendar-close-hour'].forEach(id => {
         const el = document.getElementById(id);
-        if (el) el.innerHTML += `<option value="${h}" ${(id==='hour-from'&&h===0)||(id==='hour-to'&&h===23)||(id==='mobile-hour-from'&&h===0)||(id==='mobile-hour-to'&&h===23)||(id==='day-hl-from'&&h===9)||(id==='day-hl-to'&&h===15)||(id==='oc-close-hour'&&h===16)||(id==='mobile-oc-close-hour'&&h===16)||(id==='calendar-close-hour'&&h===16)?'selected':''}>${disp}${ampm}</option>`;
+        if (el) el.innerHTML = '';
       });
-    });
-    document.getElementById('hour-from').value = hourFrom;
-    document.getElementById('hour-to').value = hourTo;
-    const mobileHourFrom = document.getElementById('mobile-hour-from');
-    const mobileHourTo = document.getElementById('mobile-hour-to');
-    if (mobileHourFrom) mobileHourFrom.value = hourFrom;
-    if (mobileHourTo) mobileHourTo.value = hourTo;
 
-    // Set day highlight dropdowns to default 9am-3pm
-    const dayHlFromEl = document.getElementById('day-hl-from');
-    const dayHlToEl = document.getElementById('day-hl-to');
-    if (dayHlFromEl) dayHlFromEl.value = 9;
-    if (dayHlToEl) dayHlToEl.value = 15;
+      realHours.forEach(h => {
+        const ampm = h >= 12 ? 'PM' : 'AM';
+        const disp = h === 0 ? 12 : h > 12 ? h - 12 : h;
+        ['hour-from', 'hour-to', 'mobile-hour-from', 'mobile-hour-to', 'day-hl-from', 'day-hl-to', 'oc-close-hour', 'mobile-oc-close-hour', 'calendar-close-hour'].forEach(id => {
+          const el = document.getElementById(id);
+          if (el) el.innerHTML += `<option value="${h}" ${(id==='hour-from'&&h===0)||(id==='hour-to'&&h===23)||(id==='mobile-hour-from'&&h===0)||(id==='mobile-hour-to'&&h===23)||(id==='day-hl-from'&&h===9)||(id==='day-hl-to'&&h===15)||(id==='oc-close-hour'&&h===16)||(id==='mobile-oc-close-hour'&&h===16)||(id==='calendar-close-hour'&&h===16)?'selected':''}>${disp}${ampm}</option>`;
+        });
+      });
+      document.getElementById('hour-from').value = hourFrom;
+      document.getElementById('hour-to').value = hourTo;
+      const mobileHourFrom = document.getElementById('mobile-hour-from');
+      const mobileHourTo = document.getElementById('mobile-hour-to');
+      if (mobileHourFrom) mobileHourFrom.value = hourFrom;
+      if (mobileHourTo) mobileHourTo.value = hourTo;
+
+      // Set day highlight dropdowns to default 9am-3pm
+      const dayHlFromEl = document.getElementById('day-hl-from');
+      const dayHlToEl = document.getElementById('day-hl-to');
+      if (dayHlFromEl) dayHlFromEl.value = 9;
+      if (dayHlToEl) dayHlToEl.value = 15;
+    }
 
     function updateLevel() {
       levelSize = parseInt(document.getElementById('level-size').value) || 250;
