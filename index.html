@@ -2018,6 +2018,10 @@
       { id: 'bar40AfterHi', label: 'B40AH', desc: ':40 bar after high', default: false, gradient: 'orange', group: 'b40' },
       { id: 'bar40AfterLo', label: 'B40AL', desc: ':40 bar after low', default: false, gradient: 'orange', group: 'b40' },
       { id: 'maxB40HL', label: 'MxB40', desc: 'Max of B40AH and B40AL', default: false, gradient: 'orange', group: 'b40' },
+      // Strength indicators
+      { id: 'buyStr', label: 'BuyStr', desc: 'Buy Strength: (C-L)/(H-L)*100', default: false, gradient: 'orange', group: 'strength' },
+      { id: 'sellStr', label: 'SellStr', desc: 'Sell Strength: (H-C)/(H-L)*100', default: false, gradient: 'orange', group: 'strength' },
+      { id: 'overallStr', label: 'NetStr', desc: 'Overall Strength: (C-O)/(H-L)*100', default: false, gradient: 'rg', group: 'strength' },
     ];
     
     const DAY_TOTAL_COLS = [
@@ -2096,7 +2100,7 @@
     let dayHlTo = 15;
     let showDayOHLC = true;
     let compareMode = false;
-    let showAfterHL = false; // Show hour high/low after close in Day/Hour View
+    let showAfterHL = 'off'; // Modes: 'off', 'afterhl' (hour H/L after bar), 'hhcll' (hour H - close, close - hour L)
     let rVolThreshold = 4; // Relative volume highlight threshold
     let calColorDays = new Set([0,1,2,3,4,5,6]);
     let calColorDates = null;
@@ -3110,6 +3114,18 @@
           // Calculate after bar high/low as the difference from current bar's close
           bar.afterBarHigh = afterHigh > -Infinity ? Math.round(afterHigh - bar.close) : null;
           bar.afterBarLow = afterLow < Infinity ? Math.round(bar.close - afterLow) : null;
+
+          // Calculate strength indicators for this bar
+          const barRng = bar.high - bar.low;
+          if (barRng > 0) {
+            bar.buyStr = Math.round(((bar.close - bar.low) / barRng) * 100);
+            bar.sellStr = Math.round(((bar.high - bar.close) / barRng) * 100);
+            bar.overallStr = Math.round(((bar.close - bar.open) / barRng) * 100);
+          } else {
+            bar.buyStr = null;
+            bar.sellStr = null;
+            bar.overallStr = null;
+          }
         });
       });
 
@@ -3414,6 +3430,21 @@
             rthCumRedBars: null,
             rthBarDelta: null,
           };
+
+          // Calculate strength indicators
+          const rng = hd.h - hd.l;
+          if (rng > 0) {
+            // buyStr: % of range from low to close (0-100)
+            hd.m.buyStr = Math.round(((hd.c - hd.l) / rng) * 100);
+            // sellStr: % of range from close to high (0-100)
+            hd.m.sellStr = Math.round(((hd.h - hd.c) / rng) * 100);
+            // overallStr: net direction as % of range (-100 to +100)
+            hd.m.overallStr = Math.round(((hd.c - hd.o) / rng) * 100);
+          } else {
+            hd.m.buyStr = null;
+            hd.m.sellStr = null;
+            hd.m.overallStr = null;
+          }
 
           hd.m.mxr = Math.max(hd.m.ur, hd.m.lr);
           hd.m.mxl = Math.max(hd.m.up, hd.m.dn);
@@ -4331,7 +4362,7 @@ function populateDatePicker() {
     }
     
     function calcRowStats(day, hours) {
-      const s = { rng: [], urlr: [], mxr: [], mxl: [], rank: [], cl: [], oc: [], cdr: [], cdrRG: [], mxcd: [], rsi: [], sig: [], vol: [], b40: [], bars: [], interval: [], afterbar: [], maxrngbar: [] };
+      const s = { rng: [], urlr: [], mxr: [], mxl: [], rank: [], cl: [], oc: [], cdr: [], cdrRG: [], mxcd: [], rsi: [], sig: [], vol: [], b40: [], bars: [], interval: [], afterbar: [], maxrngbar: [], strength: [] };
       getSortedHourKeys(day).forEach(h => {
         const m = day.hrs[h].m;
         if (!m) return;
@@ -4387,6 +4418,11 @@ function populateDatePicker() {
 
         // Max range bar metrics
         if (m.maxRngBarVal != null) s.maxrngbar.push(m.maxRngBarVal);
+
+        // Strength metrics
+        if (m.buyStr != null) s.strength.push(m.buyStr);
+        if (m.sellStr != null) s.strength.push(m.sellStr);
+        // overallStr can be negative, collect separately for red-green gradient
       });
       const r = {};
       Object.keys(s).forEach(k => {
@@ -4408,7 +4444,7 @@ function populateDatePicker() {
           cdrRG: [], cdr: [], mxcd: [], rsi: [], sig: [], vol: [],
           wcdr: [], wcdrRG: [], wmxcd: [],
           p5cdr: [], p5cdrRG: [], p5mxcd: [],
-          b40: [], bars: [], interval: [], afterbar: [], maxrngbar: []
+          b40: [], bars: [], interval: [], afterbar: [], maxrngbar: [], strength: []
         };
 
         data.forEach(d => {
@@ -4478,6 +4514,10 @@ function populateDatePicker() {
 
           // Max range bar metrics
           if (m.maxRngBarVal != null) s[h].maxrngbar.push(m.maxRngBarVal);
+
+          // Strength metrics
+          if (m.buyStr != null) s[h].strength.push(m.buyStr);
+          if (m.sellStr != null) s[h].strength.push(m.sellStr);
         });
       });
       const r = {};
@@ -5146,21 +5186,38 @@ function populateDatePicker() {
       };
 
       // Calculate after high/low stats for gradients (excluding :55 bars)
-      const afterHLStats = { hh: [], hl: [] };
-      if (showAfterHL) {
+      const afterHLStats = { hh: [], hl: [], hhc: [], cll: [] };
+      if (showAfterHL !== 'off') {
         dayHours.forEach(h => {
+          const hourData = day.hrs[h];
+          if (!hourData) return;
+          const hourHigh = hourData.h;
+          const hourLow = hourData.l;
+
           MINS.forEach(m => {
             if (m === '55') return; // Exclude :55 bars
             const bar = hourBars[h]?.[m];
             if (!bar) return;
-            if (bar.hhAfterClose != null) afterHLStats.hh.push(bar.hhAfterClose);
-            if (bar.hlAfterClose != null) afterHLStats.hl.push(bar.hlAfterClose);
+
+            if (showAfterHL === 'afterhl') {
+              if (bar.hhAfterClose != null) afterHLStats.hh.push(bar.hhAfterClose);
+              if (bar.hlAfterClose != null) afterHLStats.hl.push(bar.hlAfterClose);
+            } else if (showAfterHL === 'hhcll') {
+              // Calculate hour high - bar close and bar close - hour low
+              const hhc = Math.round(hourHigh - bar.close);
+              const cll = Math.round(bar.close - hourLow);
+              if (hhc != null) afterHLStats.hhc.push(Math.abs(hhc));
+              if (cll != null) afterHLStats.cll.push(Math.abs(cll));
+            }
           });
         });
       }
-      const afterHLRange = afterHLStats.hh.length && afterHLStats.hl.length ? {
+      const afterHLRange = (showAfterHL === 'afterhl' && afterHLStats.hh.length && afterHLStats.hl.length) ? {
         min: Math.min(...afterHLStats.hh, ...afterHLStats.hl),
         max: Math.max(...afterHLStats.hh, ...afterHLStats.hl)
+      } : (showAfterHL === 'hhcll' && afterHLStats.hhc.length && afterHLStats.cll.length) ? {
+        min: Math.min(...afterHLStats.hhc, ...afterHLStats.cll),
+        max: Math.max(...afterHLStats.hhc, ...afterHLStats.cll)
       } : { min: 0, max: 100 };
 
       let bd = '';
@@ -5260,18 +5317,25 @@ function populateDatePicker() {
 
             // After High/Low with 2-column grid and gradient coloring
             let afterHLRow = '';
-            if (showAfterHL) {
+            if (showAfterHL !== 'off') {
               if (m === '55') {
                 // Show blank for :55 bars (no bar after them)
                 afterHLRow = '<div class="after-metrics-grid"><div class="after-high">—</div><div class="after-low">—</div></div>';
-              } else {
+              } else if (showAfterHL === 'afterhl') {
                 const hhGradient = bar.hhAfterClose != null ? getOrangeGradient(bar.hhAfterClose, afterHLRange.min, afterHLRange.max) : 'transparent';
                 const hlGradient = bar.hlAfterClose != null ? getOrangeGradient(bar.hlAfterClose, afterHLRange.min, afterHLRange.max) : 'transparent';
                 afterHLRow = `<div class="after-metrics-grid"><div class="after-high" style="background:${hhGradient}">+${bar.hhAfterClose ?? 0}</div><div class="after-low" style="background:${hlGradient}">${bar.hlAfterClose >= 0 ? '+' : ''}${bar.hlAfterClose ?? 0}</div></div>`;
+              } else if (showAfterHL === 'hhcll') {
+                const hourData = day.hrs[h];
+                const hhc = Math.round(hourData.h - bar.close);
+                const cll = Math.round(bar.close - hourData.l);
+                const hhcGradient = getOrangeGradient(Math.abs(hhc), afterHLRange.min, afterHLRange.max);
+                const cllGradient = getOrangeGradient(Math.abs(cll), afterHLRange.min, afterHLRange.max);
+                afterHLRow = `<div class="after-metrics-grid"><div class="after-high" style="background:${hhcGradient}">${hhc >= 0 ? '+' : ''}${hhc}</div><div class="after-low" style="background:${cllGradient}">${cll >= 0 ? '+' : ''}${cll}</div></div>`;
               }
             }
             bd += `<td class="min-cell${borderCls}" style="min-height:56px;${rVolHighlight}">
-              <div class="min-grid" style="grid-template-rows:1fr 1fr 1fr 1fr${showAfterHL ? ' auto' : ''};">
+              <div class="min-grid" style="grid-template-rows:1fr 1fr 1fr 1fr${showAfterHL !== 'off' ? ' auto' : ''};">
                 <div class="min-grid-top left" style="background:${getOrangeGradient(ur, mStats.urlr.min, mStats.urlr.max)};${urBorder}">${ur}<span class="min-lvl">(${lvlUp})</span></div>
                 <div class="min-grid-top" style="background:${getOrangeGradient(lr, mStats.urlr.min, mStats.urlr.max)};${lrBorder}">${lr}<span class="min-lvl">(${lvlDn})</span></div>
                 <div class="min-grid-bottom ${oc >= 0 ? 'up' : 'down'}" style="background:${getRGGradient(oc, mStats.oc.min, mStats.oc.max)};border-bottom:1px solid var(--border-medium);${ocBorder}">${oc >= 0 ? '+' : ''}${oc}<span class="min-lvl">(${lvlCl >= 0 ? '+' : ''}${lvlCl})</span><span class="info-btn" data-date="${date}" data-hour="${h}" data-minute="${m}">ⓘ</span></div>
@@ -5713,18 +5777,25 @@ function populateDatePicker() {
 
             // After High/Low with 2-column grid and gradient coloring - Hour View
             let afterHLRow = '';
-            if (showAfterHL) {
+            if (showAfterHL !== 'off') {
               if (m === '55') {
                 // Show blank for :55 bars (no bar after them)
                 afterHLRow = '<div class="after-metrics-grid"><div class="after-high">—</div><div class="after-low">—</div></div>';
-              } else {
+              } else if (showAfterHL === 'afterhl') {
                 const hhGradient = bar.hhAfterClose != null ? getOrangeGradient(bar.hhAfterClose, afterHLRange.min, afterHLRange.max) : 'transparent';
                 const hlGradient = bar.hlAfterClose != null ? getOrangeGradient(bar.hlAfterClose, afterHLRange.min, afterHLRange.max) : 'transparent';
                 afterHLRow = `<div class="after-metrics-grid"><div class="after-high" style="background:${hhGradient}">+${bar.hhAfterClose ?? 0}</div><div class="after-low" style="background:${hlGradient}">${bar.hlAfterClose >= 0 ? '+' : ''}${bar.hlAfterClose ?? 0}</div></div>`;
+              } else if (showAfterHL === 'hhcll') {
+                const hourData = day.hrs[h];
+                const hhc = Math.round(hourData.h - bar.close);
+                const cll = Math.round(bar.close - hourData.l);
+                const hhcGradient = getOrangeGradient(Math.abs(hhc), afterHLRange.min, afterHLRange.max);
+                const cllGradient = getOrangeGradient(Math.abs(cll), afterHLRange.min, afterHLRange.max);
+                afterHLRow = `<div class="after-metrics-grid"><div class="after-high" style="background:${hhcGradient}">${hhc >= 0 ? '+' : ''}${hhc}</div><div class="after-low" style="background:${cllGradient}">${cll >= 0 ? '+' : ''}${cll}</div></div>`;
               }
             }
             bd += `<td class="min-cell${borderCls}" style="min-height:56px;${rVolHighlight}">
-              <div class="min-grid" style="grid-template-rows:1fr 1fr 1fr 1fr${showAfterHL ? ' auto' : ''};">
+              <div class="min-grid" style="grid-template-rows:1fr 1fr 1fr 1fr${showAfterHL !== 'off' ? ' auto' : ''};">
                 <div class="min-grid-top left" style="background:${getOrangeGradient(ur, mStats.urlr.min, mStats.urlr.max)};${urBorder}">${ur}<span class="min-lvl">(${lvlUp})</span></div>
                 <div class="min-grid-top" style="background:${getOrangeGradient(lr, mStats.urlr.min, mStats.urlr.max)};${lrBorder}">${lr}<span class="min-lvl">(${lvlDn})</span></div>
                 <div class="min-grid-bottom ${oc >= 0 ? 'up' : 'down'}" style="background:${getRGGradient(oc, mStats.oc.min, mStats.oc.max)};border-bottom:1px solid var(--border-medium);">${oc >= 0 ? '+' : ''}${oc}<span class="min-lvl">(${lvlCl >= 0 ? '+' : ''}${lvlCl})</span><span class="info-btn" data-date="${day.date}" data-hour="${hour}" data-minute="${m}">ⓘ</span></div>
@@ -6341,9 +6412,31 @@ function populateDatePicker() {
       renderDayView();
     }
     function toggleShowAfterHL() {
-      showAfterHL = !showAfterHL;
-      document.getElementById('btn-show-after-hl')?.classList.toggle('active', showAfterHL);
-      document.getElementById('btn-hv-after-hl')?.classList.toggle('active', showAfterHL);
+      // Cycle through modes: off -> afterhl -> hhcll -> off
+      if (showAfterHL === 'off') {
+        showAfterHL = 'afterhl';
+      } else if (showAfterHL === 'afterhl') {
+        showAfterHL = 'hhcll';
+      } else {
+        showAfterHL = 'off';
+      }
+
+      // Update button text and active state
+      const dayBtn = document.getElementById('btn-show-after-hl');
+      const hvBtn = document.getElementById('btn-hv-after-hl');
+      if (dayBtn) {
+        dayBtn.classList.toggle('active', showAfterHL !== 'off');
+        if (showAfterHL === 'afterhl') dayBtn.textContent = 'AfterH/L';
+        else if (showAfterHL === 'hhcll') dayBtn.textContent = 'HH-C/C-LL';
+        else dayBtn.textContent = 'AfterH/L';
+      }
+      if (hvBtn) {
+        hvBtn.classList.toggle('active', showAfterHL !== 'off');
+        if (showAfterHL === 'afterhl') hvBtn.textContent = 'AfterH/L';
+        else if (showAfterHL === 'hhcll') hvBtn.textContent = 'HH-C/C-LL';
+        else hvBtn.textContent = 'AfterH/L';
+      }
+
       renderDayView();
       renderHourView();
     }
@@ -6951,6 +7044,14 @@ function populateDatePicker() {
               infoHTML += '<div class="info-section"><strong>After Bar:</strong></div>';
               if (bar.afterBarHigh != null) infoHTML += `<div class="info-row">After High: <span>${bar.afterBarHigh}</span></div>`;
               if (bar.afterBarLow != null) infoHTML += `<div class="info-row">After Low: <span>${bar.afterBarLow}</span></div>`;
+            }
+
+            // Strength indicators
+            if (bar.buyStr != null || bar.sellStr != null || bar.overallStr != null) {
+              infoHTML += '<div class="info-section"><strong>Strength:</strong></div>';
+              if (bar.buyStr != null) infoHTML += `<div class="info-row">Buy Strength: <span>${bar.buyStr}%</span></div>`;
+              if (bar.sellStr != null) infoHTML += `<div class="info-row">Sell Strength: <span>${bar.sellStr}%</span></div>`;
+              if (bar.overallStr != null) infoHTML += `<div class="info-row">Net Strength: <span class="${bar.overallStr >= 0 ? 'up' : 'down'}">${bar.overallStr >= 0 ? '+' : ''}${bar.overallStr}%</span></div>`;
             }
 
             // Hour high/low after close
