@@ -52,7 +52,10 @@ class LiveDataFetcher {
           // Still merge data and show UI, just don't fetch
           const mergedData = this.getMergedData();
           this.onDataUpdate(mergedData);
-          this.startAutoRefresh();
+
+          // Calculate remaining time until next 5-minute mark
+          const remainingTime = fiveMinutes - timeSinceSync;
+          this.startAutoRefresh(remainingTime);
           this.startTimeUpdates();
           this.isLive = true;
           this.updateStatus('live', `Live data active (last: ${this.getLastTimestampFormatted()})`);
@@ -203,15 +206,16 @@ class LiveDataFetcher {
 
   /**
    * Start auto-refresh timer
+   * If initialDelay is provided, waits that long before starting the regular interval
    */
-  startAutoRefresh() {
+  startAutoRefresh(initialDelay = null) {
     if (!this.enabled) return;
 
     if (this.refreshTimer) {
       clearInterval(this.refreshTimer);
     }
 
-    this.refreshTimer = setInterval(async () => {
+    const refreshFn = async () => {
       console.log('Auto-refreshing live data...');
       this.updateStatus('refreshing', 'Fetching latest data...');
 
@@ -224,9 +228,24 @@ class LiveDataFetcher {
       } catch (error) {
         console.error('Auto-refresh failed:', error);
       }
-    }, this.refreshInterval);
+    };
 
-    console.log(`Auto-refresh enabled (every ${this.refreshInterval / 1000}s)`);
+    // If we have an initial delay (for sync alignment), use setTimeout first
+    if (initialDelay !== null && initialDelay > 0) {
+      console.log(`Auto-refresh scheduled in ${Math.floor(initialDelay / 1000)}s, then every ${this.refreshInterval / 1000}s`);
+
+      setTimeout(() => {
+        // Do the first refresh
+        refreshFn();
+
+        // Then start regular interval
+        this.refreshTimer = setInterval(refreshFn, this.refreshInterval);
+      }, initialDelay);
+    } else {
+      // Start regular interval immediately
+      this.refreshTimer = setInterval(refreshFn, this.refreshInterval);
+      console.log(`Auto-refresh enabled (every ${this.refreshInterval / 1000}s)`);
+    }
   }
 
   /**
