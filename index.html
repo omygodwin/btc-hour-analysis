@@ -6436,6 +6436,32 @@ function populateDatePicker() {
       renderTable();
       render5pmSession();
     }
+
+    document.addEventListener('DOMContentLoaded', function() {
+        const fromSelect = document.getElementById('hour-from');
+        const toSelect = document.getElementById('hour-to');
+    
+        // 1. Loop 0-23 to build the list options
+        for (let i = 0; i < 24; i++) {
+            // Format the label (e.g., 0="12am", 13="1pm")
+            let ampm = i < 12 ? 'am' : 'pm';
+            let hour = i % 12;
+            if (hour === 0) hour = 12;
+            
+            let label = hour + ampm; // "12am", "1am", etc.
+    
+            // Add the option to both dropdowns
+            fromSelect.add(new Option(label, i));
+            toSelect.add(new Option(label, i));
+        }
+    
+        // 2. Set the defaults (12am to 11pm)
+        fromSelect.value = 0;
+        toSelect.value = 23;
+    
+        // 3. Trigger your existing function to sync variables and render the table
+        updateHourRange();
+    });
     
     function toggleColumn(id) {
       visibleColumns.has(id) ? visibleColumns.delete(id) : visibleColumns.add(id);
