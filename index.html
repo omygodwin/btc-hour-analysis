@@ -4550,19 +4550,22 @@ function populateDatePicker() {
     function renderTable() {
       const data = getFilteredData();
 
+      const hours = getVisibleHours();
+
       // REAL hours actually present in filtered data
       const hourSet = new Set();
       data.forEach(d => {
         getSortedHourKeys(d).forEach(h => hourSet.add(Number(h)));
       });
-      const realHours = [...hourSet].sort((a, b) => a - b);
+      const realHours = [...hourSet]
+        .sort((a, b) => a - b)
+        .filter(h => hours.includes(h));
       if (!realHours.length) {
         console.warn('renderTable: no realHours found');
         return;
       }
     
       // UI / settings
-      const hours = getVisibleHours();
       const cols = getActiveColumns();
       const dtCols = getActiveDTCols();
       const gMode = document.getElementById('gradient-mode').value;
