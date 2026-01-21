@@ -2532,15 +2532,42 @@
         return false;
       }
 
-      // Check if LiveDataFetcher is loaded
+      document.getElementById('upload-screen').style.display = 'none';
+      document.getElementById('loading-screen').style.display = 'flex';
+
+      // Check if LiveDataFetcher is loaded - if not, use fallback
       if (typeof LiveDataFetcher === 'undefined') {
-        console.error('LiveDataFetcher not loaded');
-        showError('Failed to load live data system. Please refresh the page.');
+        console.warn('LiveDataFetcher not loaded, using fallback CSV loading');
+        document.getElementById('loading-text').textContent = 'Loading Bitcoin data...';
+
+        // Fallback: try loading CSV files directly
+        for (const url of DATA_URLS) {
+          try {
+            console.log(`Trying to load: ${url}`);
+            const response = await fetch(url);
+
+            if (response.ok) {
+              const csvText = await response.text();
+
+              if (csvText && csvText.includes('timestamp') && csvText.length > 100) {
+                console.log(`Successfully loaded from: ${url}`);
+                processCSVText(csvText);
+                return true;
+              }
+            }
+          } catch (err) {
+            console.log(`Failed to load ${url}: ${err.message}`);
+          }
+        }
+
+        // If all fallback attempts fail, show upload screen
+        console.log('Fallback auto-load failed, showing upload screen');
+        document.getElementById('loading-screen').style.display = 'none';
+        document.getElementById('upload-screen').style.display = 'flex';
         return false;
       }
 
-      document.getElementById('upload-screen').style.display = 'none';
-      document.getElementById('loading-screen').style.display = 'flex';
+      // Use LiveDataFetcher for live updates
       document.getElementById('loading-text').textContent = 'Loading Bitcoin data with live updates...';
 
       try {
