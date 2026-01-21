@@ -544,7 +544,7 @@
     .min-grid-row4 .bar-rsi { flex: 0 0 auto; text-align: right; padding: 0 2px; border-radius: 2px; font-weight: 500; }
     .min-grid-row4.rsi-ob-border { border: 2px solid var(--accent-purple) !important; }
     .min-grid-row4.rsi-os-border { border: 2px solid var(--accent-orange) !important; }
-    .min-lvl { font-size: 8px; color: #ffffff; margin-left: 2px; }
+    .min-lvl { font-size: 8px; color: var(--text-muted); margin-left: 2px; }
 
     /* After High/Low Grid */
     .after-metrics-grid {
@@ -559,7 +559,6 @@
       padding: 1px 2px;
       text-align: center;
       border-radius: 2px;
-      color: #ffffff;
       color: var(--text-muted);
     }
     @media (max-width: 768px) {
@@ -1424,7 +1423,6 @@
           <label>Compare:</label>
           <select id="day-view-date2" onchange="renderDayView()"></select>
         </div>
-        <button class="tb-btn" onclick="showDayViewLegend()" style="margin-left:auto;">📊 Legend</button>
         <div class="tb-group">
           <label>Level:</label>
           <input type="number" id="day-level-size" value="250" min="1" onchange="renderDayView()">
@@ -1438,10 +1436,9 @@
         <button class="tb-btn active" id="btn-day-ohlc" onclick="toggleDayOHLC()">OHLC</button>
         <button class="tb-btn" id="btn-compare" onclick="toggleCompareMode()">⚖ Compare</button>
         <button class="tb-btn" id="btn-show-after-hl" onclick="toggleShowAfterHL()">AfterH/L</button>
-        <button class="tb-btn" onclick="showDayViewLegend()">ℹ Legend</button>
         <div class="tb-group">
           <label>rVol ≥</label>
-          <input type="number" id="rvol-threshold" value="4" min="0" step="0.1" style="width:60px;" onchange="updateRVolThreshold()">
+          <input type="number" id="rvol-threshold" value="1.5" min="0" step="0.1" style="width:60px;" onchange="updateRVolThreshold()">
         </div>
       </div>
       
@@ -1590,8 +1587,6 @@
           <label>Level:</label>
           <input type="number" id="hour-level-size" value="250" min="1" onchange="renderHourView()">
         </div>
-        <button class="tb-btn" onclick="showDayViewLegend()" style="margin-left:auto;">📊 Legend</button>
-        </div>
         <div class="tb-group" style="border-left:1px solid var(--border-medium);padding-left:10px;">
           <label>Days:</label>
           <button class="f-btn active" data-hv-day="0" onclick="toggleHVDay(0)">Sun</button>
@@ -1607,7 +1602,7 @@
         <button class="tb-btn" id="btn-hv-after-hl" onclick="toggleShowAfterHL()">AfterH/L</button>
         <div class="tb-group">
           <label>rVol ≥</label>
-          <input type="number" id="hv-rvol-threshold" value="4" min="0" step="0.1" style="width:60px;" onchange="updateRVolThreshold()">
+          <input type="number" id="hv-rvol-threshold" value="1.5" min="0" step="0.1" style="width:60px;" onchange="updateRVolThreshold()">
         </div>
       </div>
 
@@ -1928,26 +1923,16 @@
       { id: 'mxr', label: 'MxR', desc: 'Max Range', default: true, gradient: 'orange', group: 'mxr' },
       { id: 'mxrRk', label: 'MxR#', desc: 'Max Rng Rank', default: false, gradient: 'orange-inv', group: 'rank' },
       { id: 'rngRk', label: 'Rng#', desc: 'Range Rank', default: false, gradient: 'orange-inv', group: 'rank' },
-      { id: 'urRk', label: 'UR#', desc: 'Upper Rng Rank', default: false, gradient: 'orange-inv', group: 'rank' },
-      { id: 'lrRk', label: 'LR#', desc: 'Lower Rng Rank', default: false, gradient: 'orange-inv', group: 'rank' },
       { id: 'up', label: '#Up', desc: 'Lvls Up', default: false, gradient: null },
       { id: 'dn', label: '#Dn', desc: 'Lvls Down', default: false, gradient: null },
       { id: 'totl', label: 'TotL', desc: 'Total Levels', default: false, gradient: 'orange', group: 'mxl' },
-      { id: 'toNxtLvl', label: 'ToNxt', desc: 'Distance to next levels (up - down)', default: false, gradient: 'rg', group: 'toNxtLvl' },
+      { id: 'toNxtLvl', label: 'ToNxt', desc: 'Distance to next levels (up - down)', default: false, gradient: null },
       { id: 'mxl', label: 'MxL', desc: 'Max Level', default: false, gradient: 'orange', group: 'mxl' },
       { id: 'mxlRk', label: 'MxL#', desc: 'Max Lvl Rank', default: false, gradient: 'orange-inv', group: 'rank' },
       { id: 'cl', label: '#Cl', desc: 'Net Lvls', default: false, gradient: 'rg', group: 'cl' },
       { id: 'oc', label: 'O-C', desc: 'Open-Close', default: true, gradient: 'rg', group: 'oc' },
       { id: 'oc25', label: 'OC25', desc: ':00-:25 O-C', default: false, gradient: 'rg', group: 'oc' },
       { id: 'oc55', label: 'OC55', desc: ':30-:55 O-C', default: false, gradient: 'rg', group: 'oc' },
-      { id: 'oc10', label: 'OC10', desc: ':00-:10 O-C', default: false, gradient: 'rg', group: 'oc15' },
-      { id: 'oc1525', label: 'OC1525', desc: ':15-:25 O-C', default: false, gradient: 'rg', group: 'oc15' },
-      { id: 'oc3040', label: 'OC3040', desc: ':30-:40 O-C', default: false, gradient: 'rg', group: 'oc15' },
-      { id: 'oc4555', label: 'OC4555', desc: ':45-:55 O-C', default: false, gradient: 'rg', group: 'oc15' },
-      { id: 'lastHHBarMin', label: 'LstHH', desc: 'Last bar min where after-high > threshold', default: false, gradient: null },
-      { id: 'lastHLBarMin', label: 'LstHL', desc: 'Last bar min where after-low > threshold', default: false, gradient: null },
-      { id: 'bar40HH', label: ':40HH', desc: ':40 bar after high', default: false, gradient: 'orange', group: 'bar40' },
-      { id: 'bar40HL', label: ':40HL', desc: ':40 bar after low', default: false, gradient: 'orange', group: 'bar40' },
       { id: 'ocRk', label: 'OC#', desc: 'O-C Rank', default: false, gradient: 'orange-inv', group: 'rank' },
       { id: 'cdrU', label: 'CDU', desc: 'Cum Day Up', default: false, gradient: 'orange-col', group: 'cdr' },
       { id: 'cdrD', label: 'CDD', desc: 'Cum Day Dn', default: false, gradient: 'orange-col', group: 'cdr' },
@@ -1960,16 +1945,6 @@
       { id: 'lo', label: 'Low', desc: 'Low', default: false, gradient: null },
       { id: 'c', label: 'Close', desc: 'Close', default: false, gradient: null },
       { id: 'vol', label: 'Vol', desc: 'Volume', default: false, gradient: null },
-
-      // Bar count metrics
-      { id: 'greenBars', label: 'Grn', desc: 'Green Bars', default: false, gradient: null },
-      { id: 'redBars', label: 'Red', desc: 'Red Bars', default: false, gradient: null },
-      { id: 'cumGreen', label: 'CumG', desc: 'Cumulative Green Bars', default: false, gradient: 'orange', group: 'bars' },
-      { id: 'cumRed', label: 'CumR', desc: 'Cumulative Red Bars', default: false, gradient: 'orange', group: 'bars' },
-      { id: 'barDelta', label: 'BarΔ', desc: 'Bar Delta (Red-Green)', default: false, gradient: 'rg', group: 'bars' },
-      { id: 'cumGreenRTH', label: 'CumG-RTH', desc: 'Cumulative Green Bars RTH (9a-3p)', default: false, gradient: 'orange', group: 'barsRTH' },
-      { id: 'cumRedRTH', label: 'CumR-RTH', desc: 'Cumulative Red Bars RTH (9a-3p)', default: false, gradient: 'orange', group: 'barsRTH' },
-      { id: 'barDeltaRTH', label: 'BarΔ-RTH', desc: 'Bar Delta RTH (Red-Green)', default: false, gradient: 'rg', group: 'barsRTH' },
 
       // ===== RELATIVE VOLUME (HOURLY) =====
       { id: 'rVol', label: 'rVol', desc: 'Relative Volume (hour)', default: false, gradient: 'purple', group: 'vol' },
@@ -2015,13 +1990,6 @@
       { id: 'dRev', label: 'Rev', desc: 'Reversal', default: false },
       { id: 'dVol', label: 'Vol', desc: 'Total Volume', default: false },
       { id: 'dRsiMed', label: 'RSIm', desc: 'Median RSI', default: false },
-      { id: 'dRsiAvgRTH', label: 'RSIμ-RTH', desc: 'Average RSI RTH (9a-3p)', default: false },
-      { id: 'dGreenBars', label: 'DGrn', desc: 'Total Green Bars', default: false },
-      { id: 'dRedBars', label: 'DRed', desc: 'Total Red Bars', default: false },
-      { id: 'dBarDelta', label: 'DBarΔ', desc: 'Day Bar Delta (Red-Green)', default: false },
-      { id: 'dGreenBarsRTH', label: 'DGrn-RTH', desc: 'Total Green Bars RTH', default: false },
-      { id: 'dRedBarsRTH', label: 'DRed-RTH', desc: 'Total Red Bars RTH', default: false },
-      { id: 'dBarDeltaRTH', label: 'DBarΔ-RTH', desc: 'Day Bar Delta RTH', default: false },
       { id: 'dOpen', label: 'Open', desc: 'Open', default: false },
       { id: 'dHigh', label: 'High', desc: 'High', default: false },
       { id: 'dLow', label: 'Low', desc: 'Low', default: false },
@@ -2076,7 +2044,7 @@
     let showDayOHLC = true;
     let compareMode = false;
     let showAfterHL = false; // Show hour high/low after close in Day/Hour View
-    let rVolThreshold = 4; // Relative volume highlight threshold
+    let rVolThreshold = 1.5; // Relative volume highlight threshold
     let calColorDays = new Set([0,1,2,3,4,5,6]);
     let calColorDates = null;
     let calSelectedYears = new Set();
@@ -2092,9 +2060,6 @@
     let signalMethod = 'EMA';
     let obLevel = 88;
     let osLevel = 12;
-
-    // After H/L threshold setting
-    let afterHLThreshold = 400;
     
     // 5PM Session & Weekly tracking
     let pmSessionDays = {}; // Days keyed by 5PM session date
@@ -2745,17 +2710,7 @@
       if (tab === 'calendar' && allETDates.length > 0) renderCalendar();
       if (tab === 'pm5session' && allETDates.length > 0) render5pmSession();
     }
-
-    function loadDayView(date) {
-      // Set the date in the day view selector
-      const sel = document.getElementById('day-view-date');
-      if (sel) {
-        sel.value = date;
-      }
-      // Switch to day view tab
-      switchTab('dayview');
-    }
-
+    
     function processCSVText(csvText) {
       // Handle both CSV text and array of objects
       if (Array.isArray(csvText)) {
@@ -3062,9 +3017,9 @@
         if (bar.low < day.dL) { day.dL = bar.low; day.dLoHr = etHour; }
         
         if (!day.hrs[etHour]) {
-          day.hrs[etHour] = {
-            o: bar.open, h: bar.high, l: bar.low, c: bar.close, v: 0,
-            hm: etMin, lm: etMin, greenBars: 0, redBars: 0,
+          day.hrs[etHour] = { 
+            o: bar.open, h: bar.high, l: bar.low, c: bar.close, v: 0, 
+            hm: etMin, lm: etMin, greenBars: 0,
             rsiVals: [], sigVals: []
           };
         }
@@ -3075,7 +3030,6 @@
         if (bar.high > hd.h) { hd.h = bar.high; hd.hm = etMin; }
         if (bar.low < hd.l) { hd.l = bar.low; hd.lm = etMin; }
         if (bar.close >= bar.open) hd.greenBars++;
-        if (bar.close < bar.open) hd.redBars++;
         if (bar.rsi != null) hd.rsiVals.push(bar.rsi);
         if (bar.signal != null) hd.sigVals.push(bar.signal);
       });
@@ -3102,31 +3056,13 @@
         // Calculate total volume and collect RSI values
         let totalVol = 0;
         const dayRsiVals = [];
-        const rthRsiVals = [];
-        let totalGreen = 0, totalRed = 0;
-        let rthGreen = 0, rthRed = 0;
         getSortedHourKeys(day).forEach(h => {
           const hr = day.hrs[h];
-          const hrNum = Number(h);
           totalVol += hr.v || 0;
           if (hr.rsiVals) dayRsiVals.push(...hr.rsiVals);
-          totalGreen += hr.greenBars || 0;
-          totalRed += hr.redBars || 0;
-          // RTH (9am-3pm) metrics
-          if (hrNum >= 9 && hrNum <= 15) {
-            if (hr.rsiVals) rthRsiVals.push(...hr.rsiVals);
-            rthGreen += hr.greenBars || 0;
-            rthRed += hr.redBars || 0;
-          }
         });
         day.dVol = totalVol;
         day.dayVol = day.dVol;
-        day.dGreenBars = totalGreen;
-        day.dRedBars = totalRed;
-        day.dBarDelta = totalRed - totalGreen;
-        day.dGreenBarsRTH = rthGreen;
-        day.dRedBarsRTH = rthRed;
-        day.dBarDeltaRTH = rthRed - rthGreen;
         
         // Calculate median RSI
         if (dayRsiVals.length > 0) {
@@ -3136,14 +3072,6 @@
           day.dRsiMed = Math.round(day.dRsiMed * 100) / 100;
         } else {
           day.dRsiMed = null;
-        }
-
-        // Calculate RTH average RSI (9am-3pm)
-        if (rthRsiVals.length > 0) {
-          const rthRsiAvg = rthRsiVals.reduce((a, b) => a + b, 0) / rthRsiVals.length;
-          day.dRsiAvgRTH = Math.round(rthRsiAvg * 100) / 100;
-        } else {
-          day.dRsiAvgRTH = null;
         }
         
         // Drawdown: fall from high to subsequent low
@@ -3183,31 +3111,17 @@
         
         let runH = -Infinity, runL = Infinity;
         let prevCdrU = null, prevCdrD = null, prevMxcd = null;
-        let cumGreen = 0, cumRed = 0;
-        let cumGreenRTH = 0, cumRedRTH = 0;
-
+        
         getSortedHourKeys(day).forEach(h => {
           const hd = day.hrs[h];
           const hrNum = Number(h);
         
           runH = Math.max(runH, hd.h);
           runL = Math.min(runL, hd.l);
-
+          
           const cdrU = day.dO ? Math.round(runH - day.dO) : null;
           const cdrD = day.dO ? Math.round(day.dO - runL) : null;
           const mxcd = Math.max(cdrU || 0, cdrD || 0);
-
-          // Cumulative bar counts
-          cumGreen += hd.greenBars;
-          cumRed += hd.redBars;
-          const barDelta = cumRed - cumGreen;
-
-          // RTH cumulative bar counts (9am-3pm)
-          if (hrNum >= 9 && hrNum <= 15) {
-            cumGreenRTH += hd.greenBars;
-            cumRedRTH += hd.redBars;
-          }
-          const barDeltaRTH = hrNum >= 9 && hrNum <= 15 ? cumRedRTH - cumGreenRTH : null;
           
           // RSI metrics
           const rsiMax = hd.rsiVals.length ? Math.max(...hd.rsiVals) : null;
@@ -3258,56 +3172,14 @@
 
           // Calculate half-hour O-C metrics (:00-:25 and :30-:55)
           let oc25 = null, oc55 = null;
-          // Calculate 15-minute interval O-C metrics
-          let oc10 = null, oc1525 = null, oc3040 = null, oc4555 = null;
-          // Last bar metrics with after H/L > threshold
-          let lastHHBarMin = null, lastHLBarMin = null;
-          // :40 bar after H/L metrics
-          let bar40HH = null, bar40HL = null;
-
           if (hourBars.length > 0) {
             const bar00 = hourBars.find(b => b.etMin === 0);
-            const bar10 = hourBars.find(b => b.etMin === 10);
-            const bar15 = hourBars.find(b => b.etMin === 15);
             const bar25 = hourBars.find(b => b.etMin === 25);
             const bar30 = hourBars.find(b => b.etMin === 30);
-            const bar40 = hourBars.find(b => b.etMin === 40);
-            const bar45 = hourBars.find(b => b.etMin === 45);
             const bar55 = hourBars.find(b => b.etMin === 55);
 
-            // Half-hour O-C
-            if (bar00 && bar25) oc25 = Math.round(bar25.close - bar00.open);
-            if (bar30 && bar55) oc55 = Math.round(bar55.close - bar30.open);
-
-            // 15-minute interval O-C metrics
-            if (bar00 && bar10) oc10 = Math.round(bar10.close - bar00.open);
-            if (bar15 && bar25) oc1525 = Math.round(bar25.close - bar15.open);
-            if (bar30 && bar40) oc3040 = Math.round(bar40.close - bar30.open);
-            if (bar45 && bar55) oc4555 = Math.round(bar55.close - bar45.open);
-
-            // Find last bar where hhAfterClose > threshold
-            for (let i = hourBars.length - 1; i >= 0; i--) {
-              const bar = hourBars[i];
-              if (bar.hhAfterClose != null && bar.hhAfterClose > afterHLThreshold) {
-                lastHHBarMin = bar.etMin;
-                break;
-              }
-            }
-
-            // Find last bar where hlAfterClose > threshold
-            for (let i = hourBars.length - 1; i >= 0; i--) {
-              const bar = hourBars[i];
-              if (bar.hlAfterClose != null && bar.hlAfterClose > afterHLThreshold) {
-                lastHLBarMin = bar.etMin;
-                break;
-              }
-            }
-
-            // :40 bar after H/L metrics
-            if (bar40) {
-              bar40HH = bar40.hhAfterClose;
-              bar40HL = bar40.hlAfterClose;
-            }
+            if (bar00 && bar25) oc25 = Math.round(bar00.open - bar25.close);
+            if (bar30 && bar55) oc55 = Math.round(bar30.open - bar55.close);
           }
           
           // Calculate toNxtLvl: (next level up - close) - (close - next level down)
@@ -3326,26 +3198,11 @@
             oc: Math.round(hd.c - hd.o),
             oc25,
             oc55,
-            oc10,
-            oc1525,
-            oc3040,
-            oc4555,
-            lastHHBarMin,
-            lastHLBarMin,
-            bar40HH,
-            bar40HL,
             hm: hd.hm, lm: hd.lm,
             o: Math.round(hd.o), hi: Math.round(hd.h), lo: Math.round(hd.l), c: Math.round(hd.c),
             v: Math.round(hd.v * 100) / 100,
             cdr: day.dO ? Math.round(hd.c - day.dO) : null,
             greenBars: hd.greenBars,
-            redBars: hd.redBars,
-            cumGreen,
-            cumRed,
-            barDelta,
-            cumGreenRTH: hrNum >= 9 && hrNum <= 15 ? cumGreenRTH : null,
-            cumRedRTH: hrNum >= 9 && hrNum <= 15 ? cumRedRTH : null,
-            barDeltaRTH,
             cdrU: (cdrU !== prevCdrU) ? cdrU : null,
             cdrD: (cdrD !== prevCdrD) ? cdrD : null,
             mxcd: (mxcd !== prevMxcd) ? mxcd : null,
@@ -3505,11 +3362,12 @@
           });
         }
         
-        // Calculate 5PM hourly cumulative metrics
-        // For hours 17-23: Start fresh with current day's hour 17 open (NEW 5PM session)
-        if (day.hrs[17]) {
-          const currentDayPm5Open = day.hrs[17].o;
-          let p5RunH = currentDayPm5Open, p5RunL = currentDayPm5Open;
+        // Calculate 5PM hourly cumulative metrics for hours after 5PM session starts
+        if (day.d5pmOpen != null) {
+          const pm5Open = day.d5pmOpen;
+
+          // Calculate for hours 17-23 of the current day (5PM session start)
+          let p5RunH = pm5Open, p5RunL = pm5Open;
           let p5PrevCdrU = null, p5PrevCdrD = null, p5PrevMxcd = null;
 
           for (let h = 17; h <= 23; h++) {
@@ -3518,11 +3376,11 @@
               p5RunH = Math.max(p5RunH, hd.h);
               p5RunL = Math.min(p5RunL, hd.l);
 
-              const p5CdrU = Math.round(p5RunH - currentDayPm5Open);
-              const p5CdrD = Math.round(currentDayPm5Open - p5RunL);
+              const p5CdrU = Math.round(p5RunH - pm5Open);
+              const p5CdrD = Math.round(pm5Open - p5RunL);
               const p5Mxcd = Math.max(p5CdrU, p5CdrD);
 
-              hd.m.p5Cdr = Math.round(hd.c - currentDayPm5Open);
+              hd.m.p5Cdr = Math.round(hd.c - pm5Open);
               hd.m.p5CdrU = (p5CdrU !== p5PrevCdrU) ? p5CdrU : null;
               hd.m.p5CdrD = (p5CdrD !== p5PrevCdrD) ? p5CdrD : null;
               hd.m.p5Mxcd = (p5Mxcd !== p5PrevMxcd) ? p5Mxcd : null;
@@ -3535,18 +3393,18 @@
               p5PrevMxcd = p5Mxcd;
             }
           }
-        }
-
-        // For hours 0-16: Continue from previous day's 5PM session
-        if (day.d5pmOpen != null) {
-          const pm5Open = day.d5pmOpen;
-          let p5RunH = pm5Open, p5RunL = pm5Open;
-          let p5PrevCdrU = null, p5PrevCdrD = null, p5PrevMxcd = null;
 
           // Get previous day for high/low from 5PM-11PM
           const prevDateIdx = idx - 1;
           const prevDateStr = prevDateIdx >= 0 ? sortedDates[prevDateIdx] : null;
           const prevDay = prevDateStr ? etDays[prevDateStr] : null;
+
+          // Reset for continuation into next day (hours 0-16)
+          p5RunH = pm5Open;
+          p5RunL = pm5Open;
+          p5PrevCdrU = null;
+          p5PrevCdrD = null;
+          p5PrevMxcd = null;
 
           // First accumulate from 5PM-11PM of previous day
           if (prevDay) {
@@ -3650,11 +3508,7 @@
     const mobileHourTo = document.getElementById('mobile-hour-to');
     if (mobileHourFrom) mobileHourFrom.value = 0;
     if (mobileHourTo) mobileHourTo.value = 23;
-    const dayHlFrom = document.getElementById('day-hl-from');
-    const dayHlTo = document.getElementById('day-hl-to');
-    if (dayHlFrom) dayHlFrom.value = 9;
-    if (dayHlTo) dayHlTo.value = 15;
-
+    
     function updateLevel() {
       levelSize = parseInt(document.getElementById('level-size').value) || 250;
       Object.values(etDays).forEach(day => {
@@ -3914,7 +3768,7 @@
     
     // ==================== RANKS ====================
     function calcRanks(day, hours) {
-      ['mxr', 'mxl', 'oc', 'rng', 'ur', 'lr'].forEach(m => {
+      ['mxr', 'mxl', 'oc', 'rng'].forEach(m => {
         const vals = hours.map(h => ({ h, v: day.hrs[h]?.m?.[m] }))
           .filter(x => x.v != null)
           .sort((a, b) => Math.abs(b.v) - Math.abs(a.v));
@@ -4217,7 +4071,7 @@ function populateDatePicker() {
     }
     
     function calcRowStats(day, hours) {
-      const s = { rng: [], urlr: [], mxr: [], mxl: [], rank: [], cl: [], oc: [], toNxtLvl: [], cdr: [], cdrRG: [], mxcd: [], rsi: [], sig: [], vol: [] };
+      const s = { rng: [], urlr: [], mxr: [], mxl: [], rank: [], cl: [], oc: [], cdr: [], cdrRG: [], mxcd: [], rsi: [], sig: [], vol: [] };
       getSortedHourKeys(day).forEach(h => {
         const m = day.hrs[h].m;
         if (!m) return;
@@ -4228,13 +4082,12 @@ function populateDatePicker() {
         if (m.mxr != null) s.mxr.push(m.mxr);
         if (m.mxl != null) s.mxl.push(m.mxl);
 
-        ['mxrRk','mxlRk','ocRk','rngRk','urRk','lrRk'].forEach(r => {
+        ['mxrRk','mxlRk','ocRk','rngRk'].forEach(r => {
           if (m[r] != null) s.rank.push(m[r]);
         });
 
         if (m.cl != null) s.cl.push(m.cl);
         if (m.oc != null) s.oc.push(m.oc);
-        if (m.toNxtLvl != null) s.toNxtLvl.push(m.toNxtLvl);
 
         if (m.cdrUActual != null) s.cdr.push(m.cdrUActual);
         if (m.cdrDActual != null) s.cdr.push(m.cdrDActual);
@@ -4271,7 +4124,7 @@ function populateDatePicker() {
       const realHours = [...hourSet].map(Number).sort((a,b) => a-b);
       realHours.forEach(h => {
         s[h] = {
-          rng: [], urlr: [], mxr: [], mxl: [], rank: [], cl: [], oc: [], toNxtLvl: [],
+          rng: [], urlr: [], mxr: [], mxl: [], rank: [], cl: [], oc: [],
           cdrRG: [], cdr: [], mxcd: [], rsi: [], sig: [], vol: [],
           wcdr: [], wcdrRG: [], wmxcd: [],
           p5cdr: [], p5cdrRG: [], p5mxcd: []
@@ -4287,13 +4140,12 @@ function populateDatePicker() {
           if (m.mxr != null) s[h].mxr.push(m.mxr);
           if (m.mxl != null) s[h].mxl.push(m.mxl);
 
-          ['mxrRk','mxlRk','ocRk','rngRk','urRk','lrRk'].forEach(r => {
+          ['mxrRk','mxlRk','ocRk','rngRk'].forEach(r => {
             if (m[r] != null) s[h].rank.push(m[r]);
           });
 
           if (m.cl != null) s[h].cl.push(m.cl);
           if (m.oc != null) s[h].oc.push(m.oc);
-          if (m.toNxtLvl != null) s[h].toNxtLvl.push(m.toNxtLvl);
 
           if (m.cdr != null) s[h].cdrRG.push(m.cdr);
           if (m.cdrUActual != null) s[h].cdr.push(m.cdrUActual);
@@ -4477,9 +4329,9 @@ function populateDatePicker() {
       let bd = '';
       data.forEach(day => {
         const rowStats = gMode === 'row' ? calcRowStats(day, hours) : null;
-
+        
         bd += '<tr>';
-        bd += `<td class="sticky-col date-cell" style="left:0;min-width:65px;cursor:pointer" onclick="loadDayView('${day.date}')">${day.date}</td>`;
+        bd += `<td class="sticky-col date-cell" style="left:0;min-width:65px">${day.date}</td>`;
         bd += `<td class="sticky-col day-cell" style="left:65px;min-width:28px">${DAYS_SHORT[day.dow]}</td>`;
         bd += `<td class="sticky-col occ-cell" style="left:93px;min-width:20px">${day.occ}</td>`;
         
@@ -4533,17 +4385,8 @@ function populateDatePicker() {
             else if (c.id === 'dRelVol' || c.id === 'dRelVolDOW') {
               bg = getPurpleGradient(val, dtStats.dRelVol?.min || 0, dtStats.dRelVol?.max || 2);
             }
-            // RSI metrics
-            else if (c.id === 'dRsiMed' || c.id === 'dRsiAvgRTH') {
-              bg = getRSIGradient(val);
-            }
-            // Bar delta metrics
-            else if (c.id === 'dBarDelta' || c.id === 'dBarDeltaRTH') {
-              bg = getRGGradient(val, dtStats.dBarDelta?.min || -50, dtStats.dBarDelta?.max || 50);
-              cls += val >= 0 ? ' up' : ' down';
-            }
 
-            const fmtVal = typeof val === 'number' ? ((['dOC','dOCH','d5pmOC','wOC','dBarDelta','dBarDeltaRTH'].includes(c.id) ? (val >= 0 ? '+' : '') : '') + val.toLocaleString()) : val;
+            const fmtVal = typeof val === 'number' ? ((['dOC','dOCH','d5pmOC','wOC'].includes(c.id) ? (val >= 0 ? '+' : '') : '') + val.toLocaleString()) : val;
             bd += `<td class="sticky-col ${cls}" style="left:${pos}px;min-width:${w}px;background:${bg}${isLast?';border-right:2px solid rgba(100,149,237,0.3)':''}${extraStyle}">${fmtVal ?? '—'}</td>`;
             pos += w;
           });
@@ -5067,7 +4910,7 @@ function populateDatePicker() {
             const hrOCGradient = getRGGradient(hrOC, mStats.hrOC.min, mStats.hrOC.max);
 
             // Check for high relative volume
-            const rVolHighlight = bar.rVol != null && bar.rVol >= rVolThreshold ? 'box-shadow: inset 0 0 0 4px rgba(255, 255, 255, 0.8); position: relative; z-index: 10;' : '';
+            const rVolHighlight = bar.rVol != null && bar.rVol >= rVolThreshold ? 'box-shadow: inset 0 0 0 2px rgba(167, 139, 250, 0.5);' : '';
 
             // Build tooltip info
             const barRng = Math.round(bar.high - bar.low);
@@ -5522,7 +5365,7 @@ function populateDatePicker() {
             const hrOCGradient = getRGGradient(hrOC.oc, hStats.oc.min, hStats.oc.max);
 
             // Check for high relative volume
-            const rVolHighlight = bar.rVol != null && bar.rVol >= rVolThreshold ? 'box-shadow: inset 0 0 0 4px rgba(255, 255, 255, 0.8); position: relative; z-index: 10;' : '';
+            const rVolHighlight = bar.rVol != null && bar.rVol >= rVolThreshold ? 'box-shadow: inset 0 0 0 2px rgba(167, 139, 250, 0.5);' : '';
 
             // Build tooltip info
             const barRng = Math.round(bar.high - bar.low);
@@ -6103,67 +5946,12 @@ function populateDatePicker() {
     function updateRVolThreshold() {
       const val1 = parseFloat(document.getElementById('rvol-threshold')?.value);
       const val2 = parseFloat(document.getElementById('hv-rvol-threshold')?.value);
-      rVolThreshold = !isNaN(val1) ? val1 : !isNaN(val2) ? val2 : 4;
+      rVolThreshold = !isNaN(val1) ? val1 : !isNaN(val2) ? val2 : 1.5;
       // Sync both inputs
       if (document.getElementById('rvol-threshold')) document.getElementById('rvol-threshold').value = rVolThreshold;
       if (document.getElementById('hv-rvol-threshold')) document.getElementById('hv-rvol-threshold').value = rVolThreshold;
       renderDayView();
       renderHourView();
-    }
-
-    function showDayViewLegend() {
-      // Remove any existing legend panel
-      document.querySelectorAll('.legend-panel').forEach(p => p.remove());
-
-      // Create legend panel HTML
-      let legendHTML = '<div class="info-panel legend-panel" style="min-width:400px;max-width:600px;">';
-      legendHTML += '<div class="info-header">Day/Hour View Legend</div>';
-      legendHTML += '<div class="info-body">';
-
-      // 5-Minute Bar Grid Explanation
-      legendHTML += '<div class="info-section"><strong>5-Minute Bar Grid Layout:</strong></div>';
-      legendHTML += '<div style="padding:8px;background:rgba(255,255,255,0.03);border-radius:6px;margin-bottom:12px;">';
-      legendHTML += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:4px;font-size:10px;font-family:monospace;">';
-      legendHTML += '<div style="background:rgba(247,147,26,0.15);padding:4px;border-radius:3px;">UR (Levels Up)</div>';
-      legendHTML += '<div style="background:rgba(247,147,26,0.15);padding:4px;border-radius:3px;">LR (Levels Down)</div>';
-      legendHTML += '<div style="background:rgba(74,222,128,0.15);padding:4px;border-radius:3px;grid-column:1/3;">O-C (Levels Closed)</div>';
-      legendHTML += '<div style="background:rgba(100,149,237,0.15);padding:4px;border-radius:3px;grid-column:1/3;">Hour O-C | RSI</div>';
-      legendHTML += '</div>';
-      legendHTML += '<div style="margin-top:8px;font-size:11px;color:var(--text-secondary);">Each cell shows price movement for that 5-minute bar</div>';
-      legendHTML += '</div>';
-
-      // Border Meanings
-      legendHTML += '<div class="info-section"><strong>Border Meanings:</strong></div>';
-      legendHTML += '<div class="info-row"><div style="display:inline-block;width:20px;height:12px;border:2px solid #4ade80;margin-right:8px;"></div>Green border: New high for hour/day</div>';
-      legendHTML += '<div class="info-row"><div style="display:inline-block;width:20px;height:12px;border:2px solid #f87171;margin-right:8px;"></div>Red border: New low for hour/day</div>';
-      legendHTML += '<div class="info-row"><div style="display:inline-block;width:20px;height:12px;border:2px solid #fbbf24;margin-right:8px;"></div>Yellow border: Made both new high & low</div>';
-      legendHTML += '<div class="info-row"><div style="display:inline-block;width:20px;height:12px;border:2px solid #a78bfa;margin-right:8px;"></div>Purple border: RSI Overbought (≥88)</div>';
-      legendHTML += '<div class="info-row"><div style="display:inline-block;width:20px;height:12px;border:2px solid #fb923c;margin-right:8px;"></div>Orange border: RSI Oversold (≤12)</div>';
-      legendHTML += '<div class="info-row"><div style="display:inline-block;width:20px;height:12px;box-shadow:inset 0 0 0 4px rgba(255,255,255,0.8);margin-right:8px;"></div>White thick border: High relative volume</div>';
-
-      // Background Colors
-      legendHTML += '<div class="info-section"><strong>Background Colors:</strong></div>';
-      legendHTML += '<div class="info-row">Orange gradient: Magnitude of price movement</div>';
-      legendHTML += '<div class="info-row">Red-Green gradient: Direction (red=down, green=up)</div>';
-      legendHTML += '<div class="info-row">Purple gradient: RSI levels</div>';
-
-      // After H/L Display
-      legendHTML += '<div class="info-section"><strong>After High/Low (when enabled):</strong></div>';
-      legendHTML += '<div class="info-row">Shows how high/low the price went after each 5-min bar closed</div>';
-      legendHTML += '<div class="info-row">Displayed as: +HH (high after) / -LL (low after)</div>';
-
-      // Values in Parentheses
-      legendHTML += '<div class="info-section"><strong>Values in Parentheses:</strong></div>';
-      legendHTML += '<div class="info-row" style="color:#ffffff;">Level counts (shown in white for visibility)</div>';
-
-      legendHTML += '</div>';
-      legendHTML += '<button class="info-close" onclick="this.parentElement.remove()">×</button>';
-      legendHTML += '</div>';
-
-      // Add panel to body
-      const panel = document.createElement('div');
-      panel.innerHTML = legendHTML;
-      document.body.appendChild(panel.firstChild);
     }
     function toggleColFilterPanel() { document.getElementById('col-filter-panel').classList.toggle('visible'); document.getElementById('btn-col-filter').classList.toggle('active'); }
     function toggleRsiSettings() { document.getElementById('rsi-settings').classList.toggle('visible'); document.getElementById('btn-rsi').classList.toggle('active'); }
@@ -6225,7 +6013,7 @@ function populateDatePicker() {
     function setDefaultCols() { visibleColumns = new Set(ALL_COLUMNS.filter(c => c.default).map(c => c.id)); document.querySelectorAll('#col-grid input').forEach((cb, i) => cb.checked = ALL_COLUMNS[i].default); renderTable(); }
     function setAllCols() { visibleColumns = new Set(ALL_COLUMNS.map(c => c.id)); document.querySelectorAll('#col-grid input').forEach(cb => cb.checked = true); renderTable(); }
     function setNoCols() { visibleColumns = new Set([]); document.querySelectorAll('#col-grid input').forEach(cb => cb.checked = false); renderTable(); }
-    function setRangeCols() { visibleColumns = new Set(['rng','ur','lr','mxr','mxrRk','rngRk','urRk','lrRk']); document.querySelectorAll('#col-grid input').forEach((cb, i) => cb.checked = visibleColumns.has(ALL_COLUMNS[i].id)); renderTable(); }
+    function setRangeCols() { visibleColumns = new Set(['rng','ur','lr','mxr','mxrRk','rngRk']); document.querySelectorAll('#col-grid input').forEach((cb, i) => cb.checked = visibleColumns.has(ALL_COLUMNS[i].id)); renderTable(); }
     function setOHLCVCols() { visibleColumns = new Set(['o','hi','lo','c','v']); document.querySelectorAll('#col-grid input').forEach((cb, i) => cb.checked = visibleColumns.has(ALL_COLUMNS[i].id)); renderTable(); }
     function setRSICols() { visibleColumns = new Set(['rsiMax','rsiMin','rsiAvg','rsiOpen','rsiClose','rsiDelta','rsiOBmin','rsiOSmin','sigMax','sigMin','sigAvg','obos']); document.querySelectorAll('#col-grid input').forEach((cb, i) => cb.checked = visibleColumns.has(ALL_COLUMNS[i].id)); renderTable(); }
     
@@ -6466,134 +6254,104 @@ function populateDatePicker() {
     }
   }
 
-  // Helper function to show info panel
-  function showInfoPanel(btn) {
-    if (!btn) return;
-    const date = btn.getAttribute('data-date');
-    const hour = parseInt(btn.getAttribute('data-hour'));
-    const minute = btn.getAttribute('data-minute');
-
-    // Find the bar data
-    const bars = barsByET[date];
-    if (!bars) return;
-
-    const bar = bars.find(b => b.etHour === hour && String(b.etMin).padStart(2, '0') === minute);
-    if (!bar) return;
-
-    // Get hour data for context
-    const day = etDays[date];
-    const hourData = day?.hrs[hour];
-
-    // Build comprehensive info panel (same as before)
-    let infoHTML = '<div class="info-panel">';
-    infoHTML += `<div class="info-header">${date} ${hour}:${minute} ET</div>`;
-    infoHTML += '<div class="info-body">';
-
-    // OHLC
-    infoHTML += '<div class="info-section"><strong>Bar OHLC:</strong></div>';
-    infoHTML += `<div class="info-row">Open: <span>${Math.round(bar.open).toLocaleString()}</span></div>`;
-    infoHTML += `<div class="info-row">High: <span>${Math.round(bar.high).toLocaleString()}</span></div>`;
-    infoHTML += `<div class="info-row">Low: <span>${Math.round(bar.low).toLocaleString()}</span></div>`;
-    infoHTML += `<div class="info-row">Close: <span>${Math.round(bar.close).toLocaleString()}</span></div>`;
-
-    // Range and UR/LR
-    const barRng = Math.round(bar.high - bar.low);
-    const barUR = Math.round(bar.high - bar.open);
-    const barLR = Math.round(bar.open - bar.low);
-    const barOC = Math.round(bar.close - bar.open);
-    infoHTML += '<div class="info-section"><strong>Bar Metrics:</strong></div>';
-    infoHTML += `<div class="info-row">Range: <span>${barRng}</span></div>`;
-    infoHTML += `<div class="info-row">UR: <span>${barUR}</span> | LR: <span>${barLR}</span></div>`;
-    infoHTML += `<div class="info-row">O-C: <span class="${barOC >= 0 ? 'up' : 'down'}">${barOC >= 0 ? '+' : ''}${barOC}</span></div>`;
-
-    // Hour O-C
-    if (hourData) {
-      const hrOC = Math.round(bar.close - hourData.o);
-      infoHTML += `<div class="info-row">Hour O-C: <span class="${hrOC >= 0 ? 'up' : 'down'}">${hrOC >= 0 ? '+' : ''}${hrOC}</span></div>`;
-    }
-
-    // Levels
-    const lvlSize = parseInt(document.getElementById('day-level-size')?.value || document.getElementById('hour-level-size')?.value) || 250;
-    const lvlUp = Math.max(0, Math.floor(bar.high / lvlSize) - Math.floor(bar.open / lvlSize));
-    const lvlDn = Math.max(0, Math.floor(bar.open / lvlSize) - Math.floor(bar.low / lvlSize));
-    const lvlCl = Math.floor(bar.close / lvlSize) - Math.floor(bar.open / lvlSize);
-    infoHTML += '<div class="info-section"><strong>Levels:</strong></div>';
-    infoHTML += `<div class="info-row">Up: <span>${lvlUp}</span> | Down: <span>${lvlDn}</span></div>`;
-    infoHTML += `<div class="info-row">Close: <span class="${lvlCl >= 0 ? 'up' : 'down'}">${lvlCl >= 0 ? '+' : ''}${lvlCl}</span></div>`;
-
-    if (hourData) {
-      const hrLvl = Math.floor(bar.close / lvlSize) - Math.floor(hourData.o / lvlSize);
-      infoHTML += `<div class="info-row">Hour Close: <span class="${hrLvl >= 0 ? 'up' : 'down'}">${hrLvl >= 0 ? '+' : ''}${hrLvl}</span></div>`;
-    }
-
-    // RSI and Signal
-    if (bar.rsi != null || bar.signal != null) {
-      infoHTML += '<div class="info-section"><strong>RSI:</strong></div>';
-      if (bar.rsi != null) infoHTML += `<div class="info-row">RSI: <span>${Math.round(bar.rsi * 10) / 10}</span></div>`;
-      if (bar.signal != null) infoHTML += `<div class="info-row">Signal: <span>${Math.round(bar.signal * 10) / 10}</span></div>`;
-    }
-
-    // Relative Volume
-    if (bar.rVol != null) {
-      infoHTML += '<div class="info-section"><strong>Relative Volume:</strong></div>';
-      infoHTML += `<div class="info-row">rVol: <span style="color:${bar.rVol >= rVolThreshold ? '#a78bfa' : ''}">${Math.round(bar.rVol * 100) / 100}x</span></div>`;
-    }
-
-    // Hour High/Low After Close
-    if (showAfterHL && (bar.hhAfterClose != null || bar.hlAfterClose != null)) {
-      infoHTML += '<div class="info-section"><strong>After This Bar:</strong></div>';
-      if (bar.hhAfterClose != null) infoHTML += `<div class="info-row">Hour High After: <span class="${bar.hhAfterClose >= 0 ? 'up' : 'down'}">${bar.hhAfterClose >= 0 ? '+' : ''}${bar.hhAfterClose}</span></div>`;
-      if (bar.hlAfterClose != null) infoHTML += `<div class="info-row">Hour Low After: <span class="${bar.hlAfterClose >= 0 ? 'down' : 'up'}">${bar.hlAfterClose >= 0 ? '+' : ''}${bar.hlAfterClose}</span></div>`;
-    }
-
-    // Volume
-    infoHTML += '<div class="info-section"><strong>Volume:</strong></div>';
-    infoHTML += `<div class="info-row">Vol: <span>${Math.round(bar.volume * 100) / 100}</span></div>`;
-
-    infoHTML += '</div>';
-    infoHTML += '<button class="info-close" onclick="this.parentElement.remove()">×</button>';
-    infoHTML += '</div>';
-
-    // Remove any existing info panel
-    document.querySelectorAll('.info-panel').forEach(p => p.remove());
-
-    // Add new panel to body
-    const panel = document.createElement('div');
-    panel.innerHTML = infoHTML;
-    document.body.appendChild(panel.firstChild);
-  }
-
-  // Desktop: Hover to show info panel (min-width: 769px)
-  const isDesktop = window.matchMedia('(min-width: 769px)');
-  if (isDesktop.matches) {
-    document.addEventListener('mouseenter', function(e) {
-      const btn = e.target.closest && e.target.closest('.info-btn');
-      if (btn) {
-        showInfoPanel(btn);
-      }
-    }, true);
-
-    document.addEventListener('mouseleave', function(e) {
-      const btn = e.target.closest && e.target.closest('.info-btn');
-      if (btn) {
-        // Remove info panel after a short delay to allow moving to the panel
-        setTimeout(() => {
-          const panel = document.querySelector('.info-panel');
-          if (panel && !panel.matches(':hover')) {
-            panel.remove();
-          }
-        }, 200);
-      }
-    }, true);
-  }
-
   // Improved info tooltip behavior: click toggles popup on mobile; clicking outside closes any open popups
   document.addEventListener('click', function(e){
-    // Check for info-btn clicks (mobile/touch or desktop click)
+    // Check for info-btn clicks
     const btn = e.target.closest && e.target.closest('.info-btn');
     if(btn){
-      // On mobile or when clicked on desktop
-      showInfoPanel(btn);
+      const date = btn.getAttribute('data-date');
+      const hour = parseInt(btn.getAttribute('data-hour'));
+      const minute = btn.getAttribute('data-minute');
+
+      // Find the bar data
+      const bars = barsByET[date];
+      if (!bars) return;
+
+      const bar = bars.find(b => b.etHour === hour && String(b.etMin).padStart(2, '0') === minute);
+      if (!bar) return;
+
+      // Get hour data for context
+      const day = etDays[date];
+      const hourData = day?.hrs[hour];
+
+      // Build comprehensive info panel
+      let infoHTML = '<div class="info-panel">';
+      infoHTML += `<div class="info-header">${date} ${hour}:${minute} ET</div>`;
+      infoHTML += '<div class="info-body">';
+
+      // OHLC
+      infoHTML += '<div class="info-section"><strong>Bar OHLC:</strong></div>';
+      infoHTML += `<div class="info-row">Open: <span>${Math.round(bar.open).toLocaleString()}</span></div>`;
+      infoHTML += `<div class="info-row">High: <span>${Math.round(bar.high).toLocaleString()}</span></div>`;
+      infoHTML += `<div class="info-row">Low: <span>${Math.round(bar.low).toLocaleString()}</span></div>`;
+      infoHTML += `<div class="info-row">Close: <span>${Math.round(bar.close).toLocaleString()}</span></div>`;
+
+      // Range and UR/LR
+      const barRng = Math.round(bar.high - bar.low);
+      const barUR = Math.round(bar.high - bar.open);
+      const barLR = Math.round(bar.open - bar.low);
+      const barOC = Math.round(bar.close - bar.open);
+      infoHTML += '<div class="info-section"><strong>Bar Metrics:</strong></div>';
+      infoHTML += `<div class="info-row">Range: <span>${barRng}</span></div>`;
+      infoHTML += `<div class="info-row">UR: <span>${barUR}</span> | LR: <span>${barLR}</span></div>`;
+      infoHTML += `<div class="info-row">O-C: <span class="${barOC >= 0 ? 'up' : 'down'}">${barOC >= 0 ? '+' : ''}${barOC}</span></div>`;
+
+      // Hour O-C
+      if (hourData) {
+        const hrOC = Math.round(bar.close - hourData.o);
+        infoHTML += `<div class="info-row">Hour O-C: <span class="${hrOC >= 0 ? 'up' : 'down'}">${hrOC >= 0 ? '+' : ''}${hrOC}</span></div>`;
+      }
+
+      // Levels
+      const lvlSize = parseInt(document.getElementById('day-level-size')?.value || document.getElementById('hour-level-size')?.value) || 250;
+      const lvlUp = Math.max(0, Math.floor(bar.high / lvlSize) - Math.floor(bar.open / lvlSize));
+      const lvlDn = Math.max(0, Math.floor(bar.open / lvlSize) - Math.floor(bar.low / lvlSize));
+      const lvlCl = Math.floor(bar.close / lvlSize) - Math.floor(bar.open / lvlSize);
+      infoHTML += '<div class="info-section"><strong>Levels:</strong></div>';
+      infoHTML += `<div class="info-row">Up: <span>${lvlUp}</span> | Down: <span>${lvlDn}</span></div>`;
+      infoHTML += `<div class="info-row">Close: <span class="${lvlCl >= 0 ? 'up' : 'down'}">${lvlCl >= 0 ? '+' : ''}${lvlCl}</span></div>`;
+
+      if (hourData) {
+        const hrLvl = Math.floor(bar.close / lvlSize) - Math.floor(hourData.o / lvlSize);
+        infoHTML += `<div class="info-row">Hour Close: <span class="${hrLvl >= 0 ? 'up' : 'down'}">${hrLvl >= 0 ? '+' : ''}${hrLvl}</span></div>`;
+      }
+
+      // RSI and Signal
+      if (bar.rsi != null || bar.signal != null) {
+        infoHTML += '<div class="info-section"><strong>RSI:</strong></div>';
+        if (bar.rsi != null) infoHTML += `<div class="info-row">RSI: <span>${Math.round(bar.rsi * 10) / 10}</span></div>`;
+        if (bar.signal != null) infoHTML += `<div class="info-row">Signal: <span>${Math.round(bar.signal * 10) / 10}</span></div>`;
+      }
+
+      // Relative Volume
+      if (bar.rVol != null) {
+        infoHTML += '<div class="info-section"><strong>Relative Volume:</strong></div>';
+        infoHTML += `<div class="info-row">rVol: <span style="color:${bar.rVol >= rVolThreshold ? '#a78bfa' : ''}">${Math.round(bar.rVol * 100) / 100}x</span></div>`;
+      }
+
+      // Hour High/Low After Close
+      if (showAfterHL && (bar.hhAfterClose != null || bar.hlAfterClose != null)) {
+        infoHTML += '<div class="info-section"><strong>After This Bar:</strong></div>';
+        if (bar.hhAfterClose != null) infoHTML += `<div class="info-row">Hour High After: <span class="${bar.hhAfterClose >= 0 ? 'up' : 'down'}">${bar.hhAfterClose >= 0 ? '+' : ''}${bar.hhAfterClose}</span></div>`;
+        if (bar.hlAfterClose != null) infoHTML += `<div class="info-row">Hour Low After: <span class="${bar.hlAfterClose >= 0 ? 'down' : 'up'}">${bar.hlAfterClose >= 0 ? '+' : ''}${bar.hlAfterClose}</span></div>`;
+      }
+
+      // Volume
+      infoHTML += '<div class="info-section"><strong>Volume:</strong></div>';
+      infoHTML += `<div class="info-row">Vol: <span>${Math.round(bar.volume * 100) / 100}</span></div>`;
+
+      infoHTML += '</div>';
+      infoHTML += '<button class="info-close" onclick="this.parentElement.remove()">×</button>';
+      infoHTML += '</div>';
+
+      // Remove any existing info panel
+      document.querySelectorAll('.info-panel').forEach(p => p.remove());
+
+      // Add new panel to body
+      const panel = document.createElement('div');
+      panel.innerHTML = infoHTML;
+      document.body.appendChild(panel.firstChild);
+
       e.stopPropagation();
       return;
     }
