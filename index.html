@@ -283,7 +283,71 @@
     .header h1 { font-family: 'JetBrains Mono', monospace; font-size: 1rem; color: var(--accent-btc); display: flex; align-items: center; gap: 6px; }
     .btc-sym { font-size: 1.2rem; background: linear-gradient(135deg, #f7931a, #ffc73b); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
     .sub { display: block; font-size: 0.55rem; color: var(--text-muted); margin-top: 1px; }
-    
+
+    /* Live Indicator */
+    .live-indicator {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 3px 8px;
+      background: rgba(74, 222, 128, 0.1);
+      border: 1px solid rgba(74, 222, 128, 0.3);
+      border-radius: 12px;
+      font-size: 0.65rem;
+      font-weight: 600;
+      color: var(--accent-green);
+      cursor: pointer;
+      transition: all 0.2s ease;
+      user-select: none;
+      margin-left: 12px;
+    }
+    .live-indicator:hover {
+      background: rgba(74, 222, 128, 0.2);
+      border-color: rgba(74, 222, 128, 0.5);
+      transform: scale(1.05);
+    }
+    .live-indicator:active {
+      transform: scale(0.95);
+    }
+    .live-indicator::before {
+      content: '';
+      width: 8px;
+      height: 8px;
+      background: var(--accent-green);
+      border-radius: 50%;
+      animation: pulse 2s ease-in-out infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+
+    @media (max-width: 768px) {
+      .live-indicator {
+        font-size: 0.55rem;
+        padding: 2px 6px;
+        gap: 4px;
+        margin-left: 8px;
+      }
+      .live-indicator::before {
+        width: 6px;
+        height: 6px;
+      }
+    }
+
+    @media (max-width: 480px) {
+      .live-indicator {
+        font-size: 0.5rem;
+        padding: 2px 5px;
+        gap: 3px;
+        margin-left: 6px;
+      }
+      .live-indicator::before {
+        width: 5px;
+        height: 5px;
+      }
+    }
+
     .header-stats { display: flex; gap: 8px; }
     .stat { display: flex; flex-direction: column; align-items: center; padding: 4px 10px; background: rgba(255,255,255,0.04); border-radius: 5px; border: 1px solid var(--border-medium); }
     .stat-val { font-family: var(--font-family); font-size: 0.85rem; font-weight: 600; color: var(--accent-btc); }
@@ -1172,9 +1236,12 @@
     <!-- Overview Tab -->
     <div id="tab-overview" class="tab-content active">
       <header class="header">
-        <div>
-          <h1><span class="btc-sym">₿</span> BTC Hourly Analysis</h1>
-          <span class="sub">5-Min Data • Level Analysis • Ultimate RSI • Eastern Time</span>
+        <div style="display: flex; align-items: center;">
+          <div>
+            <h1><span class="btc-sym">₿</span> BTC Hourly Analysis</h1>
+            <span class="sub">5-Min Data • Level Analysis • Ultimate RSI • Eastern Time</span>
+          </div>
+          <span class="live-indicator" onclick="manualRefresh()" title="Click to refresh live data">Live</span>
         </div>
         <div class="header-stats">
           <div class="stat"><span class="stat-val" id="stat-days">0</span><span class="stat-lbl">Days</span></div>
@@ -1418,7 +1485,10 @@
     <div id="tab-dayview" class="tab-content">
       <div class="day-view-header">
         <div class="day-view-header-top">
-          <div class="day-view-title" id="day-view-title">Select a Date</div>
+          <div style="display: flex; align-items: center;">
+            <div class="day-view-title" id="day-view-title">Select a Date</div>
+            <span class="live-indicator" onclick="manualRefresh()" title="Click to refresh live data">Live</span>
+          </div>
           <button class="day-view-collapse-btn collapsed" id="day-view-collapse-btn" onclick="toggleDayViewStats()">▼</button>
         </div>
         <div class="day-view-stats-collapsible collapsed" id="day-view-stats-collapsible" style="margin-top:8px;">
@@ -1480,6 +1550,7 @@
     <!-- Calendar View Tab -->
     <div id="tab-calendar" class="tab-content">
       <div class="calendar-toolbar">
+        <span class="live-indicator" onclick="manualRefresh()" title="Click to refresh live data">Live</span>
         <label>Color By:</label>
         <select id="calendar-color-by" onchange="renderCalendar()">
           <option value="dMxToHr" selected>Max DUR/DLR to Hour</option>
@@ -1519,9 +1590,12 @@
     <!-- 5PM Session Tab -->
     <div id="tab-pm5session" class="tab-content">
       <header class="header" style="background:linear-gradient(180deg, rgba(139,92,246,0.15) 0%, var(--bg-primary) 100%);border-bottom-color:rgba(139,92,246,0.3);">
-        <div>
-          <h1 style="color:#a78bfa;"><span class="btc-sym">₿</span> 5PM Session Analysis</h1>
-          <span class="sub">5PM Previous Day → 4PM Current Day • Cumulative Ranges • Eastern Time</span>
+        <div style="display: flex; align-items: center;">
+          <div>
+            <h1 style="color:#a78bfa;"><span class="btc-sym">₿</span> 5PM Session Analysis</h1>
+            <span class="sub">5PM Previous Day → 4PM Current Day • Cumulative Ranges • Eastern Time</span>
+          </div>
+          <span class="live-indicator" onclick="manualRefresh()" title="Click to refresh live data">Live</span>
         </div>
         <div class="header-stats">
           <div class="stat"><span class="stat-val" id="pm5-stat-days">0</span><span class="stat-lbl">Days</span></div>
@@ -1591,7 +1665,10 @@
     <!-- Hour View Tab -->
     <div id="tab-hourview" class="tab-content">
       <div class="day-view-header" style="background:linear-gradient(180deg, rgba(167,139,250,0.15) 0%, var(--bg-primary) 100%);border-bottom-color:rgba(167,139,250,0.3);">
-        <div class="day-view-title" id="hour-view-title" style="color:var(--accent-purple)">Select an Hour</div>
+        <div style="display: flex; align-items: center; margin-bottom: 8px;">
+          <div class="day-view-title" id="hour-view-title" style="color:var(--accent-purple); margin-bottom: 0;">Select an Hour</div>
+          <span class="live-indicator" onclick="manualRefresh()" title="Click to refresh live data">Live</span>
+        </div>
         <div class="day-stats-grid" id="hour-stats-grid"></div>
       </div>
       
