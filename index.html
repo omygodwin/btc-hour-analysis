@@ -3523,10 +3523,10 @@
     const mobileHourTo = document.getElementById('mobile-hour-to');
     if (mobileHourFrom) mobileHourFrom.value = 0;
     if (mobileHourTo) mobileHourTo.value = 23;
-    const dayHlFrom = document.getElementById('day-hl-from');
-    const dayHlTo = document.getElementById('day-hl-to');
-    if (dayHlFrom) dayHlFrom.value = 9;
-    if (dayHlTo) dayHlTo.value = 15;
+    const dayHlFromEl = document.getElementById('day-hl-from');
+    const dayHlToEl = document.getElementById('day-hl-to');
+    if (dayHlFromEl) dayHlFromEl.value = 9;
+    if (dayHlToEl) dayHlToEl.value = 15;
 
     function updateLevel() {
       levelSize = parseInt(document.getElementById('level-size').value) || 250;
