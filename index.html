@@ -1228,6 +1228,7 @@
     <nav class="tab-nav">
       <button class="tab-btn active" onclick="switchTab('overview')">📊 Overview</button>
       <button class="tab-btn" onclick="switchTab('pm5session')">🌙 5PM Session</button>
+      <button class="tab-btn" onclick="switchTab('dowanalysis')">📈 DOW Analysis</button>
       <button class="tab-btn" onclick="switchTab('dayview')">📅 Day View</button>
       <button class="tab-btn" onclick="switchTab('hourview')">🕐 Hour View</button>
       <button class="tab-btn" onclick="switchTab('calendar')">🗓 Calendar</button>
@@ -1708,6 +1709,22 @@
       </div>
     </div>
 
+    <!-- Day of Week Analysis Tab -->
+    <div id="tab-dowanalysis" class="tab-content">
+      <div class="calendar-toolbar">
+        <span class="live-indicator" onclick="manualRefresh()" title="Click to refresh live data">Live</span>
+        <h2 style="margin: 0; font-size: 1rem; color: var(--accent-btc);">📈 Day of Week Analysis</h2>
+        <div style="display: flex; gap: 8px; align-items: center;">
+          <label style="font-size: 0.75rem;">Min Sample Size:</label>
+          <input type="number" id="dow-min-sample" value="5" min="1" max="100" style="width: 60px;" onchange="renderDOWAnalysis()">
+          <button class="tb-btn" onclick="renderDOWAnalysis()" style="margin-left: 8px;">🔄 Refresh</button>
+        </div>
+      </div>
+      <div style="padding: 12px; overflow-y: auto; flex: 1;">
+        <div id="dow-content"></div>
+      </div>
+    </div>
+
     <!-- Mobile Filter Modal -->
     <div class="mobile-filter-modal" id="mobile-filter-modal">
       <div class="mobile-filter-content">
@@ -2017,6 +2034,7 @@
       { id: 'ur', label: 'UR', desc: 'Upper Rng', default: false, gradient: 'orange', group: 'urlr' },
       { id: 'lr', label: 'LR', desc: 'Lower Rng', default: false, gradient: 'orange', group: 'urlr' },
       { id: 'mxr', label: 'MxR', desc: 'Max Range', default: true, gradient: 'orange', group: 'mxr' },
+      { id: 'mxrPct', label: 'MxR%', desc: 'Max Range Percentile (0-100%)', default: false, gradient: 'orange', group: 'mxr' },
       { id: 'mxrRk', label: 'MxR#', desc: 'Max Rng Rank', default: false, gradient: 'orange-inv', group: 'rank' },
       { id: 'rngRk', label: 'Rng#', desc: 'Range Rank', default: false, gradient: 'orange-inv', group: 'rank' },
       { id: 'urRk', label: 'UR#', desc: 'Upper Rng Rank', default: false, gradient: 'orange-inv', group: 'rank' },
@@ -2186,6 +2204,16 @@
     let showAfterHL = 'off'; // Modes: 'off', 'afterhl' (hour H/L after bar), 'hhcll' (hour H - close, close - hour L)
     let rVolThreshold = 4; // Relative volume highlight threshold
     let calColorDays = new Set([0,1,2,3,4,5,6]);
+
+    // ==================== PERFORMANCE CACHING ====================
+    let filterCache = {
+      key: null,
+      filteredData: null,
+      colStats: null,
+      dtStats: null
+    };
+    let renderDebounceTimer = null;
+    const RENDER_DEBOUNCE_MS = 50; // Debounce render calls by 50ms
     let calColorDates = null;
     let calSelectedYears = new Set();
     let columnFilters = [];
@@ -2919,6 +2947,7 @@
       if (tab === 'hourview' && allETDates.length > 0) renderHourView();
       if (tab === 'calendar' && allETDates.length > 0) renderCalendar();
       if (tab === 'pm5session' && allETDates.length > 0) render5pmSession();
+      if (tab === 'dowanalysis' && allETDates.length > 0) renderDOWAnalysis();
     }
     
     function processCSVText(csvText) {
@@ -3987,6 +4016,41 @@
         });
       });
 
+      // Calculate max range percentiles
+      // Collect all mxr values from all hours across all days
+      const allMxrValues = [];
+      Object.values(etDays).forEach(day => {
+        getSortedHourKeys(day).forEach(h => {
+          const m = day.hrs[h].m;
+          if (m && m.mxr != null) {
+            allMxrValues.push(m.mxr);
+          }
+        });
+      });
+
+      // Find min and max
+      if (allMxrValues.length > 0) {
+        const mxrMin = Math.min(...allMxrValues);
+        const mxrMax = Math.max(...allMxrValues);
+        const mxrRange = mxrMax - mxrMin;
+
+        // Calculate percentile for each hour
+        Object.values(etDays).forEach(day => {
+          getSortedHourKeys(day).forEach(h => {
+            const m = day.hrs[h].m;
+            if (m && m.mxr != null) {
+              // Percentile: (value - min) / (max - min) * 100
+              if (mxrRange > 0) {
+                m.mxrPct = Math.round(((m.mxr - mxrMin) / mxrRange) * 100 * 10) / 10;
+              } else {
+                // If all values are the same, set to 50%
+                m.mxrPct = 50;
+              }
+            }
+          });
+        });
+      }
+
       allETDates = Object.keys(etDays).sort().reverse();
       availableYears = [...new Set(allETDates.map(d => d.slice(0, 4)))].sort();
       selectedYears = new Set(availableYears);
@@ -3998,6 +4062,9 @@
       populateDatePicker();
       computeEstablishedHours();
       computeRelativeVolume();
+
+      // Clear filter cache when data is reprocessed
+      clearFilterCache();
     }
 
     function populateHourSelects() {
@@ -4467,7 +4534,40 @@ function populateDatePicker() {
     function updateDateCount() { document.getElementById('date-count').textContent = selectedDates.size; }
     
     // ==================== FILTERING ====================
+    // Generate cache key from current filter state
+    function generateFilterCacheKey() {
+      return JSON.stringify({
+        useDateFilter,
+        selectedDates: useDateFilter ? Array.from(selectedDates).sort() : [],
+        selectedYears: Array.from(selectedYears).sort(),
+        selectedMonths: Array.from(selectedMonths).sort(),
+        selectedDays: Array.from(selectedDays).sort(),
+        selectedOccs: Array.from(selectedOccs).sort(),
+        columnFilters: columnFilters.map(f => ({ ...f })),
+        sortColumn,
+        sortDirection,
+        sortHour,
+        hourFrom,
+        hourTo
+      });
+    }
+
+    // Clear filter cache (call when data changes)
+    function clearFilterCache() {
+      filterCache = {
+        key: null,
+        filteredData: null,
+        colStats: null,
+        dtStats: null
+      };
+    }
+
     function getFilteredData() {
+      // Check cache first
+      const cacheKey = generateFilterCacheKey();
+      if (filterCache.key === cacheKey && filterCache.filteredData) {
+        return filterCache.filteredData;
+      }
       let data = Object.values(etDays).filter(d => {
         if (useDateFilter && selectedDates.size > 0) return selectedDates.has(d.date);
         return selectedYears.has(d.date.slice(0,4)) && selectedMonths.has(d.month) && selectedDays.has(d.dow) && selectedOccs.has(d.occ);
@@ -4486,7 +4586,11 @@ function populateDatePicker() {
         if (vb == null) vb = -Infinity;
         return sortDirection === 'asc' ? (va < vb ? -1 : va > vb ? 1 : 0) : (va > vb ? -1 : va < vb ? 1 : 0);
       });
-      
+
+      // Cache the result
+      filterCache.key = cacheKey;
+      filterCache.filteredData = data;
+
       return data;
     }
     
@@ -4640,6 +4744,7 @@ function populateDatePicker() {
         if (m.ur != null) s.urlr.push(m.ur);
         if (m.lr != null) s.urlr.push(m.lr);
         if (m.mxr != null) s.mxr.push(m.mxr);
+        if (m.mxrPct != null) s.mxr.push(m.mxrPct);
         if (m.mxl != null) s.mxl.push(m.mxl);
 
         ['mxrRk','mxlRk','ocRk','rngRk'].forEach(r => {
@@ -4730,6 +4835,7 @@ function populateDatePicker() {
           if (m.ur != null) s[h].urlr.push(m.ur);
           if (m.lr != null) s[h].urlr.push(m.lr);
           if (m.mxr != null) s[h].mxr.push(m.mxr);
+          if (m.mxrPct != null) s[h].mxr.push(m.mxrPct);
           if (m.mxl != null) s[h].mxl.push(m.mxl);
 
           ['mxrRk','mxlRk','ocRk','rngRk'].forEach(r => {
@@ -4891,7 +4997,14 @@ function populateDatePicker() {
     }
     
     // ==================== RENDER TABLE ====================
+    // Main renderTable function (with debouncing)
     function renderTable() {
+      clearTimeout(renderDebounceTimer);
+      renderDebounceTimer = setTimeout(renderTableImmediate, RENDER_DEBOUNCE_MS);
+    }
+
+    // Immediate render without debouncing (use for initial loads)
+    function renderTableImmediate() {
       const data = getFilteredData();
 
       // REAL hours actually present in filtered data
@@ -4923,9 +5036,19 @@ function populateDatePicker() {
       document.getElementById('stat-days').textContent = data.length;
       document.getElementById('stat-hours').textContent = hours.length;
       document.getElementById('stat-cols').textContent = cols.length;
-      
-      const dtStats = calcDayTotalsStats(data);
-      const colStats = calcColStats(data, hours);
+
+      // Use cached stats if available
+      let dtStats, colStats;
+      const cacheKey = filterCache.key;
+      if (filterCache.dtStats && filterCache.colStats && cacheKey === generateFilterCacheKey()) {
+        dtStats = filterCache.dtStats;
+        colStats = filterCache.colStats;
+      } else {
+        dtStats = calcDayTotalsStats(data);
+        colStats = calcColStats(data, hours);
+        filterCache.dtStats = dtStats;
+        filterCache.colStats = colStats;
+      }
       
       // Build header
       let hd = '<tr class="hour-row">';
@@ -6800,12 +6923,195 @@ function populateDatePicker() {
       popup.innerHTML = html;
       document.body.appendChild(popup.firstElementChild);
     }
+
+    // ==================== DAY OF WEEK ANALYSIS ====================
+    function renderDOWAnalysis() {
+      const minSampleSize = parseInt(document.getElementById('dow-min-sample')?.value) || 5;
+      const data = getFilteredData();
+
+      if (data.length === 0) {
+        document.getElementById('dow-content').innerHTML = '<p style="color: var(--text-muted); text-align: center;">No data available. Adjust filters to see results.</p>';
+        return;
+      }
+
+      // Group data by day of week
+      const dowData = {};
+      for (let dow = 0; dow < 7; dow++) {
+        dowData[dow] = { name: DAYS_SHORT[dow], hours: {} };
+        for (let h = 0; h < 24; h++) {
+          dowData[dow].hours[h] = {
+            samples: [],
+            first30: [],  // :00 - :25 metrics
+            second30: []  // :30 - :55 metrics
+          };
+        }
+      }
+
+      // Collect data
+      data.forEach(day => {
+        const dow = day.dow;
+        getSortedHourKeys(day).forEach(h => {
+          const hr = day.hrs[h];
+          const m = hr.m;
+          if (!m) return;
+
+          const hourData = dowData[dow].hours[h];
+
+          // Collect hourly metrics
+          hourData.samples.push({
+            mxr: m.mxr,
+            rng: m.rng,
+            ur: m.ur,
+            lr: m.lr,
+            oc: m.oc,
+            mxl: m.mxl,
+            rsiMax: m.rsiMax,
+            rsiMin: m.rsiMin,
+            rVolDOW: m.rVolDOW,
+            oc25: m.oc25,
+            oc55: m.oc55
+          });
+
+          // First 30 minutes (:00 - :25)
+          if (m.oc25 != null) {
+            hourData.first30.push(m.oc25);
+          }
+
+          // Second 30 minutes (:30 - :55)
+          if (m.oc55 != null) {
+            hourData.second30.push(m.oc55);
+          }
+        });
+      });
+
+      // Calculate statistics
+      const calculateStats = (values) => {
+        if (!values || values.length === 0) return null;
+        const sorted = [...values].sort((a, b) => a - b);
+        const len = sorted.length;
+        return {
+          count: len,
+          min: sorted[0],
+          max: sorted[len - 1],
+          avg: sorted.reduce((a, b) => a + b, 0) / len,
+          p25: sorted[Math.floor(len * 0.25)],
+          p50: sorted[Math.floor(len * 0.50)],
+          p75: sorted[Math.floor(len * 0.75)],
+          p90: sorted[Math.floor(len * 0.90)]
+        };
+      };
+
+      // Build HTML
+      let html = '';
+
+      // Summary section
+      html += '<div style="background: var(--bg-secondary); padding: 16px; border-radius: 8px; margin-bottom: 16px;">';
+      html += '<h3 style="margin: 0 0 12px 0; color: var(--accent-btc);">Summary</h3>';
+      html += '<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px;">';
+      html += `<div><strong>Total Days:</strong> ${data.length}</div>`;
+      html += `<div><strong>Min Sample Size:</strong> ${minSampleSize}</div>`;
+      html += `<div><strong>Filters Applied:</strong> ${columnFilters.length > 0 ? 'Yes' : 'No'}</div>`;
+      html += '</div></div>';
+
+      // For each day of week
+      for (let dow = 0; dow < 7; dow++) {
+        const dayData = dowData[dow];
+        html += `<div style="background: var(--bg-secondary); padding: 16px; border-radius: 8px; margin-bottom: 16px;">`;
+        html += `<h3 style="margin: 0 0 12px 0; color: var(--accent-btc);">${dayData.name}</h3>`;
+
+        // Table for this day
+        html += '<div style="overflow-x: auto;"><table style="width: 100%; border-collapse: collapse; font-size: 0.75rem;">';
+        html += '<thead><tr style="background: rgba(100,149,237,0.15); border-bottom: 2px solid rgba(100,149,237,0.3);">';
+        html += '<th style="padding: 8px; text-align: left;">Hour</th>';
+        html += '<th style="padding: 8px; text-align: center;">N</th>';
+        html += '<th style="padding: 8px; text-align: center;">MxR Avg</th>';
+        html += '<th style="padding: 8px; text-align: center;">MxR P75</th>';
+        html += '<th style="padding: 8px; text-align: center;">MxR P90</th>';
+        html += '<th style="padding: 8px; text-align: center;">Rng Avg</th>';
+        html += '<th style="padding: 8px; text-align: center;">Big Move %</th>';
+        html += '<th style="padding: 8px; text-align: center;">:00-:25</th>';
+        html += '<th style="padding: 8px; text-align: center;">:30-:55</th>';
+        html += '<th style="padding: 8px; text-align: center;">1st vs 2nd</th>';
+        html += '</tr></thead><tbody>';
+
+        // Calculate threshold for "big move" (e.g., > 75th percentile of all MxR values)
+        const allMxr = [];
+        Object.values(dayData.hours).forEach(h => {
+          h.samples.forEach(s => { if (s.mxr != null) allMxr.push(s.mxr); });
+        });
+        const bigMoveThreshold = allMxr.length > 0 ? calculateStats(allMxr)?.p75 || 500 : 500;
+
+        for (let h = 0; h < 24; h++) {
+          const hourData = dayData.hours[h];
+          if (hourData.samples.length < minSampleSize) continue;
+
+          const mxrValues = hourData.samples.map(s => s.mxr).filter(v => v != null);
+          const rngValues = hourData.samples.map(s => s.rng).filter(v => v != null);
+          const mxrStats = calculateStats(mxrValues);
+          const rngStats = calculateStats(rngValues);
+
+          const bigMoveCount = mxrValues.filter(v => v > bigMoveThreshold).length;
+          const bigMovePercent = mxrValues.length > 0 ? ((bigMoveCount / mxrValues.length) * 100).toFixed(1) : '—';
+
+          const first30Stats = calculateStats(hourData.first30);
+          const second30Stats = calculateStats(hourData.second30);
+
+          const first30Avg = first30Stats ? first30Stats.avg.toFixed(0) : '—';
+          const second30Avg = second30Stats ? second30Stats.avg.toFixed(0) : '—';
+
+          let comparison = '—';
+          if (first30Stats && second30Stats) {
+            const diff = Math.abs(first30Stats.avg) - Math.abs(second30Stats.avg);
+            comparison = diff > 0 ? `1st +${diff.toFixed(0)}` : `2nd +${Math.abs(diff).toFixed(0)}`;
+          }
+
+          const ampm = h >= 12 ? 'PM' : 'AM';
+          const disp = h === 0 ? 12 : h > 12 ? h - 12 : h;
+
+          // Row styling based on big move probability
+          const rowStyle = parseFloat(bigMovePercent) > 50 ? 'background: rgba(247,147,26,0.1);' : '';
+
+          html += `<tr style="${rowStyle} border-bottom: 1px solid rgba(255,255,255,0.05);">`;
+          html += `<td style="padding: 8px;"><strong>${disp}${ampm}</strong></td>`;
+          html += `<td style="padding: 8px; text-align: center;">${hourData.samples.length}</td>`;
+          html += `<td style="padding: 8px; text-align: center;">${mxrStats ? mxrStats.avg.toFixed(0) : '—'}</td>`;
+          html += `<td style="padding: 8px; text-align: center;">${mxrStats ? mxrStats.p75.toFixed(0) : '—'}</td>`;
+          html += `<td style="padding: 8px; text-align: center;">${mxrStats ? mxrStats.p90.toFixed(0) : '—'}</td>`;
+          html += `<td style="padding: 8px; text-align: center;">${rngStats ? rngStats.avg.toFixed(0) : '—'}</td>`;
+          html += `<td style="padding: 8px; text-align: center; font-weight: ${parseFloat(bigMovePercent) > 50 ? 'bold' : 'normal'}; color: ${parseFloat(bigMovePercent) > 50 ? 'var(--accent-btc)' : 'inherit'};">${bigMovePercent}%</td>`;
+          html += `<td style="padding: 8px; text-align: center; color: ${parseFloat(first30Avg) > 0 ? '#4ade80' : parseFloat(first30Avg) < 0 ? '#fb7185' : 'inherit'};">${first30Avg}</td>`;
+          html += `<td style="padding: 8px; text-align: center; color: ${parseFloat(second30Avg) > 0 ? '#4ade80' : parseFloat(second30Avg) < 0 ? '#fb7185' : 'inherit'};">${second30Avg}</td>`;
+          html += `<td style="padding: 8px; text-align: center; font-size: 0.7rem;">${comparison}</td>`;
+          html += '</tr>';
+        }
+
+        html += '</tbody></table></div>';
+        html += '</div>';
+      }
+
+      // Legend
+      html += '<div style="background: var(--bg-secondary); padding: 16px; border-radius: 8px; margin-top: 16px;">';
+      html += '<h4 style="margin: 0 0 8px 0; color: var(--accent-btc);">Legend</h4>';
+      html += '<div style="font-size: 0.7rem; line-height: 1.6;">';
+      html += '<div><strong>N:</strong> Number of samples (days with data for this hour)</div>';
+      html += '<div><strong>MxR Avg:</strong> Average max range (max of UR/LR)</div>';
+      html += '<div><strong>MxR P75/P90:</strong> 75th/90th percentile of max range</div>';
+      html += '<div><strong>Big Move %:</strong> Percentage of times MxR > 75th percentile (highlighted if > 50%)</div>';
+      html += '<div><strong>:00-:25:</strong> Average O-C for first 30 minutes</div>';
+      html += '<div><strong>:30-:55:</strong> Average O-C for second 30 minutes</div>';
+      html += '<div><strong>1st vs 2nd:</strong> Which half had bigger moves (absolute value)</div>';
+      html += '<div style="margin-top: 8px;"><span style="color: #4ade80;">Green</span> = Positive, <span style="color: #fb7185;">Red</span> = Negative</div>';
+      html += '</div></div>';
+
+      document.getElementById('dow-content').innerHTML = html;
+    }
+
     function toggleColFilterPanel() { document.getElementById('col-filter-panel').classList.toggle('visible'); document.getElementById('btn-col-filter').classList.toggle('active'); }
     function toggleRsiSettings() { document.getElementById('rsi-settings').classList.toggle('visible'); document.getElementById('btn-rsi').classList.toggle('active'); }
     
-    function toggleYear(y) { selectedYears.has(y) ? selectedYears.delete(y) : selectedYears.add(y); document.querySelector(`[data-year="${y}"]`).classList.toggle('active'); useDateFilter = false; selectedDates.clear(); updateDatePickerUI(); renderTable(); render5pmSession(); if(typeof renderCalendar === 'function') renderCalendar(); updateMobileFilterUI(); }
-    function toggleMonth(m) { selectedMonths.has(m) ? selectedMonths.delete(m) : selectedMonths.add(m); document.querySelector(`[data-month="${m}"]`).classList.toggle('active'); useDateFilter = false; selectedDates.clear(); updateDatePickerUI(); renderTable(); render5pmSession(); if(typeof renderCalendar === 'function') renderCalendar(); updateMobileFilterUI(); }
-    function toggleDay(d) { selectedDays.has(d) ? selectedDays.delete(d) : selectedDays.add(d); document.querySelector(`[data-day="${d}"]`).classList.toggle('active'); useDateFilter = false; selectedDates.clear(); updateDatePickerUI(); renderTable(); render5pmSession(); if(typeof renderCalendar === 'function') renderCalendar(); updateMobileFilterUI(); }
+    function toggleYear(y) { selectedYears.has(y) ? selectedYears.delete(y) : selectedYears.add(y); document.querySelector(`[data-year="${y}"]`).classList.toggle('active'); useDateFilter = false; selectedDates.clear(); updateDatePickerUI(); renderTable(); render5pmSession(); if(typeof renderCalendar === 'function') renderCalendar(); if(typeof renderDOWAnalysis === 'function' && document.getElementById('tab-dowanalysis')?.classList.contains('active')) renderDOWAnalysis(); updateMobileFilterUI(); }
+    function toggleMonth(m) { selectedMonths.has(m) ? selectedMonths.delete(m) : selectedMonths.add(m); document.querySelector(`[data-month="${m}"]`).classList.toggle('active'); useDateFilter = false; selectedDates.clear(); updateDatePickerUI(); renderTable(); render5pmSession(); if(typeof renderCalendar === 'function') renderCalendar(); if(typeof renderDOWAnalysis === 'function' && document.getElementById('tab-dowanalysis')?.classList.contains('active')) renderDOWAnalysis(); updateMobileFilterUI(); }
+    function toggleDay(d) { selectedDays.has(d) ? selectedDays.delete(d) : selectedDays.add(d); document.querySelector(`[data-day="${d}"]`).classList.toggle('active'); useDateFilter = false; selectedDates.clear(); updateDatePickerUI(); renderTable(); render5pmSession(); if(typeof renderCalendar === 'function') renderCalendar(); if(typeof renderDOWAnalysis === 'function' && document.getElementById('tab-dowanalysis')?.classList.contains('active')) renderDOWAnalysis(); updateMobileFilterUI(); }
     function toggleOcc(o) { selectedOccs.has(o) ? selectedOccs.delete(o) : selectedOccs.add(o); document.querySelector(`[data-occ="${o}"]`).classList.toggle('active'); useDateFilter = false; selectedDates.clear(); updateDatePickerUI(); renderTable(); render5pmSession(); if(typeof renderCalendar === 'function') renderCalendar(); updateMobileFilterUI(); }
     
     function setNoMonths() { selectedMonths.clear(); document.querySelectorAll('[data-month]').forEach(b => b.classList.remove('active')); useDateFilter = false; selectedDates.clear(); updateDatePickerUI(); renderTable(); render5pmSession(); if(typeof renderCalendar === 'function') renderCalendar(); updateMobileFilterUI(); }
