@@ -2003,9 +2003,11 @@
       // After bar metrics (last bar where threshold exceeded)
       { id: 'lastAfterHiBarMin', label: 'LAHm', desc: 'Last bar with after high > threshold', default: false, gradient: 'minute', group: 'afterbar' },
       { id: 'lastAfterLoBarMin', label: 'LALm', desc: 'Last bar with after low > threshold', default: false, gradient: 'minute', group: 'afterbar' },
+      { id: 'maxLastAfterBarMin', label: 'MxLABm', desc: 'Max of LAHm and LALm', default: false, gradient: 'minute', group: 'afterbar' },
       // :40 bar after bar metrics
-      { id: 'bar40AfterHi', label: 'B40AH', desc: ':40 bar after high', default: false, gradient: 'orange', group: 'afterbar' },
-      { id: 'bar40AfterLo', label: 'B40AL', desc: ':40 bar after low', default: false, gradient: 'orange', group: 'afterbar' },
+      { id: 'bar40AfterHi', label: 'B40AH', desc: ':40 bar after high', default: false, gradient: 'orange', group: 'b40' },
+      { id: 'bar40AfterLo', label: 'B40AL', desc: ':40 bar after low', default: false, gradient: 'orange', group: 'b40' },
+      { id: 'maxB40HL', label: 'MxB40', desc: 'Max of B40AH and B40AL', default: false, gradient: 'orange', group: 'b40' },
     ];
     
     const DAY_TOTAL_COLS = [
@@ -3296,12 +3298,22 @@
               }
             }
 
-            // Get :40 bar after bar high/low
+            // Get :40 bar after bar high/low (ensure positive values)
             const bar40 = hourBars.find(b => b.etMin === 40);
             if (bar40) {
-              bar40AfterHi = bar40.afterBarHigh != null ? Math.round(bar40.afterBarHigh) : null;
-              bar40AfterLo = bar40.afterBarLow != null ? Math.round(bar40.afterBarLow) : null;
+              bar40AfterHi = bar40.afterBarHigh != null ? Math.max(0, Math.round(bar40.afterBarHigh)) : null;
+              bar40AfterLo = bar40.afterBarLow != null ? Math.max(0, Math.round(bar40.afterBarLow)) : null;
             }
+          }
+
+          // Calculate max B40HL
+          let maxB40HL = null;
+          if (bar40AfterHi != null && bar40AfterLo != null) {
+            maxB40HL = Math.max(bar40AfterHi, bar40AfterLo);
+          } else if (bar40AfterHi != null) {
+            maxB40HL = bar40AfterHi;
+          } else if (bar40AfterLo != null) {
+            maxB40HL = bar40AfterLo;
           }
 
           // Calculate cumulative bar counts
@@ -3381,8 +3393,10 @@
             oc4555,
             lastAfterHiBarMin,
             lastAfterLoBarMin,
+            maxLastAfterBarMin: (lastAfterHiBarMin != null && lastAfterLoBarMin != null) ? Math.max(lastAfterHiBarMin, lastAfterLoBarMin) : (lastAfterHiBarMin ?? lastAfterLoBarMin),
             bar40AfterHi,
             bar40AfterLo,
+            maxB40HL,
             cumGreenBars: null, // Will be calculated cumulatively
             cumRedBars: null,
             barDelta: null,
@@ -4307,7 +4321,7 @@ function populateDatePicker() {
     }
     
     function calcRowStats(day, hours) {
-      const s = { rng: [], urlr: [], mxr: [], mxl: [], rank: [], cl: [], oc: [], cdr: [], cdrRG: [], mxcd: [], rsi: [], sig: [], vol: [] };
+      const s = { rng: [], urlr: [], mxr: [], mxl: [], rank: [], cl: [], oc: [], cdr: [], cdrRG: [], mxcd: [], rsi: [], sig: [], vol: [], b40: [], bars: [], interval: [], afterbar: [], maxrngbar: [] };
       getSortedHourKeys(day).forEach(h => {
         const m = day.hrs[h].m;
         if (!m) return;
@@ -4343,6 +4357,26 @@ function populateDatePicker() {
         if (m.rVol != null) s.vol.push(m.rVol);
         if (m.rVolC != null) s.vol.push(m.rVolC);
         if (m.rVolDOW != null) s.vol.push(m.rVolDOW);
+
+        // B40 metrics
+        if (m.bar40AfterHi != null) s.b40.push(m.bar40AfterHi);
+        if (m.bar40AfterLo != null) s.b40.push(m.bar40AfterLo);
+        if (m.maxB40HL != null) s.b40.push(m.maxB40HL);
+
+        // Bar count metrics
+        if (m.cumGreenBars != null) s.bars.push(m.cumGreenBars);
+        if (m.cumRedBars != null) s.bars.push(m.cumRedBars);
+        if (m.rthCumGreenBars != null) s.bars.push(m.rthCumGreenBars);
+        if (m.rthCumRedBars != null) s.bars.push(m.rthCumRedBars);
+
+        // Interval metrics
+        if (m.oc0010 != null) s.interval.push(m.oc0010);
+        if (m.oc1525 != null) s.interval.push(m.oc1525);
+        if (m.oc3040 != null) s.interval.push(m.oc3040);
+        if (m.oc4555 != null) s.interval.push(m.oc4555);
+
+        // Max range bar metrics
+        if (m.maxRngBarVal != null) s.maxrngbar.push(m.maxRngBarVal);
       });
       const r = {};
       Object.keys(s).forEach(k => {
@@ -4363,7 +4397,8 @@ function populateDatePicker() {
           rng: [], urlr: [], mxr: [], mxl: [], rank: [], cl: [], oc: [],
           cdrRG: [], cdr: [], mxcd: [], rsi: [], sig: [], vol: [],
           wcdr: [], wcdrRG: [], wmxcd: [],
-          p5cdr: [], p5cdrRG: [], p5mxcd: []
+          p5cdr: [], p5cdrRG: [], p5mxcd: [],
+          b40: [], bars: [], interval: [], afterbar: [], maxrngbar: []
         };
 
         data.forEach(d => {
@@ -4413,6 +4448,26 @@ function populateDatePicker() {
           if (m.p5CdrUActual != null) s[h].p5cdr.push(m.p5CdrUActual);
           if (m.p5CdrDActual != null) s[h].p5cdr.push(m.p5CdrDActual);
           if (m.p5MxcdActual != null) s[h].p5mxcd.push(m.p5MxcdActual);
+
+          // B40 metrics
+          if (m.bar40AfterHi != null) s[h].b40.push(m.bar40AfterHi);
+          if (m.bar40AfterLo != null) s[h].b40.push(m.bar40AfterLo);
+          if (m.maxB40HL != null) s[h].b40.push(m.maxB40HL);
+
+          // Bar count metrics
+          if (m.cumGreenBars != null) s[h].bars.push(m.cumGreenBars);
+          if (m.cumRedBars != null) s[h].bars.push(m.cumRedBars);
+          if (m.rthCumGreenBars != null) s[h].bars.push(m.rthCumGreenBars);
+          if (m.rthCumRedBars != null) s[h].bars.push(m.rthCumRedBars);
+
+          // Interval metrics
+          if (m.oc0010 != null) s[h].interval.push(m.oc0010);
+          if (m.oc1525 != null) s[h].interval.push(m.oc1525);
+          if (m.oc3040 != null) s[h].interval.push(m.oc3040);
+          if (m.oc4555 != null) s[h].interval.push(m.oc4555);
+
+          // Max range bar metrics
+          if (m.maxRngBarVal != null) s[h].maxrngbar.push(m.maxRngBarVal);
         });
       });
       const r = {};
@@ -6089,26 +6144,16 @@ function populateDatePicker() {
       // Build body
       let bd = '';
 
-      // Determine if we should show "tomorrow's date" for current session
+      // Get current date/time for determining which hours are in the future
       const now = new Date();
+      const currentDateStr = now.toISOString().split('T')[0];
       const currentHour = now.getHours();
-      const showTomorrowDate = currentHour >= 17; // Between 5PM and midnight
 
       filteredData.forEach(day => {
         bd += '<tr>';
 
-        // If we're viewing the most recent day and it's after 5PM, show tomorrow's date
-        const isLatestDay = day === filteredData[0];
-        let displayDate = day.date;
-
-        if (isLatestDay && showTomorrowDate) {
-          // Calculate tomorrow's date
-          const dayDate = new Date(day.date + 'T12:00:00Z');
-          dayDate.setUTCDate(dayDate.getUTCDate() + 1);
-          displayDate = dayDate.toISOString().split('T')[0];
-        }
-
-        bd += `<td class="sticky-col date-cell" style="left:0;min-width:65px;cursor:pointer;" onclick="loadDateInDayView('${day.date}')" title="Click to view in Day View">${displayDate}${isLatestDay && showTomorrowDate ? ' (tmrw)' : ''}</td>`;
+        // Display the day's date normally
+        bd += `<td class="sticky-col date-cell" style="left:0;min-width:65px;cursor:pointer;" onclick="loadDateInDayView('${day.date}')" title="Click to view in Day View">${day.date}</td>`;
         bd += `<td class="sticky-col day-cell" style="left:65px;min-width:28px">${DAYS_SHORT[day.dow]}</td>`;
         
         // 5PM session totals
@@ -6122,17 +6167,46 @@ function populateDatePicker() {
         const prevDateIdx = allETDates.indexOf(day.date) + 1; // +1 because allETDates is reverse sorted
         const prevDate = prevDateIdx < allETDates.length ? allETDates[prevDateIdx] : null;
         const prevDay = prevDate ? etDays[prevDate] : null;
-        
+
+        // Determine if this is the most recent session and check for future hours
+        const isLatestSession = day === filteredData[0];
+
         // Calculate cumulative metrics for each hour
         const pm5Open = day.d5pmOpen;
         let cumHigh = pm5Open, cumLow = pm5Open;
-        
+
         // Hour data
         PM5_HOURS.forEach((h, hi) => {
+          // Check if this hour is in the future (for the latest session only)
+          let isFutureHour = false;
+          if (isLatestSession && day.date === currentDateStr) {
+            // If viewing today's session
+            if (currentHour >= 17) {
+              // Currently 5PM or later - we're IN this session
+              // Hours 17 through currentHour have data, rest are future
+              if (h >= 17) {
+                isFutureHour = h > currentHour;
+              } else {
+                // Hours 0-16 are tomorrow and haven't happened yet
+                isFutureHour = true;
+              }
+            } else {
+              // Currently before 5PM - this session started yesterday at 5PM
+              // Hours 0 through currentHour have data, rest are future
+              if (h >= 17) {
+                // These are from yesterday, they have data
+                isFutureHour = false;
+              } else {
+                // These are today, check if they've happened
+                isFutureHour = h > currentHour;
+              }
+            }
+          }
+
           // For hours 17-23, use previous day's data
           // For hours 0-16, use current day's data
           const sourceDay = h >= 17 ? prevDay : day;
-          const hourData = sourceDay?.hrs[h];
+          const hourData = !isFutureHour ? sourceDay?.hrs[h] : null;
           const hm = hourData?.m;
           
           if (hm) {
