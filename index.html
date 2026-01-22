@@ -363,7 +363,6 @@
     #col-selector,
     #rsi-settings,
     #query-builder-panel,
-    #query-columns-panel,
     .filters,
     .col-selector,
     .dt-col-selector,
@@ -456,7 +455,13 @@
     .query-filter-remove { padding: 2px 6px; background: rgba(248,113,113,0.1); border: 1px solid rgba(248,113,113,0.25); border-radius: 2px; color: var(--accent-red); font-size: 0.5rem; cursor: pointer; }
 
     .query-builder-controls { display: flex; align-items: center; gap: 6px; padding-top: 8px; border-top: 1px solid rgba(100,149,237,0.15); }
-    
+
+    /* Query Results Tabs */
+    .query-results-tabs { display: flex; gap: 8px; padding: 8px 16px; background: rgba(100,149,237,0.05); border-bottom: 1px solid rgba(100,149,237,0.2); }
+    .query-results-tab { padding: 6px 16px; background: rgba(255,255,255,0.05); border: 1px solid rgba(100,149,237,0.3); border-radius: 4px; color: var(--text-primary); font-size: 0.7rem; cursor: pointer; transition: all 0.2s; }
+    .query-results-tab:hover { background: rgba(100,149,237,0.15); }
+    .query-results-tab.active { background: rgba(100,149,237,0.25); border-color: rgba(100,149,237,0.6); color: var(--accent-blue); font-weight: 500; }
+
     .col-selector { display: none; padding: 10px 16px; background: var(--bg-tertiary); border-bottom: 1px solid var(--border-subtle); flex-shrink: 0; }
     .col-selector.visible { display: block; }
     .col-selector h3 { font-size: 0.52rem; text-transform: uppercase; letter-spacing: 1px; color: var(--text-muted); margin-bottom: 6px; }
@@ -1825,26 +1830,37 @@
       </div>
 
       <!-- Results Section -->
-      <div id="query-results-container" style="display:none; height: calc(100vh - 220px); overflow-y: auto;">
-        <!-- Unified Results Table -->
-        <div id="query-unified-view">
-          <h3 style="margin: 8px 12px; color: var(--accent-blue); font-size: 0.85rem;">📊 Matching Hours with 5-Minute Breakdown</h3>
-          <div class="day-table-container">
-            <table class="day-table" id="query-unified-table">
-              <thead id="query-unified-head"></thead>
-              <tbody id="query-unified-body"></tbody>
-            </table>
+      <div id="query-results-container" style="display:none;">
+        <!-- Tabs -->
+        <div class="query-results-tabs">
+          <div class="query-results-tab active" id="query-tab-hours" onclick="switchQueryResultTab('hours')">
+            📊 Matching Hours with 5-Minute Breakdown
+          </div>
+          <div class="query-results-tab" id="query-tab-dates" onclick="switchQueryResultTab('dates')">
+            📅 Matching Dates Summary
           </div>
         </div>
 
-        <!-- Date Summary Section -->
-        <div id="query-date-summary" style="margin-top: 30px; margin-bottom: 30px;">
-          <h3 style="margin: 8px 12px; color: var(--accent-blue); font-size: 0.85rem;">📅 Matching Dates Summary</h3>
-          <div class="table-container" style="max-height: 400px;">
-            <table class="data-table" id="query-date-summary-table">
-              <thead id="query-date-summary-head"></thead>
-              <tbody id="query-date-summary-body"></tbody>
-            </table>
+        <!-- Tab Content Container -->
+        <div style="height: calc(100vh - 260px); overflow-y: auto;">
+          <!-- Unified Results Table -->
+          <div id="query-unified-view">
+            <div class="day-table-container">
+              <table class="day-table" id="query-unified-table">
+                <thead id="query-unified-head"></thead>
+                <tbody id="query-unified-body"></tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Date Summary Section -->
+          <div id="query-date-summary" style="display:none; padding: 16px;">
+            <div class="table-container">
+              <table class="data-table" id="query-date-summary-table">
+                <thead id="query-date-summary-head"></thead>
+                <tbody id="query-date-summary-body"></tbody>
+              </table>
+            </div>
           </div>
         </div>
       </div>
@@ -7357,6 +7373,16 @@ function populateDatePicker() {
       }
     }
 
+    function switchQueryResultTab(tab) {
+      // Update tab buttons
+      document.getElementById('query-tab-hours').classList.toggle('active', tab === 'hours');
+      document.getElementById('query-tab-dates').classList.toggle('active', tab === 'dates');
+
+      // Update content visibility
+      document.getElementById('query-unified-view').style.display = tab === 'hours' ? 'block' : 'none';
+      document.getElementById('query-date-summary').style.display = tab === 'dates' ? 'block' : 'none';
+    }
+
     function addQueryGroup() {
       const groupId = queryGroupIdCounter++;
       const group = {
@@ -7903,7 +7929,7 @@ function populateDatePicker() {
     }
 
     function renderQueryDateSummary() {
-      // Group results by date
+      // Group results by date and collect hours
       const dateMap = new Map();
       queryResults.forEach(result => {
         if (!dateMap.has(result.date)) {
@@ -7911,10 +7937,13 @@ function populateDatePicker() {
             date: result.date,
             dow: result.dow,
             dayNum: result.dayNum,
-            count: 0
+            count: 0,
+            hours: []
           });
         }
-        dateMap.get(result.date).count++;
+        const entry = dateMap.get(result.date);
+        entry.count++;
+        entry.hours.push(result.hour);
       });
 
       // Add dates with 0 matches if they match the filter criteria
@@ -7939,7 +7968,8 @@ function populateDatePicker() {
               date: day.date,
               dow: day.dow,
               dayNum: day.occ,
-              count: 0
+              count: 0,
+              hours: []
             });
           }
         });
@@ -7958,6 +7988,7 @@ function populateDatePicker() {
       headerHTML += '<th style="min-width:35px;">Day</th>';
       headerHTML += '<th style="min-width:30px;">#</th>';
       headerHTML += '<th style="min-width:60px;">Count</th>';
+      headerHTML += '<th style="min-width:200px;">Hours</th>';
       headerHTML += '</tr>';
       document.getElementById('query-date-summary-head').innerHTML = headerHTML;
 
@@ -7970,11 +8001,20 @@ function populateDatePicker() {
           countBg = getOrangeGradient(entry.count, 0, maxCount);
         }
 
+        // Format hours list
+        let hoursText = '—';
+        if (entry.hours.length > 0) {
+          // Sort hours numerically
+          entry.hours.sort((a, b) => a - b);
+          hoursText = entry.hours.map(h => formatHourHeader(h)).join(', ');
+        }
+
         bodyHTML += '<tr>';
         bodyHTML += `<td style="text-align:left;">${entry.date}</td>`;
         bodyHTML += `<td>${DAYS_SHORT[entry.dow]}</td>`;
         bodyHTML += `<td>${entry.dayNum}</td>`;
         bodyHTML += `<td style="background:${countBg}"><strong>${entry.count}</strong></td>`;
+        bodyHTML += `<td style="text-align:left; font-size:0.65rem; color:${entry.count === 0 ? 'var(--text-muted)' : 'var(--text-primary)'};">${hoursText}</td>`;
         bodyHTML += '</tr>';
       });
       document.getElementById('query-date-summary-body').innerHTML = bodyHTML;
