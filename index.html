@@ -1762,14 +1762,14 @@
     <div id="tab-dowanalysis" class="tab-content">
       <div class="calendar-toolbar">
         <span class="live-indicator" onclick="manualRefresh()" title="Click to refresh live data">Live</span>
-        <h2 style="margin: 0; font-size: 1rem; color: var(--accent-btc);">📈 Day of Week Analysis</h2>
-        <div style="display: flex; gap: 8px; align-items: center;">
-          <label style="font-size: 0.75rem;">Min Sample Size:</label>
-          <input type="number" id="dow-min-sample" value="5" min="1" max="100" style="width: 60px;" onchange="renderDOWAnalysis()">
-          <button class="tb-btn" onclick="renderDOWAnalysis()" style="margin-left: 8px;">🔄 Refresh</button>
+        <h2 style="margin: 0; font-size: 0.85rem; color: var(--accent-btc);">📈 Day of Week Analysis</h2>
+        <div style="display: flex; gap: 6px; align-items: center;">
+          <label style="font-size: 0.65rem;">Min Sample Size:</label>
+          <input type="number" id="dow-min-sample" value="5" min="1" max="100" style="width: 50px; font-size: 0.65rem; padding: 2px 4px;" onchange="renderDOWAnalysis()">
+          <button class="tb-btn" onclick="renderDOWAnalysis()" style="margin-left: 6px; font-size: 0.65rem; padding: 4px 8px;">🔄 Refresh</button>
         </div>
       </div>
-      <div style="padding: 12px; overflow-y: auto; flex: 1;">
+      <div style="padding: 8px; overflow-y: auto; flex: 1;">
         <div id="dow-content"></div>
       </div>
     </div>
@@ -4167,40 +4167,38 @@
         });
       });
 
-      // Calculate max range percentiles
-      // Collect all mxr values from all hours across all days
-      const allMxrValues = [];
+      // Calculate max range percentiles (per day)
+      // For each day, the lowest mxr = 0%, highest mxr = 100%
       Object.values(etDays).forEach(day => {
+        const dayMxrValues = [];
         getSortedHourKeys(day).forEach(h => {
           const m = day.hrs[h].m;
           if (m && m.mxr != null) {
-            allMxrValues.push(m.mxr);
+            dayMxrValues.push(m.mxr);
           }
         });
-      });
 
-      // Find min and max
-      if (allMxrValues.length > 0) {
-        const mxrMin = Math.min(...allMxrValues);
-        const mxrMax = Math.max(...allMxrValues);
-        const mxrRange = mxrMax - mxrMin;
+        // Find min and max for this day
+        if (dayMxrValues.length > 0) {
+          const dayMxrMin = Math.min(...dayMxrValues);
+          const dayMxrMax = Math.max(...dayMxrValues);
+          const dayMxrRange = dayMxrMax - dayMxrMin;
 
-        // Calculate percentile for each hour
-        Object.values(etDays).forEach(day => {
+          // Calculate percentile for each hour in this day
           getSortedHourKeys(day).forEach(h => {
             const m = day.hrs[h].m;
             if (m && m.mxr != null) {
-              // Percentile: (value - min) / (max - min) * 100
-              if (mxrRange > 0) {
-                m.mxrPct = Math.round(((m.mxr - mxrMin) / mxrRange) * 100 * 10) / 10;
+              // Percent rank: (value - min) / (max - min) * 100
+              if (dayMxrRange > 0) {
+                m.mxrPct = Math.round(((m.mxr - dayMxrMin) / dayMxrRange) * 100 * 10) / 10;
               } else {
-                // If all values are the same, set to 50%
+                // If all values are the same in this day, set to 50%
                 m.mxrPct = 50;
               }
             }
           });
-        });
-      }
+        }
+      });
 
       allETDates = Object.keys(etDays).sort().reverse();
       availableYears = [...new Set(allETDates.map(d => d.slice(0, 4)))].sort();
@@ -6761,12 +6759,13 @@ function populateDatePicker() {
     
     function getPm5FilteredData() {
       return Object.values(etDays).filter(d => {
-        if (!pm5SelectedYears.has(d.date.slice(0,4))) return false;
-        if (!pm5SelectedMonths.has(d.month)) return false;
-        if (!pm5SelectedDays.has(d.dow)) return false;
-        if (!pm5SelectedOccs.has(d.occ)) return false;
-        if (pm5UseDateFilter && pm5SelectedDates.size > 0) {
-          if (!pm5SelectedDates.has(d.date)) return false;
+        // Use main filters instead of pm5-specific filters
+        if (!selectedYears.has(d.date.slice(0,4))) return false;
+        if (!selectedMonths.has(d.month)) return false;
+        if (!selectedDays.has(d.dow)) return false;
+        if (!selectedOccs.has(d.occ)) return false;
+        if (useDateFilter && selectedDates.size > 0) {
+          if (!selectedDates.has(d.date)) return false;
         }
         if (d.d5pmOpen == null) return false; // Must have 5PM session data
         return true;
@@ -6825,8 +6824,8 @@ function populateDatePicker() {
         cumRG: stats5pm.cumRG.length ? { min: Math.min(...stats5pm.cumRG), max: Math.max(...stats5pm.cumRG) } : { min: -1000, max: 1000 },
       };
       
-      // Get active columns for PM5
-      const pm5Cols = ALL_COLUMNS.filter(c => pm5VisibleColumns.has(c.id));
+      // Get active columns for PM5 (use main column selector)
+      const pm5Cols = ALL_COLUMNS.filter(c => selectedCols.has(c.id));
       const colsPerHour = pm5Cols.length + (pm5ShowCumulative ? 4 : 0);
 
       // Build header
@@ -7227,13 +7226,13 @@ function populateDatePicker() {
         };
       };
 
-      // Build HTML
+      // Build HTML (compact design)
       let html = '';
 
       // Summary section
-      html += '<div style="background: var(--bg-secondary); padding: 16px; border-radius: 8px; margin-bottom: 16px;">';
-      html += '<h3 style="margin: 0 0 12px 0; color: var(--accent-btc);">Summary</h3>';
-      html += '<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px;">';
+      html += '<div style="background: var(--bg-secondary); padding: 8px 12px; border-radius: 4px; margin-bottom: 8px;">';
+      html += '<h3 style="margin: 0 0 6px 0; color: var(--accent-btc); font-size: 0.7rem;">Summary</h3>';
+      html += '<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px; font-size: 0.65rem;">';
       html += `<div><strong>Total Days:</strong> ${data.length}</div>`;
       html += `<div><strong>Min Sample Size:</strong> ${minSampleSize}</div>`;
       html += `<div><strong>Filters Applied:</strong> ${columnFilters.length > 0 ? 'Yes' : 'No'}</div>`;
@@ -7242,22 +7241,22 @@ function populateDatePicker() {
       // For each day of week
       for (let dow = 0; dow < 7; dow++) {
         const dayData = dowData[dow];
-        html += `<div style="background: var(--bg-secondary); padding: 16px; border-radius: 8px; margin-bottom: 16px;">`;
-        html += `<h3 style="margin: 0 0 12px 0; color: var(--accent-btc);">${dayData.name}</h3>`;
+        html += `<div style="background: var(--bg-secondary); padding: 8px 12px; border-radius: 4px; margin-bottom: 8px;">`;
+        html += `<h3 style="margin: 0 0 6px 0; color: var(--accent-btc); font-size: 0.7rem;">${dayData.name}</h3>`;
 
         // Table for this day
-        html += '<div style="overflow-x: auto;"><table style="width: 100%; border-collapse: collapse; font-size: 0.75rem;">';
-        html += '<thead><tr style="background: rgba(100,149,237,0.15); border-bottom: 2px solid rgba(100,149,237,0.3);">';
-        html += '<th style="padding: 8px; text-align: left;">Hour</th>';
-        html += '<th style="padding: 8px; text-align: center;">N</th>';
-        html += '<th style="padding: 8px; text-align: center;">MxR Avg</th>';
-        html += '<th style="padding: 8px; text-align: center;">MxR P75</th>';
-        html += '<th style="padding: 8px; text-align: center;">MxR P90</th>';
-        html += '<th style="padding: 8px; text-align: center;">Rng Avg</th>';
-        html += '<th style="padding: 8px; text-align: center;">Big Move %</th>';
-        html += '<th style="padding: 8px; text-align: center;">:00-:25</th>';
-        html += '<th style="padding: 8px; text-align: center;">:30-:55</th>';
-        html += '<th style="padding: 8px; text-align: center;">1st vs 2nd</th>';
+        html += '<div style="overflow-x: auto;"><table style="width: 100%; border-collapse: collapse; font-size: 0.6rem;">';
+        html += '<thead><tr style="background: rgba(100,149,237,0.15); border-bottom: 1px solid rgba(100,149,237,0.3);">';
+        html += '<th style="padding: 4px 6px; text-align: left;">Hour</th>';
+        html += '<th style="padding: 4px 6px; text-align: center;">N</th>';
+        html += '<th style="padding: 4px 6px; text-align: center;">MxR Avg</th>';
+        html += '<th style="padding: 4px 6px; text-align: center;">MxR P75</th>';
+        html += '<th style="padding: 4px 6px; text-align: center;">MxR P90</th>';
+        html += '<th style="padding: 4px 6px; text-align: center;">Rng Avg</th>';
+        html += '<th style="padding: 4px 6px; text-align: center;">Big Move %</th>';
+        html += '<th style="padding: 4px 6px; text-align: center;">:00-:25</th>';
+        html += '<th style="padding: 4px 6px; text-align: center;">:30-:55</th>';
+        html += '<th style="padding: 4px 6px; text-align: center;">1st vs 2nd</th>';
         html += '</tr></thead><tbody>';
 
         // Calculate threshold for "big move" (e.g., > 75th percentile of all MxR values)
@@ -7298,16 +7297,16 @@ function populateDatePicker() {
           const rowStyle = parseFloat(bigMovePercent) > 50 ? 'background: rgba(247,147,26,0.1);' : '';
 
           html += `<tr style="${rowStyle} border-bottom: 1px solid rgba(255,255,255,0.05);">`;
-          html += `<td style="padding: 8px;"><strong>${disp}${ampm}</strong></td>`;
-          html += `<td style="padding: 8px; text-align: center;">${hourData.samples.length}</td>`;
-          html += `<td style="padding: 8px; text-align: center;">${mxrStats ? mxrStats.avg.toFixed(0) : '—'}</td>`;
-          html += `<td style="padding: 8px; text-align: center;">${mxrStats ? mxrStats.p75.toFixed(0) : '—'}</td>`;
-          html += `<td style="padding: 8px; text-align: center;">${mxrStats ? mxrStats.p90.toFixed(0) : '—'}</td>`;
-          html += `<td style="padding: 8px; text-align: center;">${rngStats ? rngStats.avg.toFixed(0) : '—'}</td>`;
-          html += `<td style="padding: 8px; text-align: center; font-weight: ${parseFloat(bigMovePercent) > 50 ? 'bold' : 'normal'}; color: ${parseFloat(bigMovePercent) > 50 ? 'var(--accent-btc)' : 'inherit'};">${bigMovePercent}%</td>`;
-          html += `<td style="padding: 8px; text-align: center; color: ${parseFloat(first30Avg) > 0 ? '#4ade80' : parseFloat(first30Avg) < 0 ? '#fb7185' : 'inherit'};">${first30Avg}</td>`;
-          html += `<td style="padding: 8px; text-align: center; color: ${parseFloat(second30Avg) > 0 ? '#4ade80' : parseFloat(second30Avg) < 0 ? '#fb7185' : 'inherit'};">${second30Avg}</td>`;
-          html += `<td style="padding: 8px; text-align: center; font-size: 0.7rem;">${comparison}</td>`;
+          html += `<td style="padding: 4px 6px;"><strong>${disp}${ampm}</strong></td>`;
+          html += `<td style="padding: 4px 6px; text-align: center;">${hourData.samples.length}</td>`;
+          html += `<td style="padding: 4px 6px; text-align: center;">${mxrStats ? mxrStats.avg.toFixed(0) : '—'}</td>`;
+          html += `<td style="padding: 4px 6px; text-align: center;">${mxrStats ? mxrStats.p75.toFixed(0) : '—'}</td>`;
+          html += `<td style="padding: 4px 6px; text-align: center;">${mxrStats ? mxrStats.p90.toFixed(0) : '—'}</td>`;
+          html += `<td style="padding: 4px 6px; text-align: center;">${rngStats ? rngStats.avg.toFixed(0) : '—'}</td>`;
+          html += `<td style="padding: 4px 6px; text-align: center; font-weight: ${parseFloat(bigMovePercent) > 50 ? 'bold' : 'normal'}; color: ${parseFloat(bigMovePercent) > 50 ? 'var(--accent-btc)' : 'inherit'};">${bigMovePercent}%</td>`;
+          html += `<td style="padding: 4px 6px; text-align: center; color: ${parseFloat(first30Avg) > 0 ? '#4ade80' : parseFloat(first30Avg) < 0 ? '#fb7185' : 'inherit'};">${first30Avg}</td>`;
+          html += `<td style="padding: 4px 6px; text-align: center; color: ${parseFloat(second30Avg) > 0 ? '#4ade80' : parseFloat(second30Avg) < 0 ? '#fb7185' : 'inherit'};">${second30Avg}</td>`;
+          html += `<td style="padding: 4px 6px; text-align: center;">${comparison}</td>`;
           html += '</tr>';
         }
 
@@ -7316,9 +7315,9 @@ function populateDatePicker() {
       }
 
       // Legend
-      html += '<div style="background: var(--bg-secondary); padding: 16px; border-radius: 8px; margin-top: 16px;">';
-      html += '<h4 style="margin: 0 0 8px 0; color: var(--accent-btc);">Legend</h4>';
-      html += '<div style="font-size: 0.7rem; line-height: 1.6;">';
+      html += '<div style="background: var(--bg-secondary); padding: 8px 12px; border-radius: 4px; margin-top: 8px;">';
+      html += '<h4 style="margin: 0 0 4px 0; color: var(--accent-btc); font-size: 0.65rem;">Legend</h4>';
+      html += '<div style="font-size: 0.6rem; line-height: 1.4;">';
       html += '<div><strong>N:</strong> Number of samples (days with data for this hour)</div>';
       html += '<div><strong>MxR Avg:</strong> Average max range (max of UR/LR)</div>';
       html += '<div><strong>MxR P75/P90:</strong> 75th/90th percentile of max range</div>';
@@ -7326,7 +7325,7 @@ function populateDatePicker() {
       html += '<div><strong>:00-:25:</strong> Average O-C for first 30 minutes</div>';
       html += '<div><strong>:30-:55:</strong> Average O-C for second 30 minutes</div>';
       html += '<div><strong>1st vs 2nd:</strong> Which half had bigger moves (absolute value)</div>';
-      html += '<div style="margin-top: 8px;"><span style="color: #4ade80;">Green</span> = Positive, <span style="color: #fb7185;">Red</span> = Negative</div>';
+      html += '<div style="margin-top: 4px;"><span style="color: #4ade80;">Green</span> = Positive, <span style="color: #fb7185;">Red</span> = Negative</div>';
       html += '</div></div>';
 
       document.getElementById('dow-content').innerHTML = html;
