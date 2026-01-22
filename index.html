@@ -7329,6 +7329,10 @@ function populateDatePicker() {
       }
       populateQueryColumnSelector();
       renderQueryBuilder();
+
+      // Show query builder panel by default
+      document.getElementById('query-builder-panel').classList.add('visible');
+      document.getElementById('btn-query-builder').classList.add('active');
     }
 
     function toggleQueryBuilder() {
