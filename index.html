@@ -1826,24 +1826,37 @@
 
       <!-- Results Section -->
       <div id="query-results-container" style="display:none;">
-        <!-- Table View -->
-        <div id="query-table-view" style="margin-bottom: 20px;">
-          <h3 style="margin: 8px 12px; color: var(--accent-blue); font-size: 0.85rem;">📋 Matching Hours</h3>
-          <div class="table-container">
-            <table class="data-table" id="query-results-table">
-              <thead id="query-results-head"></thead>
-              <tbody id="query-results-body"></tbody>
-            </table>
+        <div style="display: flex; gap: 20px; flex-wrap: wrap;">
+          <!-- Table View -->
+          <div id="query-table-view" style="flex: 0 0 auto; max-width: 45%;">
+            <h3 style="margin: 8px 12px; color: var(--accent-blue); font-size: 0.85rem;">📋 Matching Hours</h3>
+            <div class="table-container" style="max-height: 600px;">
+              <table class="data-table" id="query-results-table">
+                <thead id="query-results-head"></thead>
+                <tbody id="query-results-body"></tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Detailed View -->
+          <div id="query-detailed-view" style="flex: 1; min-width: 50%;">
+            <h3 style="margin: 8px 12px; color: var(--accent-blue); font-size: 0.85rem;">📊 Detailed 5-Minute Breakdown</h3>
+            <div class="day-table-container" style="max-height: 600px;">
+              <table class="day-table" id="query-detailed-table">
+                <thead id="query-detailed-head"></thead>
+                <tbody id="query-detailed-body"></tbody>
+              </table>
+            </div>
           </div>
         </div>
 
-        <!-- Detailed View -->
-        <div id="query-detailed-view" style="display:none;">
-          <h3 style="margin: 8px 12px; color: var(--accent-blue); font-size: 0.85rem;">📊 Detailed 5-Minute Breakdown</h3>
-          <div class="day-table-container">
-            <table class="day-table" id="query-detailed-table">
-              <thead id="query-detailed-head"></thead>
-              <tbody id="query-detailed-body"></tbody>
+        <!-- Date Summary Section -->
+        <div id="query-date-summary" style="margin-top: 30px;">
+          <h3 style="margin: 8px 12px; color: var(--accent-blue); font-size: 0.85rem;">📅 Matching Dates Summary</h3>
+          <div class="table-container" style="max-height: 400px;">
+            <table class="data-table" id="query-date-summary-table">
+              <thead id="query-date-summary-head"></thead>
+              <tbody id="query-date-summary-body"></tbody>
             </table>
           </div>
         </div>
@@ -7382,6 +7395,7 @@ function populateDatePicker() {
       const filterId = queryFilterIdCounter++;
       const filter = {
         id: filterId,
+        type: 'metric', // 'metric', 'dow', or 'occ'
         column: ALL_COLUMNS[0].id,
         op: '>=',
         value: 0,
@@ -7418,6 +7432,31 @@ function populateDatePicker() {
         const filter = group.filters.find(f => f.id === filterId);
         if (filter) {
           filter[field] = value;
+        }
+      }
+    }
+
+    function updateQueryFilterType(groupId, filterId, newType) {
+      const group = queryGroups.find(g => g.id === groupId);
+      if (group) {
+        const filter = group.filters.find(f => f.id === filterId);
+        if (filter) {
+          filter.type = newType;
+          // Reset filter values based on type
+          if (newType === 'dow') {
+            filter.value = 0; // Sunday
+            delete filter.op;
+            delete filter.column;
+          } else if (newType === 'occ') {
+            filter.value = 1; // First occurrence
+            delete filter.op;
+            delete filter.column;
+          } else {
+            filter.column = ALL_COLUMNS[0].id;
+            filter.op = '>=';
+            filter.value = 0;
+          }
+          renderQueryBuilder();
         }
       }
     }
@@ -7460,25 +7499,48 @@ function populateDatePicker() {
               html += `<span class="query-filter-logic" style="opacity: 0.3;">—</span>`;
             }
 
-            // Column selector
-            html += `<select class="query-filter-column" onchange="updateQueryFilter(${group.id}, ${filter.id}, 'column', this.value)">`;
-            ALL_COLUMNS.forEach(col => {
-              html += `<option value="${col.id}" ${filter.column === col.id ? 'selected' : ''}>${col.label}</option>`;
-            });
+            // Filter type selector
+            html += `<select class="query-filter-type" onchange="updateQueryFilterType(${group.id}, ${filter.id}, this.value)" style="padding: 3px 6px; background: rgba(255,255,255,0.05); border: 1px solid var(--border-medium); border-radius: 3px; color: var(--text-primary); font-size: 0.6rem;">`;
+            html += `<option value="metric" ${(filter.type || 'metric') === 'metric' ? 'selected' : ''}>Metric</option>`;
+            html += `<option value="dow" ${filter.type === 'dow' ? 'selected' : ''}>Day of Week</option>`;
+            html += `<option value="occ" ${filter.type === 'occ' ? 'selected' : ''}>Occurrence</option>`;
             html += `</select>`;
 
-            // Operator selector
-            html += `<select class="query-filter-op" onchange="updateQueryFilter(${group.id}, ${filter.id}, 'op', this.value)">`;
-            html += `<option value=">=" ${filter.op === '>=' ? 'selected' : ''}>≥</option>`;
-            html += `<option value="<=" ${filter.op === '<=' ? 'selected' : ''}>≤</option>`;
-            html += `<option value=">" ${filter.op === '>' ? 'selected' : ''}>&gt;</option>`;
-            html += `<option value="<" ${filter.op === '<' ? 'selected' : ''}>&lt;</option>`;
-            html += `<option value="==" ${filter.op === '==' ? 'selected' : ''}>＝</option>`;
-            html += `<option value="!=" ${filter.op === '!=' ? 'selected' : ''}>≠</option>`;
-            html += `</select>`;
+            // Column/value selector (changes based on type)
+            if (filter.type === 'dow') {
+              html += `<select class="query-filter-column" onchange="updateQueryFilter(${group.id}, ${filter.id}, 'value', parseInt(this.value))">`;
+              DAYS_SHORT.forEach((day, idx) => {
+                html += `<option value="${idx}" ${(filter.value || 0) === idx ? 'selected' : ''}>${day}</option>`;
+              });
+              html += `</select>`;
+            } else if (filter.type === 'occ') {
+              html += `<select class="query-filter-column" onchange="updateQueryFilter(${group.id}, ${filter.id}, 'value', parseInt(this.value))">`;
+              for (let i = 1; i <= 5; i++) {
+                html += `<option value="${i}" ${(filter.value || 1) === i ? 'selected' : ''}>${i}</option>`;
+              }
+              html += `</select>`;
+            } else {
+              // Metric filter
+              html += `<select class="query-filter-column" onchange="updateQueryFilter(${group.id}, ${filter.id}, 'column', this.value)">`;
+              ALL_COLUMNS.forEach(col => {
+                html += `<option value="${col.id}" ${filter.column === col.id ? 'selected' : ''}>${col.label}</option>`;
+              });
+              html += `</select>`;
 
-            // Value input
-            html += `<input type="number" class="query-filter-value" value="${filter.value}" onchange="updateQueryFilter(${group.id}, ${filter.id}, 'value', parseFloat(this.value))">`;
+            // Operator selector (only for metric filters)
+            if (filter.type === 'metric' || !filter.type) {
+              html += `<select class="query-filter-op" onchange="updateQueryFilter(${group.id}, ${filter.id}, 'op', this.value)">`;
+              html += `<option value=">=" ${filter.op === '>=' ? 'selected' : ''}>≥</option>`;
+              html += `<option value="<=" ${filter.op === '<=' ? 'selected' : ''}>≤</option>`;
+              html += `<option value=">" ${filter.op === '>' ? 'selected' : ''}>&gt;</option>`;
+              html += `<option value="<" ${filter.op === '<' ? 'selected' : ''}>&lt;</option>`;
+              html += `<option value="==" ${filter.op === '==' ? 'selected' : ''}>＝</option>`;
+              html += `<option value="!=" ${filter.op === '!=' ? 'selected' : ''}>≠</option>`;
+              html += `</select>`;
+
+              // Value input
+              html += `<input type="number" class="query-filter-value" value="${filter.value}" onchange="updateQueryFilter(${group.id}, ${filter.id}, 'value', parseFloat(this.value))">`;
+            }
 
             // Remove button
             html += `<button class="query-filter-remove" onclick="removeQueryFilter(${group.id}, ${filter.id})">×</button>`;
@@ -7519,7 +7581,7 @@ function populateDatePicker() {
               date: day.date,
               dateObj: new Date(day.date),
               dow: day.dow,
-              dayNum: day.dayNum,
+              dayNum: day.occ,
               hour: hour,
               metrics: day.hrs[hour].m,
               hourData: day.hrs[hour]
@@ -7536,17 +7598,25 @@ function populateDatePicker() {
 
           // Evaluate filters within the group
           const filterResults = group.filters.map(filter => {
-            const val = hourEntry.metrics[filter.column];
-            if (val == null) return false;
+            // Handle different filter types
+            if (filter.type === 'dow') {
+              return hourEntry.dow === filter.value;
+            } else if (filter.type === 'occ') {
+              return hourEntry.dayNum === filter.value;
+            } else {
+              // Metric filter
+              const val = hourEntry.metrics[filter.column];
+              if (val == null) return false;
 
-            switch (filter.op) {
-              case '>=': return val >= filter.value;
-              case '<=': return val <= filter.value;
-              case '>': return val > filter.value;
-              case '<': return val < filter.value;
-              case '==': return val === filter.value;
-              case '!=': return val !== filter.value;
-              default: return true;
+              switch (filter.op) {
+                case '>=': return val >= filter.value;
+                case '<=': return val <= filter.value;
+                case '>': return val > filter.value;
+                case '<': return val < filter.value;
+                case '==': return val === filter.value;
+                case '!=': return val !== filter.value;
+                default: return true;
+              }
             }
           });
 
@@ -7614,18 +7684,43 @@ function populateDatePicker() {
       // Render table view
       renderQueryTableView();
 
-      // Render detailed view
-      if (queryShowDetailed) {
-        document.getElementById('query-detailed-view').style.display = 'block';
-        renderQueryDetailedView();
-      } else {
-        document.getElementById('query-detailed-view').style.display = 'none';
-      }
+      // Render detailed view (always visible now)
+      renderQueryDetailedView();
+
+      // Render date summary
+      renderQueryDateSummary();
     }
 
     function renderQueryTableView() {
       const selectedCols = Array.from(querySelectedCols);
       const lvl = parseInt(document.getElementById('query-level-size')?.value) || 250;
+
+      // Calculate stats for gradient coloring
+      const stats = {};
+      selectedCols.forEach(colId => {
+        stats[colId] = [];
+      });
+
+      queryResults.forEach(result => {
+        selectedCols.forEach(colId => {
+          const val = result.metrics[colId];
+          if (val != null) {
+            stats[colId].push(val);
+          }
+        });
+      });
+
+      const colStats = {};
+      selectedCols.forEach(colId => {
+        if (stats[colId].length > 0) {
+          colStats[colId] = {
+            min: Math.min(...stats[colId]),
+            max: Math.max(...stats[colId])
+          };
+        } else {
+          colStats[colId] = { min: 0, max: 100 };
+        }
+      });
 
       // Build header
       let headerHTML = '<tr>';
@@ -7654,22 +7749,32 @@ function populateDatePicker() {
 
         selectedCols.forEach(colId => {
           const val = result.metrics[colId];
+          const col = ALL_COLUMNS.find(c => c.id === colId);
+
           if (val == null) {
             bodyHTML += '<td style="color:var(--text-muted)">—</td>';
           } else {
             let displayVal = val;
-            let cellStyle = '';
+            let bg = '#0d0d12';
+            let cellClass = '';
+            const cStats = colStats[colId];
 
-            // Apply formatting based on column type
-            if (colId === 'oc' || colId === 'cdr') {
-              const cls = val >= 0 ? 'up' : 'down';
-              cellStyle = `class="${cls}"`;
-              displayVal = (val >= 0 ? '+' : '') + Math.round(val);
-            } else if (typeof val === 'number') {
-              displayVal = Math.round(val);
+            // Apply gradient and formatting based on column properties
+            if (col.gradient === 'orange' && cStats) {
+              bg = getOrangeGradient(val, cStats.min, cStats.max);
+            } else if (col.gradient === 'orange-inv' && cStats) {
+              bg = getOrangeGradientInverted(val, cStats.min, cStats.max);
+            } else if (col.gradient === 'rg' && cStats) {
+              bg = getRGGradient(val, cStats.min, cStats.max);
+              cellClass = val >= 0 ? 'up' : 'down';
+            } else if (col.gradient === 'purple' && cStats) {
+              bg = getPurpleGradient(val, cStats.min, cStats.max);
             }
 
-            bodyHTML += `<td ${cellStyle}>${displayVal}</td>`;
+            // Format display value
+            displayVal = fmt(val, colId);
+
+            bodyHTML += `<td class="${cellClass}" style="background:${bg}">${displayVal}</td>`;
           }
         });
 
@@ -7817,6 +7922,46 @@ function populateDatePicker() {
         querySelectedCols.add(colId);
       }
       renderQueryResults();
+    }
+
+    function renderQueryDateSummary() {
+      // Group results by date
+      const dateMap = new Map();
+      queryResults.forEach(result => {
+        if (!dateMap.has(result.date)) {
+          dateMap.set(result.date, {
+            date: result.date,
+            dow: result.dow,
+            dayNum: result.dayNum,
+            count: 0
+          });
+        }
+        dateMap.get(result.date).count++;
+      });
+
+      // Convert to array and sort by date (most recent first)
+      const dateSummary = Array.from(dateMap.values()).sort((a, b) => b.date.localeCompare(a.date));
+
+      // Build header
+      let headerHTML = '<tr>';
+      headerHTML += '<th style="min-width:80px;">Date</th>';
+      headerHTML += '<th style="min-width:35px;">Day</th>';
+      headerHTML += '<th style="min-width:30px;">#</th>';
+      headerHTML += '<th style="min-width:60px;">Count</th>';
+      headerHTML += '</tr>';
+      document.getElementById('query-date-summary-head').innerHTML = headerHTML;
+
+      // Build body
+      let bodyHTML = '';
+      dateSummary.forEach(entry => {
+        bodyHTML += '<tr>';
+        bodyHTML += `<td style="text-align:left;">${entry.date}</td>`;
+        bodyHTML += `<td>${DAYS_SHORT[entry.dow]}</td>`;
+        bodyHTML += `<td>${entry.dayNum}</td>`;
+        bodyHTML += `<td><strong>${entry.count}</strong></td>`;
+        bodyHTML += '</tr>';
+      });
+      document.getElementById('query-date-summary-body').innerHTML = bodyHTML;
     }
 
     function setQueryDefaultCols() {
