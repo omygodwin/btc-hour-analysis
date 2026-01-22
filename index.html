@@ -2182,7 +2182,7 @@
       { id: 'ur', label: 'UR', desc: 'Upper Rng', default: false, gradient: 'orange', group: 'urlr' },
       { id: 'lr', label: 'LR', desc: 'Lower Rng', default: false, gradient: 'orange', group: 'urlr' },
       { id: 'mxr', label: 'MxR', desc: 'Max Range', default: true, gradient: 'orange', group: 'mxr' },
-      { id: 'mxrPct', label: 'MxR%', desc: 'Max Range Percentile (0-100%)', default: false, gradient: 'orange', group: 'mxr' },
+      { id: 'mxrPct', label: 'MxR%', desc: 'Max Range Percentile (0-100%)', default: true, gradient: 'orange', group: 'mxr' },
       { id: 'mxrRk', label: 'MxR#', desc: 'Max Rng Rank', default: false, gradient: 'orange-inv', group: 'rank' },
       { id: 'rngRk', label: 'Rng#', desc: 'Range Rank', default: false, gradient: 'orange-inv', group: 'rank' },
       { id: 'urRk', label: 'UR#', desc: 'Upper Rng Rank', default: false, gradient: 'orange-inv', group: 'rank' },
@@ -2195,8 +2195,8 @@
       { id: 'mxlRk', label: 'MxL#', desc: 'Max Lvl Rank', default: false, gradient: 'orange-inv', group: 'rank' },
       { id: 'cl', label: '#Cl', desc: 'Net Lvls', default: false, gradient: 'rg', group: 'cl' },
       { id: 'oc', label: 'O-C', desc: 'Open-Close', default: true, gradient: 'rg', group: 'oc' },
-      { id: 'oc25', label: 'OC25', desc: ':00-:25 O-C', default: false, gradient: 'rg', group: 'oc' },
-      { id: 'oc55', label: 'OC55', desc: ':30-:55 O-C', default: false, gradient: 'rg', group: 'oc' },
+      { id: 'oc25', label: 'OC25', desc: ':00-:25 O-C', default: true, gradient: 'rg', group: 'oc' },
+      { id: 'oc55', label: 'OC55', desc: ':30-:55 O-C', default: true, gradient: 'rg', group: 'oc' },
       { id: 'ocRk', label: 'OC#', desc: 'O-C Rank', default: false, gradient: 'orange-inv', group: 'rank' },
       { id: 'cdrU', label: 'CDU', desc: 'Cum Day Up', default: false, gradient: 'orange-col', group: 'cdr' },
       { id: 'cdrD', label: 'CDD', desc: 'Cum Day Dn', default: false, gradient: 'orange-col', group: 'cdr' },
@@ -2204,8 +2204,8 @@
       { id: 'cdr', label: 'CDR', desc: 'Cum Day Rng', default: true, gradient: 'rg-col', group: 'cdrRG' },
       { id: 'hm', label: 'HMin', desc: 'High Min', default: false, gradient: 'minute' },
       { id: 'lm', label: 'LMin', desc: 'Low Min', default: false, gradient: 'minute' },
-      { id: 'maxRngBarMin', label: 'MxRBm', desc: 'Max Range Bar Minute', default: false, gradient: 'minute', group: 'maxrngbar' },
-      { id: 'maxRngBarVal', label: 'MxRBv', desc: 'Max Range Bar Value', default: false, gradient: 'orange', group: 'maxrngbar' },
+      { id: 'maxRngBarMin', label: 'MxRBm', desc: 'Max Range Bar Minute', default: true, gradient: 'minute', group: 'maxrngbar' },
+      { id: 'maxRngBarVal', label: 'MxRBv', desc: 'Max Range Bar Value', default: true, gradient: 'orange', group: 'maxrngbar' },
       { id: 'o', label: 'Open', desc: 'Open', default: false, gradient: null },
       { id: 'hi', label: 'High', desc: 'High', default: false, gradient: null },
       { id: 'lo', label: 'Low', desc: 'Low', default: false, gradient: null },
@@ -2245,8 +2245,8 @@
       // 5PM hourly cumulative columns
       { id: 'p5CdrU', label: '5CU', desc: '5PM Cum Up', default: false, gradient: 'orange-col', group: 'p5cdr' },
       { id: 'p5CdrD', label: '5CD', desc: '5PM Cum Dn', default: false, gradient: 'orange-col', group: 'p5cdr' },
-      { id: 'p5Mxcd', label: '5MxC', desc: '5PM Max Cum', default: false, gradient: 'orange-col', group: 'p5mxcd' },
-      { id: 'p5Cdr', label: '5CR', desc: '5PM Cum Rng', default: false, gradient: 'rg-col', group: 'p5cdrRG' },
+      { id: 'p5Mxcd', label: '5MxC', desc: '5PM Max Cum', default: true, gradient: 'orange-col', group: 'p5mxcd' },
+      { id: 'p5Cdr', label: '5CR', desc: '5PM Cum Rng', default: true, gradient: 'rg-col', group: 'p5cdrRG' },
       // Bar count metrics
       { id: 'cumGreenBars', label: 'CumG', desc: 'Cumulative green bars', default: false, gradient: 'orange', group: 'bars' },
       { id: 'cumRedBars', label: 'CumR', desc: 'Cumulative red bars', default: false, gradient: 'orange', group: 'bars' },
@@ -2262,11 +2262,11 @@
       // After bar metrics (last bar where threshold exceeded)
       { id: 'lastAfterHiBarMin', label: 'LAHm', desc: 'Last bar with after high > threshold', default: false, gradient: 'minute', group: 'afterbar' },
       { id: 'lastAfterLoBarMin', label: 'LALm', desc: 'Last bar with after low > threshold', default: false, gradient: 'minute', group: 'afterbar' },
-      { id: 'maxLastAfterBarMin', label: 'MxLABm', desc: 'Max of LAHm and LALm', default: false, gradient: 'minute', group: 'afterbar' },
+      { id: 'maxLastAfterBarMin', label: 'MxLABm', desc: 'Max of LAHm and LALm', default: true, gradient: 'minute', group: 'afterbar' },
       // :40 bar after bar metrics
       { id: 'bar40AfterHi', label: 'B40AH', desc: ':40 bar after high', default: false, gradient: 'orange', group: 'b40' },
       { id: 'bar40AfterLo', label: 'B40AL', desc: ':40 bar after low', default: false, gradient: 'orange', group: 'b40' },
-      { id: 'maxB40HL', label: 'MxB40', desc: 'Max of B40AH and B40AL', default: false, gradient: 'orange', group: 'b40' },
+      { id: 'maxB40HL', label: 'MxB40', desc: 'Max of B40AH and B40AL', default: true, gradient: 'orange', group: 'b40' },
       // Strength indicators
       { id: 'buyStr', label: 'BuyStr', desc: 'Buy Strength: (C-L)/(H-L)*100', default: false, gradient: 'orange', group: 'strength' },
       { id: 'sellStr', label: 'SellStr', desc: 'Sell Strength: (H-C)/(H-L)*100', default: false, gradient: 'orange', group: 'strength' },
@@ -3059,12 +3059,12 @@
     
     const colGrid = document.getElementById('col-grid');
     ALL_COLUMNS.forEach(col => {
-      colGrid.innerHTML += `<label class="col-item" title="${col.desc}"><input type="checkbox" ${col.default ? 'checked' : ''} onchange="toggleColumn('${col.id}')"><span class="col-label">${col.label}</span><span class="col-desc">${col.desc}</span></label>`;
+      colGrid.innerHTML += `<label class="col-item" title="${col.desc}" for="col-${col.id}"><input type="checkbox" id="col-${col.id}" ${col.default ? 'checked' : ''} onchange="toggleColumn('${col.id}')"><span class="col-label">${col.label}</span><span class="col-desc">${col.desc}</span></label>`;
     });
     
     const dtColGrid = document.getElementById('dt-col-grid');
     DAY_TOTAL_COLS.forEach(col => {
-      dtColGrid.innerHTML += `<label class="dt-col-item"><input type="checkbox" ${col.default ? 'checked' : ''} data-dtcol="${col.id}" onchange="toggleDTCol('${col.id}')"><span>${col.label}</span></label>`;
+      dtColGrid.innerHTML += `<label class="dt-col-item" for="dtcol-${col.id}"><input type="checkbox" id="dtcol-${col.id}" ${col.default ? 'checked' : ''} data-dtcol="${col.id}" onchange="toggleDTCol('${col.id}')"><span>${col.label}</span></label>`;
     });
 
     // Populate PM5 column grid (using subset of ALL_COLUMNS that make sense for hourly data)
@@ -3072,7 +3072,7 @@
     if (pm5ColGrid) {
       ALL_COLUMNS.forEach(col => {
         const isDefault = pm5VisibleColumns.has(col.id);
-        pm5ColGrid.innerHTML += `<label class="col-item" title="${col.desc}"><input type="checkbox" ${isDefault ? 'checked' : ''} onchange="togglePm5Column('${col.id}')"><span class="col-label">${col.label}</span><span class="col-desc">${col.desc}</span></label>`;
+        pm5ColGrid.innerHTML += `<label class="col-item" title="${col.desc}" for="pm5col-${col.id}"><input type="checkbox" id="pm5col-${col.id}" ${isDefault ? 'checked' : ''} onchange="togglePm5Column('${col.id}')"><span class="col-label">${col.label}</span><span class="col-desc">${col.desc}</span></label>`;
       });
     }
 
@@ -4807,13 +4807,13 @@ function populateDatePicker() {
         }
       }
 
-      // Fallback to original min/max based gradient
+      // Fallback to original min/max based gradient with alpha for transparency
       if (val > 0) {
         const t = Math.min(1, val / Math.max(max, 1));
-        return `rgb(${Math.round(13 + t * 61)}, ${Math.round(13 + t * 209)}, ${Math.round(18 + t * 110)})`;
+        return `rgba(${Math.round(13 + t * 61)}, ${Math.round(13 + t * 209)}, ${Math.round(18 + t * 110)}, ${0.2 + t * 0.8})`;
       } else {
         const t = Math.min(1, Math.abs(val) / Math.abs(Math.min(min, -1)));
-        return `rgb(${Math.round(13 + t * 235)}, ${Math.round(13 + t * 100)}, ${Math.round(18 + t * 95)})`;
+        return `rgba(${Math.round(13 + t * 235)}, ${Math.round(13 + t * 100)}, ${Math.round(18 + t * 95)}, ${0.2 + t * 0.8})`;
       }
     }
     
@@ -4894,7 +4894,7 @@ function populateDatePicker() {
         if (m.ur != null) s.urlr.push(m.ur);
         if (m.lr != null) s.urlr.push(m.lr);
         if (m.mxr != null) s.mxr.push(m.mxr);
-        if (m.mxrPct != null) s.mxr.push(m.mxrPct);
+        // mxrPct is always 0-100, don't mix with mxr stats
         if (m.mxl != null) s.mxl.push(m.mxl);
 
         ['mxrRk','mxlRk','ocRk','rngRk'].forEach(r => {
@@ -4985,7 +4985,7 @@ function populateDatePicker() {
           if (m.ur != null) s[h].urlr.push(m.ur);
           if (m.lr != null) s[h].urlr.push(m.lr);
           if (m.mxr != null) s[h].mxr.push(m.mxr);
-          if (m.mxrPct != null) s[h].mxr.push(m.mxrPct);
+          // mxrPct is always 0-100, don't mix with mxr stats
           if (m.mxl != null) s[h].mxl.push(m.mxl);
 
           ['mxrRk','mxlRk','ocRk','rngRk'].forEach(r => {
@@ -5360,8 +5360,12 @@ function populateDatePicker() {
             else v = m?.[col.id];
             
             let bg = '#0d0d12';
-            
-            if (col.gradient === 'orange' && stats[col.group]) bg = getOrangeGradient(v, stats[col.group].min, stats[col.group].max);
+
+            // Special case for mxrPct: always use 0-100 range
+            if (col.id === 'mxrPct' && col.gradient === 'orange') {
+              bg = getOrangeGradient(v, 0, 100);
+            }
+            else if (col.gradient === 'orange' && stats[col.group]) bg = getOrangeGradient(v, stats[col.group].min, stats[col.group].max);
             else if (col.gradient === 'orange-inv' && stats[col.group]) bg = getOrangeGradientInverted(v, stats[col.group].min, stats[col.group].max);
             else if (col.gradient === 'rg' && stats[col.group]) {
               // For overallStr (NetStr), use percentile-based gradient
@@ -6825,7 +6829,7 @@ function populateDatePicker() {
       };
       
       // Get active columns for PM5 (use main column selector)
-      const pm5Cols = ALL_COLUMNS.filter(c => selectedCols.has(c.id));
+      const pm5Cols = ALL_COLUMNS.filter(c => visibleColumns.has(c.id));
       const colsPerHour = pm5Cols.length + (pm5ShowCumulative ? 4 : 0);
 
       // Build header
@@ -8447,9 +8451,11 @@ function populateDatePicker() {
       }
 
       // Relative Volume
-      if (bar.rVol != null) {
+      if (bar.rVol != null || bar.rVolC != null || bar.rVolDOW != null) {
         infoHTML += '<div class="info-section"><strong>Relative Volume:</strong></div>';
-        infoHTML += `<div class="info-row">rVol: <span style="color:${bar.rVol >= rVolThreshold ? '#a78bfa' : ''}">${Math.round(bar.rVol * 100) / 100}x</span></div>`;
+        if (bar.rVol != null) infoHTML += `<div class="info-row">rVol (Hour): <span style="color:${bar.rVol >= rVolThreshold ? '#a78bfa' : ''}">${Math.round(bar.rVol * 100) / 100}x</span></div>`;
+        if (bar.rVolC != null) infoHTML += `<div class="info-row">rVol (Cum): <span style="color:${bar.rVolC >= rVolThreshold ? '#a78bfa' : ''}">${Math.round(bar.rVolC * 100) / 100}x</span></div>`;
+        if (bar.rVolDOW != null) infoHTML += `<div class="info-row">rVol (DOW): <span style="color:${bar.rVolDOW >= rVolThreshold ? '#a78bfa' : ''}">${Math.round(bar.rVolDOW * 100) / 100}x</span></div>`;
       }
 
       // Hour High/Low After Close
