@@ -1813,7 +1813,7 @@
       </div>
 
       <!-- Query Columns Panel -->
-      <div id="query-columns-panel" class="col-selector" style="display:none;">
+      <div id="query-columns-panel" class="col-selector">
         <h3>Result Table Columns</h3>
         <div class="col-grid" id="query-col-grid"></div>
         <div class="col-presets">
@@ -1825,33 +1825,20 @@
       </div>
 
       <!-- Results Section -->
-      <div id="query-results-container" style="display:none;">
-        <div style="display: flex; gap: 20px; flex-wrap: wrap;">
-          <!-- Table View -->
-          <div id="query-table-view" style="flex: 0 0 auto; max-width: 45%;">
-            <h3 style="margin: 8px 12px; color: var(--accent-blue); font-size: 0.85rem;">📋 Matching Hours</h3>
-            <div class="table-container" style="max-height: 600px;">
-              <table class="data-table" id="query-results-table">
-                <thead id="query-results-head"></thead>
-                <tbody id="query-results-body"></tbody>
-              </table>
-            </div>
-          </div>
-
-          <!-- Detailed View -->
-          <div id="query-detailed-view" style="flex: 1; min-width: 50%;">
-            <h3 style="margin: 8px 12px; color: var(--accent-blue); font-size: 0.85rem;">📊 Detailed 5-Minute Breakdown</h3>
-            <div class="day-table-container" style="max-height: 600px;">
-              <table class="day-table" id="query-detailed-table">
-                <thead id="query-detailed-head"></thead>
-                <tbody id="query-detailed-body"></tbody>
-              </table>
-            </div>
+      <div id="query-results-container" style="display:none; height: calc(100vh - 220px); overflow-y: auto;">
+        <!-- Unified Results Table -->
+        <div id="query-unified-view">
+          <h3 style="margin: 8px 12px; color: var(--accent-blue); font-size: 0.85rem;">📊 Matching Hours with 5-Minute Breakdown</h3>
+          <div class="day-table-container">
+            <table class="day-table" id="query-unified-table">
+              <thead id="query-unified-head"></thead>
+              <tbody id="query-unified-body"></tbody>
+            </table>
           </div>
         </div>
 
         <!-- Date Summary Section -->
-        <div id="query-date-summary" style="margin-top: 30px;">
+        <div id="query-date-summary" style="margin-top: 30px; margin-bottom: 30px;">
           <h3 style="margin: 8px 12px; color: var(--accent-blue); font-size: 0.85rem;">📅 Matching Dates Summary</h3>
           <div class="table-container" style="max-height: 400px;">
             <table class="data-table" id="query-date-summary-table">
@@ -7365,7 +7352,9 @@ function populateDatePicker() {
     function toggleQueryDetailed() {
       queryShowDetailed = !queryShowDetailed;
       document.getElementById('btn-query-detailed').classList.toggle('active', queryShowDetailed);
-      renderQueryResults();
+      if (queryResults.length > 0) {
+        renderQueryResults();
+      }
     }
 
     function addQueryGroup() {
@@ -7682,25 +7671,56 @@ function populateDatePicker() {
     function renderQueryResults() {
       if (queryResults.length === 0) return;
 
-      // Render table view
-      renderQueryTableView();
-
-      // Render detailed view (always visible now)
-      renderQueryDetailedView();
+      // Render unified view
+      renderQueryUnifiedView();
 
       // Render date summary
       renderQueryDateSummary();
     }
 
-    function renderQueryTableView() {
-      const selectedCols = Array.from(querySelectedCols);
+
+    function renderQueryUnifiedView() {
       const lvl = parseInt(document.getElementById('query-level-size')?.value) || 250;
+      const selectedCols = Array.from(querySelectedCols);
+
+      // Build header - unified approach
+      let headerHTML = '<tr>';
+      headerHTML += '<th rowspan="2" class="hour-cell" style="min-width:80px;">Date</th>';
+      headerHTML += '<th rowspan="2" class="hour-cell" style="min-width:35px;">Day</th>';
+      headerHTML += '<th rowspan="2" class="hour-cell" style="min-width:30px;">#</th>';
+      headerHTML += '<th rowspan="2" class="hour-cell" style="min-width:60px;">Hour</th>';
+
+      // Add selected columns
+      selectedCols.forEach(colId => {
+        const col = ALL_COLUMNS.find(c => c.id === colId);
+        if (col) {
+          headerHTML += `<th rowspan="2">${col.label}</th>`;
+        }
+      });
+
+      // Add 5-minute interval headers
+      if (queryShowDetailed) {
+        headerHTML += `<th colspan="${MINS.length}" class="group-header section-header">5-Min Bars</th>`;
+      }
+      headerHTML += '</tr><tr>';
+
+      // Second row only has 5-minute headers
+      if (queryShowDetailed) {
+        MINS.forEach((m, i) => {
+          headerHTML += `<th class="${i === 0 ? 'group-border section-header' : 'section-header'}">:${m}</th>`;
+        });
+      }
+      headerHTML += '</tr>';
+      document.getElementById('query-unified-head').innerHTML = headerHTML;
 
       // Calculate stats for gradient coloring
       const stats = {};
       selectedCols.forEach(colId => {
         stats[colId] = [];
       });
+
+      const minStats = { ur: [], lr: [], oc: [] };
+      const afterHLStats = { hh: [], hl: [] };
 
       queryResults.forEach(result => {
         selectedCols.forEach(colId => {
@@ -7709,6 +7729,24 @@ function populateDatePicker() {
             stats[colId].push(val);
           }
         });
+
+        if (queryShowDetailed) {
+          const bars = barsByET[result.date];
+          if (bars) {
+            bars.filter(b => b.etHour === result.hour).forEach(bar => {
+              minStats.ur.push(Math.round(bar.high - bar.open));
+              minStats.lr.push(Math.round(bar.open - bar.low));
+              minStats.oc.push(Math.round(bar.close - bar.open));
+
+              // Collect after H/L stats (excluding :55 bars)
+              const m = String(bar.etMin).padStart(2, '0');
+              if (m !== '55') {
+                if (bar.hhAfterClose != null) afterHLStats.hh.push(bar.hhAfterClose);
+                if (bar.hlAfterClose != null) afterHLStats.hl.push(bar.hlAfterClose);
+              }
+            });
+          }
+        }
       });
 
       const colStats = {};
@@ -7723,33 +7761,34 @@ function populateDatePicker() {
         }
       });
 
-      // Build header
-      let headerHTML = '<tr>';
-      headerHTML += '<th style="min-width:80px;">Date</th>';
-      headerHTML += '<th style="min-width:35px;">Day</th>';
-      headerHTML += '<th style="min-width:30px;">#</th>';
-      headerHTML += '<th style="min-width:60px;">Hour</th>';
+      const mStats = {
+        urlr: minStats.ur.length ? { min: Math.min(...minStats.ur, ...minStats.lr), max: Math.max(...minStats.ur, ...minStats.lr) } : { min: 0, max: 100 },
+        oc: minStats.oc.length ? { min: Math.min(...minStats.oc), max: Math.max(...minStats.oc) } : { min: 0, max: 100 },
+      };
 
-      selectedCols.forEach(colId => {
-        const col = ALL_COLUMNS.find(c => c.id === colId);
-        if (col) {
-          headerHTML += `<th>${col.label}</th>`;
-        }
-      });
-      headerHTML += '</tr>';
-      document.getElementById('query-results-head').innerHTML = headerHTML;
+      const afterHLRange = afterHLStats.hh.length && afterHLStats.hl.length ? {
+        min: Math.min(...afterHLStats.hh, ...afterHLStats.hl),
+        max: Math.max(...afterHLStats.hh, ...afterHLStats.hl)
+      } : { min: 0, max: 100 };
 
       // Build body
       let bodyHTML = '';
       queryResults.forEach(result => {
-        bodyHTML += '<tr>';
-        bodyHTML += `<td style="text-align:left;">${result.date}</td>`;
-        bodyHTML += `<td>${DAYS_SHORT[result.dow]}</td>`;
-        bodyHTML += `<td>${result.dayNum}</td>`;
-        bodyHTML += `<td>${formatHourHeader(result.hour)}</td>`;
+        const hm = result.metrics;
+        const hourData = result.hourData;
+        const bars = barsByET[result.date];
+        const hourBars = {};
+        if (bars) bars.filter(b => b.etHour === result.hour).forEach(b => hourBars[String(b.etMin).padStart(2, '0')] = b);
 
+        bodyHTML += '<tr>';
+        bodyHTML += `<td class="hour-cell" style="text-align:left;">${result.date}</td>`;
+        bodyHTML += `<td class="hour-cell">${DAYS_SHORT[result.dow]}</td>`;
+        bodyHTML += `<td class="hour-cell">${result.dayNum}</td>`;
+        bodyHTML += `<td class="hour-cell">${formatHourHeader(result.hour)}</td>`;
+
+        // Add selected columns
         selectedCols.forEach(colId => {
-          const val = result.metrics[colId];
+          const val = hm[colId];
           const col = ALL_COLUMNS.find(c => c.id === colId);
 
           if (val == null) {
@@ -7779,126 +7818,64 @@ function populateDatePicker() {
           }
         });
 
-        bodyHTML += '</tr>';
-      });
-      document.getElementById('query-results-body').innerHTML = bodyHTML;
-    }
+        // Add 5-minute interval cells
+        if (queryShowDetailed) {
+          // Calculate running O-C for each minute
+          let runningOC = 0;
+          const minOCs = {};
+          MINS.forEach(m => {
+            const bar = hourBars[m];
+            if (bar && hourData) {
+              runningOC = Math.round(bar.close - hourData.o);
+              minOCs[m] = { oc: runningOC, lvl: Math.floor(bar.close / lvl) - Math.floor(hourData.o / lvl) };
+            }
+          });
 
-    function renderQueryDetailedView() {
-      const lvl = parseInt(document.getElementById('query-level-size')?.value) || 250;
+          MINS.forEach((m, mi) => {
+            const bar = hourBars[m];
+            const borderCls = mi === 0 ? ' group-border' : '';
+            if (bar && hourData) {
+              const ur = Math.round(bar.high - bar.open);
+              const lr = Math.round(bar.open - bar.low);
+              const oc = Math.round(bar.close - bar.open);
+              const lvlUp = Math.max(0, Math.floor(bar.high / lvl) - Math.floor(bar.open / lvl));
+              const lvlDn = Math.max(0, Math.floor(bar.open / lvl) - Math.floor(bar.low / lvl));
+              const lvlCl = Math.floor(bar.close / lvl) - Math.floor(bar.open / lvl);
+              const hrOC = minOCs[m] || { oc: 0, lvl: 0 };
 
-      // Build header (similar to HourView)
-      let headerHTML = '<tr>';
-      headerHTML += '<th rowspan="2" class="hour-cell" style="min-width:80px;">Date</th>';
-      headerHTML += '<th rowspan="2" class="hour-cell" style="min-width:35px;">Day</th>';
-      headerHTML += '<th rowspan="2" class="hour-cell" style="min-width:30px;">#</th>';
-      headerHTML += '<th rowspan="2" class="hour-cell" style="min-width:60px;">Hour</th>';
-      headerHTML += '<th colspan="9" class="group-header">Range &amp; Levels</th>';
-      headerHTML += `<th colspan="${MINS.length}" class="group-header section-header">5-Min Bars</th>`;
-      headerHTML += '</tr><tr>';
-      headerHTML += '<th class="group-border">Rng</th><th>UR</th><th>LR</th><th>#Up</th><th>#Dn</th><th>#Cl</th><th>HMin</th><th>LMin</th><th>O-C</th>';
-      MINS.forEach((m, i) => { headerHTML += `<th class="${i === 0 ? 'group-border section-header' : 'section-header'}">:${m}</th>`; });
-      headerHTML += '</tr>';
-      document.getElementById('query-detailed-head').innerHTML = headerHTML;
+              const hrOCGradient = getRGGradient(hrOC.oc, colStats.oc?.min || 0, colStats.oc?.max || 100);
 
-      // Calculate stats for gradient coloring
-      const stats = { rng: [], urlr: [], oc: [] };
-      const minStats = { ur: [], lr: [], oc: [] };
+              // After High/Low row with gradient coloring
+              let afterHLRow = '';
+              if (m === '55') {
+                afterHLRow = '<div class="after-metrics-grid"><div class="after-high">—</div><div class="after-low">—</div></div>';
+              } else {
+                const hhGradient = bar.hhAfterClose != null ? getOrangeGradient(bar.hhAfterClose, afterHLRange.min, afterHLRange.max) : 'transparent';
+                const hlGradient = bar.hlAfterClose != null ? getOrangeGradient(bar.hlAfterClose, afterHLRange.min, afterHLRange.max) : 'transparent';
+                afterHLRow = `<div class="after-metrics-grid"><div class="after-high" style="background:${hhGradient}">+${bar.hhAfterClose ?? 0}</div><div class="after-low" style="background:${hlGradient}">${bar.hlAfterClose >= 0 ? '+' : ''}${bar.hlAfterClose ?? 0}</div></div>`;
+              }
 
-      queryResults.forEach(result => {
-        stats.rng.push(result.metrics.rng);
-        stats.urlr.push(result.metrics.ur, result.metrics.lr);
-        stats.oc.push(result.metrics.oc);
-
-        const bars = barsByET[result.date];
-        if (bars) {
-          bars.filter(b => b.etHour === result.hour).forEach(bar => {
-            minStats.ur.push(Math.round(bar.high - bar.open));
-            minStats.lr.push(Math.round(bar.open - bar.low));
-            minStats.oc.push(Math.round(bar.close - bar.open));
+              bodyHTML += `<td class="min-cell${borderCls}">
+                <div class="min-grid" style="grid-template-rows:1fr 1fr 1fr 1fr auto;">
+                  <div class="min-grid-top left" style="background:${getOrangeGradient(ur, mStats.urlr.min, mStats.urlr.max)}">${ur}<span class="min-lvl">(${lvlUp})</span></div>
+                  <div class="min-grid-top" style="background:${getOrangeGradient(lr, mStats.urlr.min, mStats.urlr.max)}">${lr}<span class="min-lvl">(${lvlDn})</span></div>
+                  <div class="min-grid-bottom ${oc >= 0 ? 'up' : 'down'}" style="background:${getRGGradient(oc, mStats.oc.min, mStats.oc.max)}">${oc >= 0 ? '+' : ''}${oc}<span class="min-lvl">(${lvlCl >= 0 ? '+' : ''}${lvlCl})</span></div>
+                  <div class="min-grid-row4" style="grid-column:1/3;background:${hrOCGradient};">
+                    <span class="hr-oc ${hrOC.oc >= 0 ? 'up' : 'down'}">${hrOC.oc >= 0 ? '+' : ''}${hrOC.oc}<span class="min-lvl">(${hrOC.lvl >= 0 ? '+' : ''}${hrOC.lvl})</span></span>
+                  </div>
+                  ${afterHLRow}
+                </div>
+              </td>`;
+            } else {
+              bodyHTML += `<td class="min-cell${borderCls}" style="color:var(--text-muted)">—</td>`;
+            }
           });
         }
-      });
-
-      const hStats = {
-        rng: stats.rng.length ? { min: Math.min(...stats.rng), max: Math.max(...stats.rng) } : { min: 0, max: 100 },
-        urlr: stats.urlr.length ? { min: Math.min(...stats.urlr), max: Math.max(...stats.urlr) } : { min: 0, max: 100 },
-        oc: stats.oc.length ? { min: Math.min(...stats.oc), max: Math.max(...stats.oc) } : { min: 0, max: 100 },
-      };
-      const mStats = {
-        urlr: minStats.ur.length ? { min: Math.min(...minStats.ur, ...minStats.lr), max: Math.max(...minStats.ur, ...minStats.lr) } : { min: 0, max: 100 },
-        oc: minStats.oc.length ? { min: Math.min(...minStats.oc), max: Math.max(...minStats.oc) } : { min: 0, max: 100 },
-      };
-
-      // Build body
-      let bodyHTML = '';
-      queryResults.forEach(result => {
-        const hm = result.metrics;
-        const hourData = result.hourData;
-        const bars = barsByET[result.date];
-        const hourBars = {};
-        if (bars) bars.filter(b => b.etHour === result.hour).forEach(b => hourBars[String(b.etMin).padStart(2, '0')] = b);
-
-        bodyHTML += '<tr>';
-        bodyHTML += `<td class="hour-cell" style="text-align:left;">${result.date}</td>`;
-        bodyHTML += `<td class="hour-cell">${DAYS_SHORT[result.dow]}</td>`;
-        bodyHTML += `<td class="hour-cell">${result.dayNum}</td>`;
-        bodyHTML += `<td class="hour-cell">${formatHourHeader(result.hour)}</td>`;
-
-        bodyHTML += `<td class="group-border" style="background:${getOrangeGradient(hm.rng, hStats.rng.min, hStats.rng.max)}">${hm.rng}</td>`;
-        bodyHTML += `<td style="background:${getOrangeGradient(hm.ur, hStats.urlr.min, hStats.urlr.max)}">${hm.ur}</td>`;
-        bodyHTML += `<td style="background:${getOrangeGradient(hm.lr, hStats.urlr.min, hStats.urlr.max)}">${hm.lr}</td>`;
-        bodyHTML += `<td style="color:${hm.up > 0 ? '#a7f3d0' : ''}">${hm.up}</td>`;
-        bodyHTML += `<td style="color:${hm.dn > 0 ? '#fecaca' : ''}">${hm.dn}</td>`;
-        bodyHTML += `<td style="color:${hm.cl > 0 ? '#a7f3d0' : hm.cl < 0 ? '#fecaca' : ''}">${hm.cl > 0 ? '+' + hm.cl : hm.cl}</td>`;
-        bodyHTML += `<td>:${String(hm.hm).padStart(2,'0')}</td>`;
-        bodyHTML += `<td>:${String(hm.lm).padStart(2,'0')}</td>`;
-        bodyHTML += `<td class="${hm.oc >= 0 ? 'up' : 'down'}" style="background:${getRGGradient(hm.oc, hStats.oc.min, hStats.oc.max)}">${hm.oc >= 0 ? '+' : ''}${hm.oc}</td>`;
-
-        // Calculate running O-C for each minute
-        let runningOC = 0;
-        const minOCs = {};
-        MINS.forEach(m => {
-          const bar = hourBars[m];
-          if (bar && hourData) {
-            runningOC = Math.round(bar.close - hourData.o);
-            minOCs[m] = { oc: runningOC, lvl: Math.floor(bar.close / lvl) - Math.floor(hourData.o / lvl) };
-          }
-        });
-
-        MINS.forEach((m, mi) => {
-          const bar = hourBars[m];
-          const borderCls = mi === 0 ? ' group-border' : '';
-          if (bar && hourData) {
-            const ur = Math.round(bar.high - bar.open);
-            const lr = Math.round(bar.open - bar.low);
-            const oc = Math.round(bar.close - bar.open);
-            const lvlUp = Math.max(0, Math.floor(bar.high / lvl) - Math.floor(bar.open / lvl));
-            const lvlDn = Math.max(0, Math.floor(bar.open / lvl) - Math.floor(bar.low / lvl));
-            const lvlCl = Math.floor(bar.close / lvl) - Math.floor(bar.open / lvl);
-            const hrOC = minOCs[m] || { oc: 0, lvl: 0 };
-
-            const hrOCGradient = getRGGradient(hrOC.oc, hStats.oc.min, hStats.oc.max);
-
-            bodyHTML += `<td class="min-cell${borderCls}">
-              <div class="min-grid">
-                <div class="min-grid-top left" style="background:${getOrangeGradient(ur, mStats.urlr.min, mStats.urlr.max)}">${ur}<span class="min-lvl">(${lvlUp})</span></div>
-                <div class="min-grid-top" style="background:${getOrangeGradient(lr, mStats.urlr.min, mStats.urlr.max)}">${lr}<span class="min-lvl">(${lvlDn})</span></div>
-                <div class="min-grid-bottom ${oc >= 0 ? 'up' : 'down'}" style="background:${getRGGradient(oc, mStats.oc.min, mStats.oc.max)}">${oc >= 0 ? '+' : ''}${oc}<span class="min-lvl">(${lvlCl >= 0 ? '+' : ''}${lvlCl})</span></div>
-                <div class="min-grid-row4" style="grid-column:1/3;background:${hrOCGradient};">
-                  <span class="hr-oc ${hrOC.oc >= 0 ? 'up' : 'down'}">${hrOC.oc >= 0 ? '+' : ''}${hrOC.oc}<span class="min-lvl">(${hrOC.lvl >= 0 ? '+' : ''}${hrOC.lvl})</span></span>
-                </div>
-              </div>
-            </td>`;
-          } else {
-            bodyHTML += `<td class="min-cell${borderCls}" style="color:var(--text-muted)">—</td>`;
-          }
-        });
 
         bodyHTML += '</tr>';
       });
 
-      document.getElementById('query-detailed-body').innerHTML = bodyHTML;
+      document.getElementById('query-unified-body').innerHTML = bodyHTML;
     }
 
     function populateQueryColumnSelector() {
@@ -7940,8 +7917,40 @@ function populateDatePicker() {
         dateMap.get(result.date).count++;
       });
 
+      // Add dates with 0 matches if they match the filter criteria
+      // Extract DOW and occurrence filters from query groups
+      const dowFilters = new Set();
+      const occFilters = new Set();
+      queryGroups.forEach(group => {
+        group.filters.forEach(filter => {
+          if (filter.type === 'dow') dowFilters.add(filter.value);
+          if (filter.type === 'occ') occFilters.add(filter.value);
+        });
+      });
+
+      // If we have DOW or occurrence filters, include all matching dates
+      if (dowFilters.size > 0 || occFilters.size > 0) {
+        Object.values(etDays).forEach(day => {
+          const matchesDow = dowFilters.size === 0 || dowFilters.has(day.dow);
+          const matchesOcc = occFilters.size === 0 || occFilters.has(day.occ);
+
+          if (matchesDow && matchesOcc && !dateMap.has(day.date)) {
+            dateMap.set(day.date, {
+              date: day.date,
+              dow: day.dow,
+              dayNum: day.occ,
+              count: 0
+            });
+          }
+        });
+      }
+
       // Convert to array and sort by date (most recent first)
       const dateSummary = Array.from(dateMap.values()).sort((a, b) => b.date.localeCompare(a.date));
+
+      // Calculate stats for heat map gradient
+      const counts = dateSummary.map(d => d.count);
+      const maxCount = counts.length > 0 ? Math.max(...counts) : 1;
 
       // Build header
       let headerHTML = '<tr>';
@@ -7952,14 +7961,20 @@ function populateDatePicker() {
       headerHTML += '</tr>';
       document.getElementById('query-date-summary-head').innerHTML = headerHTML;
 
-      // Build body
+      // Build body with heat map coloring
       let bodyHTML = '';
       dateSummary.forEach(entry => {
+        // Heat map gradient based on count
+        let countBg = '#0d0d12';
+        if (maxCount > 0) {
+          countBg = getOrangeGradient(entry.count, 0, maxCount);
+        }
+
         bodyHTML += '<tr>';
         bodyHTML += `<td style="text-align:left;">${entry.date}</td>`;
         bodyHTML += `<td>${DAYS_SHORT[entry.dow]}</td>`;
         bodyHTML += `<td>${entry.dayNum}</td>`;
-        bodyHTML += `<td><strong>${entry.count}</strong></td>`;
+        bodyHTML += `<td style="background:${countBg}"><strong>${entry.count}</strong></td>`;
         bodyHTML += '</tr>';
       });
       document.getElementById('query-date-summary-body').innerHTML = bodyHTML;
