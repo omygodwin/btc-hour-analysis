@@ -7527,19 +7527,20 @@ function populateDatePicker() {
               });
               html += `</select>`;
 
-            // Operator selector (only for metric filters)
-            if (filter.type === 'metric' || !filter.type) {
-              html += `<select class="query-filter-op" onchange="updateQueryFilter(${group.id}, ${filter.id}, 'op', this.value)">`;
-              html += `<option value=">=" ${filter.op === '>=' ? 'selected' : ''}>≥</option>`;
-              html += `<option value="<=" ${filter.op === '<=' ? 'selected' : ''}>≤</option>`;
-              html += `<option value=">" ${filter.op === '>' ? 'selected' : ''}>&gt;</option>`;
-              html += `<option value="<" ${filter.op === '<' ? 'selected' : ''}>&lt;</option>`;
-              html += `<option value="==" ${filter.op === '==' ? 'selected' : ''}>＝</option>`;
-              html += `<option value="!=" ${filter.op === '!=' ? 'selected' : ''}>≠</option>`;
-              html += `</select>`;
+              // Operator selector (only for metric filters)
+              if (filter.type === 'metric' || !filter.type) {
+                html += `<select class="query-filter-op" onchange="updateQueryFilter(${group.id}, ${filter.id}, 'op', this.value)">`;
+                html += `<option value=">=" ${filter.op === '>=' ? 'selected' : ''}>≥</option>`;
+                html += `<option value="<=" ${filter.op === '<=' ? 'selected' : ''}>≤</option>`;
+                html += `<option value=">" ${filter.op === '>' ? 'selected' : ''}>&gt;</option>`;
+                html += `<option value="<" ${filter.op === '<' ? 'selected' : ''}>&lt;</option>`;
+                html += `<option value="==" ${filter.op === '==' ? 'selected' : ''}>＝</option>`;
+                html += `<option value="!=" ${filter.op === '!=' ? 'selected' : ''}>≠</option>`;
+                html += `</select>`;
 
-              // Value input
-              html += `<input type="number" class="query-filter-value" value="${filter.value}" onchange="updateQueryFilter(${group.id}, ${filter.id}, 'value', parseFloat(this.value))">`;
+                // Value input
+                html += `<input type="number" class="query-filter-value" value="${filter.value}" onchange="updateQueryFilter(${group.id}, ${filter.id}, 'value', parseFloat(this.value))">`;
+              }
             }
 
             // Remove button
