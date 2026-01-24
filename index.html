@@ -4412,45 +4412,102 @@
       });
 
       // Calculate after-hour to 4pm close metrics
-      Object.values(etDays).forEach(day => {
+      // For hours 0-16: track to same day's 4PM close
+      // For hours 17-23: track to NEXT day's 4PM close (5PM session reset)
+      const sortedDatesForAH = Object.keys(etDays).sort();
+
+      sortedDatesForAH.forEach((dateStr, dateIdx) => {
+        const day = etDays[dateStr];
         const pm4Hour = day.hrs[16]; // 4PM
-        if (!pm4Hour) return; // No 4PM data, skip
 
-        const pm4Close = pm4Hour.c;
+        // Calculate for hours 0-16 (same day's 4PM close)
+        if (pm4Hour) {
+          getSortedHourKeys(day).forEach(h => {
+            const hrNum = parseInt(h);
+            const hd = day.hrs[h];
+            if (!hd.m || hrNum > 16) return; // Only hours 0-16
 
-        getSortedHourKeys(day).forEach(h => {
-          const hrNum = parseInt(h);
-          const hd = day.hrs[h];
-          if (!hd.m || hrNum >= 16) return; // Only calculate for hours before 4pm
+            const hourClose = hd.c;
 
-          const hourClose = hd.c;
+            // Find max and min from this hour's close until 4pm
+            let maxTo4pm = hourClose;
+            let minTo4pm = hourClose;
+            let highTo4pm = hd.h;
+            let lowTo4pm = hd.l;
 
-          // Find max and min from this hour's close until 4pm
-          let maxTo4pm = hourClose;
-          let minTo4pm = hourClose;
-          let highTo4pm = hd.h;
-          let lowTo4pm = hd.l;
-
-          // Go through hours from current+1 to 16 (4pm)
-          for (let futureH = hrNum + 1; futureH <= 16; futureH++) {
-            const futureHd = day.hrs[futureH];
-            if (futureHd) {
-              if (futureHd.h > maxTo4pm) maxTo4pm = futureHd.h;
-              if (futureHd.l < minTo4pm) minTo4pm = futureHd.l;
-              if (futureHd.h > highTo4pm) highTo4pm = futureHd.h;
-              if (futureHd.l < lowTo4pm) lowTo4pm = futureHd.l;
+            // Go through hours from current+1 to 16 (4pm)
+            for (let futureH = hrNum + 1; futureH <= 16; futureH++) {
+              const futureHd = day.hrs[futureH];
+              if (futureHd) {
+                if (futureHd.h > maxTo4pm) maxTo4pm = futureHd.h;
+                if (futureHd.l < minTo4pm) minTo4pm = futureHd.l;
+                if (futureHd.h > highTo4pm) highTo4pm = futureHd.h;
+                if (futureHd.l < lowTo4pm) lowTo4pm = futureHd.l;
+              }
             }
-          }
 
-          // Up range: max price until 4pm close - hour's close
-          hd.m.ah4pmUp = Math.round(maxTo4pm - hourClose);
-          // Down range: hour's close - min price until 4pm close
-          hd.m.ah4pmDn = Math.round(hourClose - minTo4pm);
-          // Max of up/down
-          hd.m.ah4pmMx = Math.max(hd.m.ah4pmUp, hd.m.ah4pmDn);
-          // H-L range from close to 4pm (high - low of period)
-          hd.m.ah4pmRng = Math.round(highTo4pm - lowTo4pm);
-        });
+            // Up range: max price until 4pm close - hour's close
+            hd.m.ah4pmUp = Math.round(maxTo4pm - hourClose);
+            // Down range: hour's close - min price until 4pm close
+            hd.m.ah4pmDn = Math.round(hourClose - minTo4pm);
+            // Max of up/down
+            hd.m.ah4pmMx = Math.max(hd.m.ah4pmUp, hd.m.ah4pmDn);
+            // H-L range from close to 4pm (high - low of period)
+            hd.m.ah4pmRng = Math.round(highTo4pm - lowTo4pm);
+          });
+        }
+
+        // Calculate for hours 17-23 (next day's 4PM close)
+        const nextDateStr = sortedDatesForAH[dateIdx + 1];
+        const nextDay = nextDateStr ? etDays[nextDateStr] : null;
+        const nextPm4Hour = nextDay?.hrs[16];
+
+        if (nextPm4Hour) {
+          getSortedHourKeys(day).forEach(h => {
+            const hrNum = parseInt(h);
+            const hd = day.hrs[h];
+            if (!hd.m || hrNum < 17) return; // Only hours 17-23
+
+            const hourClose = hd.c;
+
+            // Find max and min from this hour's close until next day's 4pm
+            let maxTo4pm = hourClose;
+            let minTo4pm = hourClose;
+            let highTo4pm = hd.h;
+            let lowTo4pm = hd.l;
+
+            // Go through remaining hours of current day (hrNum+1 to 23)
+            for (let futureH = hrNum + 1; futureH <= 23; futureH++) {
+              const futureHd = day.hrs[futureH];
+              if (futureHd) {
+                if (futureHd.h > maxTo4pm) maxTo4pm = futureHd.h;
+                if (futureHd.l < minTo4pm) minTo4pm = futureHd.l;
+                if (futureHd.h > highTo4pm) highTo4pm = futureHd.h;
+                if (futureHd.l < lowTo4pm) lowTo4pm = futureHd.l;
+              }
+            }
+
+            // Go through next day's hours 0-16
+            for (let futureH = 0; futureH <= 16; futureH++) {
+              const futureHd = nextDay.hrs[futureH];
+              if (futureHd) {
+                if (futureHd.h > maxTo4pm) maxTo4pm = futureHd.h;
+                if (futureHd.l < minTo4pm) minTo4pm = futureHd.l;
+                if (futureHd.h > highTo4pm) highTo4pm = futureHd.h;
+                if (futureHd.l < lowTo4pm) lowTo4pm = futureHd.l;
+              }
+            }
+
+            // Up range: max price until 4pm close - hour's close
+            hd.m.ah4pmUp = Math.round(maxTo4pm - hourClose);
+            // Down range: hour's close - min price until 4pm close
+            hd.m.ah4pmDn = Math.round(hourClose - minTo4pm);
+            // Max of up/down
+            hd.m.ah4pmMx = Math.max(hd.m.ah4pmUp, hd.m.ah4pmDn);
+            // H-L range from close to 4pm (high - low of period)
+            hd.m.ah4pmRng = Math.round(highTo4pm - lowTo4pm);
+          });
+        }
       });
 
       allETDates = Object.keys(etDays).sort().reverse();
@@ -5646,8 +5703,8 @@ function populateDatePicker() {
             
             let bg = '#0d0d12';
 
-            // Special case for mxrPct: always use 0-100 range
-            if (col.id === 'mxrPct' && col.gradient === 'orange') {
+            // Special case for mxrPct and rngPct: always use 0-100 range
+            if ((col.id === 'mxrPct' || col.id === 'rngPct') && col.gradient === 'orange') {
               bg = getOrangeGradient(v, 0, 100);
             }
             else if (col.gradient === 'orange' && stats[col.group]) bg = getOrangeGradient(v, stats[col.group].min, stats[col.group].max);
