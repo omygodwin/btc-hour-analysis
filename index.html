@@ -5034,16 +5034,23 @@ function populateDatePicker() {
       });
       
       data = applyColumnFilters(data);
-      
+
       data.sort((a, b) => {
         let va, vb;
-        if (sortColumn === 'date') { va = a.date; vb = b.date; }
-        else if (DAY_TOTAL_COLS.some(c => c.id === sortColumn)) { va = a[sortColumn]; vb = b[sortColumn]; }
-        else if (sortHour !== null && a.hrs[sortHour]?.m && b.hrs[sortHour]?.m) {
-          va = a.hrs[sortHour].m[sortColumn]; vb = b.hrs[sortHour].m[sortColumn];
-        } else { va = a.date; vb = b.date; }
-        if (va == null) va = -Infinity;
-        if (vb == null) vb = -Infinity;
+        if (sortColumn === 'date') {
+          va = a.date; vb = b.date;
+        } else if (DAY_TOTAL_COLS.some(c => c.id === sortColumn)) {
+          va = a[sortColumn]; vb = b[sortColumn];
+        } else if (sortHour !== null) {
+          // Always get the value for the hour column - null values handled below
+          va = a.hrs[sortHour]?.m?.[sortColumn];
+          vb = b.hrs[sortHour]?.m?.[sortColumn];
+        } else {
+          va = a.date; vb = b.date;
+        }
+        // Null/undefined values sort to the end (use -Infinity for desc, +Infinity for asc)
+        if (va == null) va = sortDirection === 'desc' ? -Infinity : Infinity;
+        if (vb == null) vb = sortDirection === 'desc' ? -Infinity : Infinity;
         return sortDirection === 'asc' ? (va < vb ? -1 : va > vb ? 1 : 0) : (va > vb ? -1 : va < vb ? 1 : 0);
       });
 
