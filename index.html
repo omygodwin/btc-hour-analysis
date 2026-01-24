@@ -1549,16 +1549,8 @@
         <button class="tb-btn" id="btn-compare" onclick="toggleCompareMode()">⚖ Compare</button>
         <button class="tb-btn" id="btn-show-after-hl" onclick="toggleShowAfterHL()">AfterH/L</button>
         <button class="tb-btn" onclick="showLegendPopup()">📖 Legend</button>
-        <div class="tb-group">
-          <label>rVol ≥</label>
-          <input type="number" id="rvol-threshold" value="4" min="0" step="0.1" style="width:60px;" onchange="updateRVolThreshold()">
-        </div>
-        <div class="tb-group">
-          <label>After Bar ≥</label>
-          <input type="number" id="after-bar-threshold" value="400" min="0" step="10" style="width:70px;" onchange="updateAfterBarThreshold()">
-        </div>
       </div>
-      
+
       <div class="day-compare-container" id="day-compare-container">
         <div class="day-table-panel" id="day-table-panel-1">
           <div class="day-table-container">
@@ -1740,14 +1732,6 @@
         <button class="tb-btn preset" onclick="syncHVFromOverview()">Sync Filters</button>
         <button class="tb-btn" id="btn-hv-after-hl" onclick="toggleShowAfterHL()">AfterH/L</button>
         <button class="tb-btn" onclick="showLegendPopup()">📖 Legend</button>
-        <div class="tb-group">
-          <label>rVol ≥</label>
-          <input type="number" id="hv-rvol-threshold" value="4" min="0" step="0.1" style="width:60px;" onchange="updateRVolThreshold()">
-        </div>
-        <div class="tb-group">
-          <label>After Bar ≥</label>
-          <input type="number" id="hv-after-bar-threshold" value="400" min="0" step="10" style="width:70px;" onchange="updateAfterBarThreshold()">
-        </div>
       </div>
 
       <div class="day-table-container">
@@ -2157,6 +2141,44 @@
                 When enabled, fetches latest data from Coinbase API every 5 minutes. When disabled, shows only historical data from last commit.
               </p>
             </div>
+
+            <div class="mobile-filter-section">
+              <h3>Analysis Thresholds</h3>
+              <div class="mobile-settings-row">
+                <div class="mobile-settings-item">
+                  <span class="mobile-settings-label">rVol Highlight ≥:</span>
+                  <input type="number" id="mobile-rvol-threshold" value="4" min="0" step="0.1" class="mobile-settings-input" style="width:80px;" onchange="updateRVolThresholdFromSettings(this.value);">
+                </div>
+                <div class="mobile-settings-item">
+                  <span class="mobile-settings-label">After Bar ≥:</span>
+                  <input type="number" id="mobile-after-bar-threshold" value="400" min="0" step="10" class="mobile-settings-input" style="width:80px;" onchange="updateAfterBarThresholdFromSettings(this.value);">
+                </div>
+                <div class="mobile-settings-item">
+                  <span class="mobile-settings-label">After Bar Minute:</span>
+                  <select id="mobile-after-bar-minute" class="mobile-settings-input" style="flex:1;margin-left:8px;" onchange="updateAfterBarMinute(this.value);">
+                    <option value="0">:00</option>
+                    <option value="5">:05</option>
+                    <option value="10">:10</option>
+                    <option value="15">:15</option>
+                    <option value="20">:20</option>
+                    <option value="25">:25</option>
+                    <option value="30">:30</option>
+                    <option value="35" selected>:35</option>
+                    <option value="40">:40</option>
+                    <option value="45">:45</option>
+                    <option value="50">:50</option>
+                  </select>
+                </div>
+                <div class="mobile-settings-item">
+                  <span class="mobile-settings-label">Day Totals Top N:</span>
+                  <input type="number" id="mobile-day-totals-top-n" value="7" min="1" max="24" class="mobile-settings-input" style="width:80px;" onchange="updateDayTotalsTopN(this.value);">
+                </div>
+              </div>
+              <p style="font-size:0.65rem;color:var(--text-muted);margin-top:8px;line-height:1.3;">
+                After Bar Minute: The specific minute for after-bar metrics (BXAH, BXAL, MxBX).<br>
+                Day Totals Top N: Number of top hourly values to average for TopRng and TopMxR.
+              </p>
+            </div>
           </div>
         </div>
       </div>
@@ -2263,10 +2285,28 @@
       { id: 'lastAfterHiBarMin', label: 'LAHm', desc: 'Last bar with after high > threshold', default: false, gradient: 'minute', group: 'afterbar' },
       { id: 'lastAfterLoBarMin', label: 'LALm', desc: 'Last bar with after low > threshold', default: false, gradient: 'minute', group: 'afterbar' },
       { id: 'maxLastAfterBarMin', label: 'MxLABm', desc: 'Max of LAHm and LALm', default: true, gradient: 'minute', group: 'afterbar' },
-      // :40 bar after bar metrics
-      { id: 'bar40AfterHi', label: 'B40AH', desc: ':40 bar after high', default: false, gradient: 'orange', group: 'b40' },
-      { id: 'bar40AfterLo', label: 'B40AL', desc: ':40 bar after low', default: false, gradient: 'orange', group: 'b40' },
-      { id: 'maxB40HL', label: 'MxB40', desc: 'Max of B40AH and B40AL', default: true, gradient: 'orange', group: 'b40' },
+      // Dynamic after-bar metrics (bar minute configurable, default :35)
+      { id: 'barXAfterHi', label: 'BXAH', desc: 'After-bar high (configurable minute)', default: false, gradient: 'orange', group: 'bx' },
+      { id: 'barXAfterLo', label: 'BXAL', desc: 'After-bar low (configurable minute)', default: false, gradient: 'orange', group: 'bx' },
+      { id: 'maxBXHL', label: 'MxBX', desc: 'Max of BXAH and BXAL', default: true, gradient: 'orange', group: 'bx' },
+      // Consecutive new high/low intervals
+      { id: 'consNewHi', label: 'ConHi', desc: 'Max consecutive new highs', default: false, gradient: 'orange', group: 'cons' },
+      { id: 'consNewLo', label: 'ConLo', desc: 'Max consecutive new lows', default: false, gradient: 'orange', group: 'cons' },
+      { id: 'consHiEndMin', label: 'HiEnd', desc: 'Minute where consecutive highs ended', default: false, gradient: 'minute', group: 'cons' },
+      { id: 'consLoEndMin', label: 'LoEnd', desc: 'Minute where consecutive lows ended', default: false, gradient: 'minute', group: 'cons' },
+      // Reversal metrics from consecutive bars (blank if <=2 consecutive)
+      { id: 'consHiRev', label: 'HiRev', desc: 'High reversal: rest of hour low - last consecutive high', default: false, gradient: 'orange', group: 'consrev' },
+      { id: 'consLoRev', label: 'LoRev', desc: 'Low reversal: rest of hour high - last consecutive low', default: false, gradient: 'orange', group: 'consrev' },
+      // OBM/OSM reversal metrics
+      { id: 'obRev', label: 'OBRev', desc: 'OB reversal: rest of hour high - OB bar close', default: false, gradient: 'orange', group: 'obosrev' },
+      { id: 'osRev', label: 'OSRev', desc: 'OS reversal: OB bar close - rest of hour low', default: false, gradient: 'orange', group: 'obosrev' },
+      // After-hour to 4pm close metrics
+      { id: 'ah4pmUp', label: 'AH4U', desc: 'Up range to 4pm: max to 4pm - hour close', default: false, gradient: 'orange', group: 'ah4pm' },
+      { id: 'ah4pmDn', label: 'AH4D', desc: 'Down range to 4pm: hour close - min to 4pm', default: false, gradient: 'orange', group: 'ah4pm' },
+      { id: 'ah4pmMx', label: 'AH4Mx', desc: 'Max of up/down range to 4pm', default: false, gradient: 'orange', group: 'ah4pm' },
+      { id: 'ah4pmRng', label: 'AH4Rng', desc: 'H-L range from close to 4pm', default: false, gradient: 'orange', group: 'ah4pm' },
+      // Hourly range percentile
+      { id: 'rngPct', label: 'Rng%', desc: 'Hourly Range Percentile (0-100%)', default: false, gradient: 'orange', group: 'rng' },
       // Strength indicators
       { id: 'buyStr', label: 'BuyStr', desc: 'Buy Strength: (C-L)/(H-L)*100', default: false, gradient: 'orange', group: 'strength' },
       { id: 'sellStr', label: 'SellStr', desc: 'Sell Strength: (H-C)/(H-L)*100', default: false, gradient: 'orange', group: 'strength' },
@@ -2320,6 +2360,9 @@
       { id: 'dRthCumGreenBars', label: 'RTHGreen', desc: 'RTH cumulative green bars', default: false, gradient: 'orange' },
       { id: 'dRthCumRedBars', label: 'RTHRed', desc: 'RTH cumulative red bars', default: false, gradient: 'orange' },
       { id: 'dRthBarDelta', label: 'RTHBarΔ', desc: 'RTH bar delta (red - green)', default: false, gradient: 'rg' },
+      // Top X hourly metrics (configurable X, default 7)
+      { id: 'dTopXRngAvg', label: 'TopRng', desc: 'Avg of top X hourly ranges', default: false, gradient: 'orange' },
+      { id: 'dTopXMxRAvg', label: 'TopMxR', desc: 'Avg of top X hourly max ranges', default: false, gradient: 'orange' },
     ];
     
     // ==================== STATE ====================
@@ -2369,6 +2412,8 @@
     let hvSelectedDays = new Set([0,1,2,3,4,5,6]);
     let hvSelectedHour = 9;
     let afterBarThreshold = 400; // Threshold for after bar high/low metrics
+    let afterBarMinute = 35; // Dynamic minute for after-bar metrics (default :35)
+    let dayTotalsTopN = 7; // Number of top hourly values to average for day totals
 
     // RSI settings
     let rsiLength = 9;
@@ -2793,6 +2838,16 @@
 
       // Sync established %
       document.getElementById('mobile-est-pct').value = document.getElementById('est-pct').value;
+
+      // Sync analysis thresholds
+      const rvolThreshEl = document.getElementById('mobile-rvol-threshold');
+      if (rvolThreshEl) rvolThreshEl.value = rVolThreshold;
+      const afterBarThreshEl = document.getElementById('mobile-after-bar-threshold');
+      if (afterBarThreshEl) afterBarThreshEl.value = afterBarThreshold;
+      const afterBarMinEl = document.getElementById('mobile-after-bar-minute');
+      if (afterBarMinEl) afterBarMinEl.value = afterBarMinute;
+      const dayTotalsTopNEl = document.getElementById('mobile-day-totals-top-n');
+      if (dayTotalsTopNEl) dayTotalsTopNEl.value = dayTotalsTopN;
     }
 
     // Close modal when clicking outside
@@ -3702,7 +3757,20 @@
 
           // Calculate after bar metrics
           let lastAfterHiBarMin = null, lastAfterLoBarMin = null;
-          let bar40AfterHi = null, bar40AfterLo = null;
+          let barXAfterHi = null, barXAfterLo = null;
+
+          // Consecutive new high/low tracking
+          let consNewHi = 0, consNewLo = 0;
+          let consHiEndMin = null, consLoEndMin = null;
+          let consHiRev = null, consLoRev = null;
+          let lastConsHiBarHigh = null, lastConsLoBarLow = null;
+          let lastConsHiBarIdx = -1, lastConsLoBarIdx = -1;
+
+          // OBM/OSM reversal metrics
+          let obRev = null, osRev = null;
+
+          // After-hour to 4pm close metrics
+          let ah4pmUp = null, ah4pmDn = null, ah4pmMx = null, ah4pmRng = null;
 
           if (hourBars.length > 0) {
             // Find last bar where after bar high > threshold
@@ -3723,22 +3791,115 @@
               }
             }
 
-            // Get :40 bar after bar high/low (ensure positive values)
-            const bar40 = hourBars.find(b => b.etMin === 40);
-            if (bar40) {
-              bar40AfterHi = bar40.afterBarHigh != null ? Math.max(0, Math.round(bar40.afterBarHigh)) : null;
-              bar40AfterLo = bar40.afterBarLow != null ? Math.max(0, Math.round(bar40.afterBarLow)) : null;
+            // Get dynamic minute bar after bar high/low (ensure positive values)
+            const barX = hourBars.find(b => b.etMin === afterBarMinute);
+            if (barX) {
+              barXAfterHi = barX.afterBarHigh != null ? Math.max(0, Math.round(barX.afterBarHigh)) : null;
+              barXAfterLo = barX.afterBarLow != null ? Math.max(0, Math.round(barX.afterBarLow)) : null;
+            }
+
+            // Calculate consecutive new highs/lows within the hour
+            let runningHigh = -Infinity;
+            let runningLow = Infinity;
+            let currentHiStreak = 0, maxHiStreak = 0, hiStreakEndMin = null, hiStreakEndIdx = -1, hiStreakEndHigh = null;
+            let currentLoStreak = 0, maxLoStreak = 0, loStreakEndMin = null, loStreakEndIdx = -1, loStreakEndLow = null;
+
+            hourBars.forEach((bar, idx) => {
+              // Check for new high
+              if (bar.high > runningHigh) {
+                currentHiStreak++;
+                runningHigh = bar.high;
+                if (currentHiStreak > maxHiStreak) {
+                  maxHiStreak = currentHiStreak;
+                  hiStreakEndMin = bar.etMin;
+                  hiStreakEndIdx = idx;
+                  hiStreakEndHigh = bar.high;
+                }
+              } else {
+                currentHiStreak = 0;
+              }
+
+              // Check for new low
+              if (bar.low < runningLow) {
+                currentLoStreak++;
+                runningLow = bar.low;
+                if (currentLoStreak > maxLoStreak) {
+                  maxLoStreak = currentLoStreak;
+                  loStreakEndMin = bar.etMin;
+                  loStreakEndIdx = idx;
+                  loStreakEndLow = bar.low;
+                }
+              } else {
+                currentLoStreak = 0;
+              }
+            });
+
+            consNewHi = maxHiStreak;
+            consNewLo = maxLoStreak;
+            consHiEndMin = hiStreakEndMin;
+            consLoEndMin = loStreakEndMin;
+            lastConsHiBarHigh = hiStreakEndHigh;
+            lastConsLoBarLow = loStreakEndLow;
+            lastConsHiBarIdx = hiStreakEndIdx;
+            lastConsLoBarIdx = loStreakEndIdx;
+
+            // Calculate reversal metrics (only if 3+ consecutive)
+            if (maxHiStreak >= 3 && hiStreakEndIdx >= 0 && hiStreakEndIdx < hourBars.length - 1) {
+              // Rest of hour low after the consecutive high streak
+              const barsAfterHi = hourBars.slice(hiStreakEndIdx + 1);
+              if (barsAfterHi.length > 0) {
+                const restOfHourLow = Math.min(...barsAfterHi.map(b => b.low));
+                consHiRev = Math.round(hiStreakEndHigh - restOfHourLow);
+                if (consHiRev < 0) consHiRev = 0; // Ensure positive
+              }
+            }
+
+            if (maxLoStreak >= 3 && loStreakEndIdx >= 0 && loStreakEndIdx < hourBars.length - 1) {
+              // Rest of hour high after the consecutive low streak
+              const barsAfterLo = hourBars.slice(loStreakEndIdx + 1);
+              if (barsAfterLo.length > 0) {
+                const restOfHourHigh = Math.max(...barsAfterLo.map(b => b.high));
+                consLoRev = Math.round(restOfHourHigh - loStreakEndLow);
+                if (consLoRev < 0) consLoRev = 0; // Ensure positive
+              }
+            }
+
+            // OBM/OSM reversal metrics
+            if (rsiOBmin !== null && rsiOBmin < 55) {
+              const obBarIdx = hourBars.findIndex(b => b.etMin === rsiOBmin);
+              if (obBarIdx >= 0 && obBarIdx < hourBars.length - 1) {
+                const obBar = hourBars[obBarIdx];
+                const barsAfterOB = hourBars.slice(obBarIdx + 1);
+                if (barsAfterOB.length > 0) {
+                  const restOfHourHigh = Math.max(...barsAfterOB.map(b => b.high));
+                  obRev = Math.round(restOfHourHigh - obBar.close);
+                  if (obRev < 0) obRev = 0;
+                }
+              }
+            }
+
+            if (rsiOSmin !== null && rsiOSmin < 55) {
+              const osBarIdx = hourBars.findIndex(b => b.etMin === rsiOSmin);
+              if (osBarIdx >= 0 && osBarIdx < hourBars.length - 1) {
+                const osBar = hourBars[osBarIdx];
+                const barsAfterOS = hourBars.slice(osBarIdx + 1);
+                if (barsAfterOS.length > 0) {
+                  const restOfHourLow = Math.min(...barsAfterOS.map(b => b.low));
+                  osRev = Math.round(osBar.close - restOfHourLow);
+                  if (osRev < 0) osRev = 0;
+                }
+              }
             }
           }
 
-          // Calculate max B40HL
-          let maxB40HL = null;
-          if (bar40AfterHi != null && bar40AfterLo != null) {
-            maxB40HL = Math.max(bar40AfterHi, bar40AfterLo);
-          } else if (bar40AfterHi != null) {
-            maxB40HL = bar40AfterHi;
-          } else if (bar40AfterLo != null) {
-            maxB40HL = bar40AfterLo;
+          // Calculate max BXHL
+          let maxBXHL = null;
+          if (barXAfterHi != null && barXAfterLo != null) {
+            maxBXHL = Math.max(barXAfterHi, barXAfterLo);
+          } else if (barXAfterHi != null) {
+            maxBXHL = barXAfterHi;
+          } else if (barXAfterLo != null) {
+            maxBXHL = barXAfterLo;
           }
 
           // Calculate cumulative bar counts
@@ -3823,9 +3984,24 @@
             lastAfterHiBarMin,
             lastAfterLoBarMin,
             maxLastAfterBarMin: (lastAfterHiBarMin != null && lastAfterLoBarMin != null) ? Math.max(lastAfterHiBarMin, lastAfterLoBarMin) : (lastAfterHiBarMin ?? lastAfterLoBarMin),
-            bar40AfterHi,
-            bar40AfterLo,
-            maxB40HL,
+            barXAfterHi,
+            barXAfterLo,
+            maxBXHL,
+            // Consecutive new high/low metrics
+            consNewHi,
+            consNewLo,
+            consHiEndMin,
+            consLoEndMin,
+            consHiRev,
+            consLoRev,
+            // OBM/OSM reversal metrics
+            obRev,
+            osRev,
+            // After-hour to 4pm (will be calculated in second pass)
+            ah4pmUp: null,
+            ah4pmDn: null,
+            ah4pmMx: null,
+            ah4pmRng: null,
             cumGreenBars: null, // Will be calculated cumulatively
             cumRedBars: null,
             barDelta: null,
@@ -4171,14 +4347,18 @@
       // For each day, the lowest mxr = 0%, highest mxr = 100%
       Object.values(etDays).forEach(day => {
         const dayMxrValues = [];
+        const dayRngValues = [];
         getSortedHourKeys(day).forEach(h => {
           const m = day.hrs[h].m;
           if (m && m.mxr != null) {
             dayMxrValues.push(m.mxr);
           }
+          if (m && m.rng != null) {
+            dayRngValues.push(m.rng);
+          }
         });
 
-        // Find min and max for this day
+        // Find min and max for this day (mxr)
         if (dayMxrValues.length > 0) {
           const dayMxrMin = Math.min(...dayMxrValues);
           const dayMxrMax = Math.max(...dayMxrValues);
@@ -4198,6 +4378,79 @@
             }
           });
         }
+
+        // Calculate hourly range percentile (rng)
+        if (dayRngValues.length > 0) {
+          const dayRngMin = Math.min(...dayRngValues);
+          const dayRngMax = Math.max(...dayRngValues);
+          const dayRngRange = dayRngMax - dayRngMin;
+
+          getSortedHourKeys(day).forEach(h => {
+            const m = day.hrs[h].m;
+            if (m && m.rng != null) {
+              if (dayRngRange > 0) {
+                m.rngPct = Math.round(((m.rng - dayRngMin) / dayRngRange) * 100 * 10) / 10;
+              } else {
+                m.rngPct = 50;
+              }
+            }
+          });
+        }
+
+        // Calculate day totals for top N hourly ranges and max ranges
+        if (dayRngValues.length > 0) {
+          const sortedRng = [...dayRngValues].sort((a, b) => b - a);
+          const topNRng = sortedRng.slice(0, Math.min(dayTotalsTopN, sortedRng.length));
+          day.dTopXRngAvg = topNRng.length > 0 ? Math.round(topNRng.reduce((a, b) => a + b, 0) / topNRng.length) : null;
+        }
+
+        if (dayMxrValues.length > 0) {
+          const sortedMxr = [...dayMxrValues].sort((a, b) => b - a);
+          const topNMxr = sortedMxr.slice(0, Math.min(dayTotalsTopN, sortedMxr.length));
+          day.dTopXMxRAvg = topNMxr.length > 0 ? Math.round(topNMxr.reduce((a, b) => a + b, 0) / topNMxr.length) : null;
+        }
+      });
+
+      // Calculate after-hour to 4pm close metrics
+      Object.values(etDays).forEach(day => {
+        const pm4Hour = day.hrs[16]; // 4PM
+        if (!pm4Hour) return; // No 4PM data, skip
+
+        const pm4Close = pm4Hour.c;
+
+        getSortedHourKeys(day).forEach(h => {
+          const hrNum = parseInt(h);
+          const hd = day.hrs[h];
+          if (!hd.m || hrNum >= 16) return; // Only calculate for hours before 4pm
+
+          const hourClose = hd.c;
+
+          // Find max and min from this hour's close until 4pm
+          let maxTo4pm = hourClose;
+          let minTo4pm = hourClose;
+          let highTo4pm = hd.h;
+          let lowTo4pm = hd.l;
+
+          // Go through hours from current+1 to 16 (4pm)
+          for (let futureH = hrNum + 1; futureH <= 16; futureH++) {
+            const futureHd = day.hrs[futureH];
+            if (futureHd) {
+              if (futureHd.h > maxTo4pm) maxTo4pm = futureHd.h;
+              if (futureHd.l < minTo4pm) minTo4pm = futureHd.l;
+              if (futureHd.h > highTo4pm) highTo4pm = futureHd.h;
+              if (futureHd.l < lowTo4pm) lowTo4pm = futureHd.l;
+            }
+          }
+
+          // Up range: max price until 4pm close - hour's close
+          hd.m.ah4pmUp = Math.round(maxTo4pm - hourClose);
+          // Down range: hour's close - min price until 4pm close
+          hd.m.ah4pmDn = Math.round(hourClose - minTo4pm);
+          // Max of up/down
+          hd.m.ah4pmMx = Math.max(hd.m.ah4pmUp, hd.m.ah4pmDn);
+          // H-L range from close to 4pm (high - low of period)
+          hd.m.ah4pmRng = Math.round(highTo4pm - lowTo4pm);
+        });
       });
 
       allETDates = Object.keys(etDays).sort().reverse();
@@ -4885,7 +5138,7 @@ function populateDatePicker() {
     }
     
     function calcRowStats(day, hours) {
-      const s = { rng: [], urlr: [], mxr: [], mxl: [], rank: [], cl: [], oc: [], cdr: [], cdrRG: [], mxcd: [], rsi: [], sig: [], vol: [], b40: [], bars: [], interval: [], afterbar: [], maxrngbar: [], strength: [], m15rng: [] };
+      const s = { rng: [], urlr: [], mxr: [], mxl: [], rank: [], cl: [], oc: [], cdr: [], cdrRG: [], mxcd: [], rsi: [], sig: [], vol: [], bx: [], cons: [], consrev: [], obosrev: [], ah4pm: [], bars: [], interval: [], afterbar: [], maxrngbar: [], strength: [], m15rng: [] };
       getSortedHourKeys(day).forEach(h => {
         const m = day.hrs[h].m;
         if (!m) return;
@@ -4923,10 +5176,26 @@ function populateDatePicker() {
         if (m.rVolC != null) s.vol.push(m.rVolC);
         if (m.rVolDOW != null) s.vol.push(m.rVolDOW);
 
-        // B40 metrics
-        if (m.bar40AfterHi != null) s.b40.push(m.bar40AfterHi);
-        if (m.bar40AfterLo != null) s.b40.push(m.bar40AfterLo);
-        if (m.maxB40HL != null) s.b40.push(m.maxB40HL);
+        // BX metrics (dynamic after-bar)
+        if (m.barXAfterHi != null) s.bx.push(m.barXAfterHi);
+        if (m.barXAfterLo != null) s.bx.push(m.barXAfterLo);
+        if (m.maxBXHL != null) s.bx.push(m.maxBXHL);
+
+        // Consecutive metrics
+        if (m.consNewHi != null) s.cons.push(m.consNewHi);
+        if (m.consNewLo != null) s.cons.push(m.consNewLo);
+        if (m.consHiRev != null) s.consrev.push(m.consHiRev);
+        if (m.consLoRev != null) s.consrev.push(m.consLoRev);
+
+        // OB/OS reversal metrics
+        if (m.obRev != null) s.obosrev.push(m.obRev);
+        if (m.osRev != null) s.obosrev.push(m.osRev);
+
+        // After-hour to 4pm metrics
+        if (m.ah4pmUp != null) s.ah4pm.push(m.ah4pmUp);
+        if (m.ah4pmDn != null) s.ah4pm.push(m.ah4pmDn);
+        if (m.ah4pmMx != null) s.ah4pm.push(m.ah4pmMx);
+        if (m.ah4pmRng != null) s.ah4pm.push(m.ah4pmRng);
 
         // Bar count metrics
         if (m.cumGreenBars != null) s.bars.push(m.cumGreenBars);
@@ -4974,7 +5243,7 @@ function populateDatePicker() {
           cdrRG: [], cdr: [], mxcd: [], rsi: [], sig: [], vol: [],
           wcdr: [], wcdrRG: [], wmxcd: [],
           p5cdr: [], p5cdrRG: [], p5mxcd: [],
-          b40: [], bars: [], interval: [], afterbar: [], maxrngbar: [], strength: [], m15rng: []
+          bx: [], cons: [], consrev: [], obosrev: [], ah4pm: [], bars: [], interval: [], afterbar: [], maxrngbar: [], strength: [], m15rng: []
         };
 
         data.forEach(d => {
@@ -5026,10 +5295,26 @@ function populateDatePicker() {
           if (m.p5CdrDActual != null) s[h].p5cdr.push(m.p5CdrDActual);
           if (m.p5MxcdActual != null) s[h].p5mxcd.push(m.p5MxcdActual);
 
-          // B40 metrics
-          if (m.bar40AfterHi != null) s[h].b40.push(m.bar40AfterHi);
-          if (m.bar40AfterLo != null) s[h].b40.push(m.bar40AfterLo);
-          if (m.maxB40HL != null) s[h].b40.push(m.maxB40HL);
+          // BX metrics (dynamic after-bar)
+          if (m.barXAfterHi != null) s[h].bx.push(m.barXAfterHi);
+          if (m.barXAfterLo != null) s[h].bx.push(m.barXAfterLo);
+          if (m.maxBXHL != null) s[h].bx.push(m.maxBXHL);
+
+          // Consecutive metrics
+          if (m.consNewHi != null) s[h].cons.push(m.consNewHi);
+          if (m.consNewLo != null) s[h].cons.push(m.consNewLo);
+          if (m.consHiRev != null) s[h].consrev.push(m.consHiRev);
+          if (m.consLoRev != null) s[h].consrev.push(m.consLoRev);
+
+          // OB/OS reversal metrics
+          if (m.obRev != null) s[h].obosrev.push(m.obRev);
+          if (m.osRev != null) s[h].obosrev.push(m.osRev);
+
+          // After-hour to 4pm metrics
+          if (m.ah4pmUp != null) s[h].ah4pm.push(m.ah4pmUp);
+          if (m.ah4pmDn != null) s[h].ah4pm.push(m.ah4pmDn);
+          if (m.ah4pmMx != null) s[h].ah4pm.push(m.ah4pmMx);
+          if (m.ah4pmRng != null) s[h].ah4pm.push(m.ah4pmRng);
 
           // Bar count metrics
           if (m.cumGreenBars != null) s[h].bars.push(m.cumGreenBars);
@@ -5127,7 +5412,7 @@ function populateDatePicker() {
     // ==================== FORMATTING ====================
     function fmt(v, id) {
       if (v == null) return '—';
-      if (['hm','lm','rsiOBmin','rsiOSmin'].includes(id)) return ':' + String(v).padStart(2, '0');
+      if (['hm','lm','rsiOBmin','rsiOSmin','consHiEndMin','consLoEndMin'].includes(id)) return ':' + String(v).padStart(2, '0');
       if (['up','dn','totl','mxl'].includes(id)) return v;
       if (id === 'cl') return v === 0 ? '0' : (v > 0 ? '+' + v : v);
       if (id === 'v') return v.toFixed(1);
@@ -7079,27 +7364,54 @@ function populateDatePicker() {
       renderHourView();
     }
     function updateRVolThreshold() {
-      const val1 = parseFloat(document.getElementById('rvol-threshold')?.value);
-      const val2 = parseFloat(document.getElementById('hv-rvol-threshold')?.value);
-      rVolThreshold = !isNaN(val1) ? val1 : !isNaN(val2) ? val2 : 4;
-      // Sync both inputs
-      if (document.getElementById('rvol-threshold')) document.getElementById('rvol-threshold').value = rVolThreshold;
-      if (document.getElementById('hv-rvol-threshold')) document.getElementById('hv-rvol-threshold').value = rVolThreshold;
+      const val = parseFloat(document.getElementById('mobile-rvol-threshold')?.value);
+      rVolThreshold = !isNaN(val) ? val : 4;
+      renderDayView();
+      renderHourView();
+    }
+    function updateRVolThresholdFromSettings(val) {
+      rVolThreshold = parseFloat(val) || 4;
       renderDayView();
       renderHourView();
     }
     function updateAfterBarThreshold() {
-      const val1 = parseFloat(document.getElementById('after-bar-threshold')?.value);
-      const val2 = parseFloat(document.getElementById('hv-after-bar-threshold')?.value);
-      afterBarThreshold = !isNaN(val1) ? val1 : !isNaN(val2) ? val2 : 400;
-      // Sync both inputs
-      if (document.getElementById('after-bar-threshold')) document.getElementById('after-bar-threshold').value = afterBarThreshold;
-      if (document.getElementById('hv-after-bar-threshold')) document.getElementById('hv-after-bar-threshold').value = afterBarThreshold;
+      const val = parseFloat(document.getElementById('mobile-after-bar-threshold')?.value);
+      afterBarThreshold = !isNaN(val) ? val : 400;
       // Re-process data to recalculate after bar metrics
       processDataET();
       renderTable();
       renderDayView();
       renderHourView();
+    }
+    function updateAfterBarThresholdFromSettings(val) {
+      afterBarThreshold = parseFloat(val) || 400;
+      // Re-process data to recalculate after bar metrics
+      processDataET();
+      renderTable();
+      renderDayView();
+      renderHourView();
+    }
+    function updateAfterBarMinute(val) {
+      afterBarMinute = parseInt(val) || 35;
+      if (document.getElementById('mobile-after-bar-minute')) {
+        document.getElementById('mobile-after-bar-minute').value = afterBarMinute;
+      }
+      // Re-process data to recalculate after bar metrics
+      processDataET();
+      renderTable();
+      renderDayView();
+      renderHourView();
+    }
+    function updateDayTotalsTopN(val) {
+      dayTotalsTopN = parseInt(val) || 7;
+      if (dayTotalsTopN < 1) dayTotalsTopN = 1;
+      if (dayTotalsTopN > 24) dayTotalsTopN = 24;
+      if (document.getElementById('mobile-day-totals-top-n')) {
+        document.getElementById('mobile-day-totals-top-n').value = dayTotalsTopN;
+      }
+      // Re-process data to recalculate day totals
+      processDataET();
+      renderTable();
     }
     function loadDateInDayView(date) {
       // Switch to day view tab
