@@ -1961,9 +1961,13 @@
             <div class="mobile-filter-section">
               <h3>Close-to-Rest (CR) Presets</h3>
               <div class="mobile-filter-btns" style="margin-bottom:8px;">
-                <button class="mobile-filter-btn quick" onclick="setCRAllCols()">All CR</button>
+                <button class="mobile-filter-btn quick" onclick="setCRAllCols()">All</button>
+                <button class="mobile-filter-btn none-btn" onclick="setCRNoneCols()">None</button>
                 <button class="mobile-filter-btn quick" onclick="setCRMaxCols()">MxR Only</button>
+                <button class="mobile-filter-btn quick" onclick="setCR3055Cols()">:30-:55</button>
+                <button class="mobile-filter-btn quick" onclick="setCR4555Cols()">:45-:55</button>
               </div>
+              <div style="font-size:0.65rem;color:var(--text-muted);margin-bottom:4px;">Individual minutes:</div>
               <div class="mobile-filter-btns" style="flex-wrap:wrap;gap:4px;">
                 <button class="mobile-filter-btn" onclick="setCRCols('00')">:00</button>
                 <button class="mobile-filter-btn" onclick="setCRCols('05')">:05</button>
@@ -5377,7 +5381,11 @@ function populateDatePicker() {
     }
     
     function calcRowStats(day, hours) {
-      const s = { rng: [], urlr: [], mxr: [], mxl: [], rank: [], cl: [], oc: [], cdr: [], cdrRG: [], mxcd: [], rsi: [], sig: [], vol: [], bx: [], cons: [], consrev: [], obosrev: [], ah4pm: [], bars: [], interval: [], afterbar: [], maxrngbar: [], strength: [], m15rng: [] };
+      const s = {
+        rng: [], urlr: [], mxr: [], mxl: [], rank: [], cl: [], oc: [], cdr: [], cdrRG: [], mxcd: [], rsi: [], sig: [], vol: [], bx: [], cons: [], consrev: [], obosrev: [], ah4pm: [], bars: [], interval: [], afterbar: [], maxrngbar: [], strength: [], m15rng: [],
+        // Close-to-rest-of-hour metric groups (one per minute)
+        cr00: [], cr05: [], cr10: [], cr15: [], cr20: [], cr25: [], cr30: [], cr35: [], cr40: [], cr45: [], cr50: []
+      };
       getSortedHourKeys(day).forEach(h => {
         const m = day.hrs[h].m;
         if (!m) return;
@@ -5461,6 +5469,15 @@ function populateDatePicker() {
         if (m.buyStr != null) s.strength.push(m.buyStr);
         if (m.sellStr != null) s.strength.push(m.sellStr);
         // overallStr can be negative, collect separately for red-green gradient
+
+        // Close-to-rest-of-hour metrics (one group per minute)
+        const crMins = ['00', '05', '10', '15', '20', '25', '30', '35', '40', '45', '50'];
+        crMins.forEach(min => {
+          const grp = 'cr' + min;
+          ['crUR' + min, 'crLR' + min, 'crRng' + min, 'crMxR' + min].forEach(key => {
+            if (m[key] != null) s[grp].push(m[key]);
+          });
+        });
       });
       const r = {};
       Object.keys(s).forEach(k => {
@@ -8740,6 +8757,49 @@ function populateDatePicker() {
         cols.push('crMxR' + min);
       });
       visibleColumns = new Set(cols);
+      document.querySelectorAll('#col-grid input').forEach((cb, i) => cb.checked = visibleColumns.has(ALL_COLUMNS[i].id));
+      renderTable();
+      updateMobileColumnGrid();
+    }
+
+    function setCRNoneCols() {
+      // Remove all CR columns from visible columns
+      const crIds = ALL_COLUMNS.filter(c => c.id.startsWith('cr')).map(c => c.id);
+      crIds.forEach(id => visibleColumns.delete(id));
+      document.querySelectorAll('#col-grid input').forEach((cb, i) => cb.checked = visibleColumns.has(ALL_COLUMNS[i].id));
+      renderTable();
+      updateMobileColumnGrid();
+    }
+
+    function setCR3055Cols() {
+      // Set :30, :35, :40, :45, :50 minute columns
+      const cols = [];
+      ['30', '35', '40', '45', '50'].forEach(min => {
+        cols.push('crUR' + min, 'crLR' + min, 'crRng' + min, 'crMxR' + min);
+      });
+      visibleColumns = new Set(cols);
+      document.querySelectorAll('#col-grid input').forEach((cb, i) => cb.checked = visibleColumns.has(ALL_COLUMNS[i].id));
+      renderTable();
+      updateMobileColumnGrid();
+    }
+
+    function setCR4555Cols() {
+      // Set :45, :50 minute columns
+      const cols = [];
+      ['45', '50'].forEach(min => {
+        cols.push('crUR' + min, 'crLR' + min, 'crRng' + min, 'crMxR' + min);
+      });
+      visibleColumns = new Set(cols);
+      document.querySelectorAll('#col-grid input').forEach((cb, i) => cb.checked = visibleColumns.has(ALL_COLUMNS[i].id));
+      renderTable();
+      updateMobileColumnGrid();
+    }
+
+    function addCRCols(minutes) {
+      // Add CR columns for specified minutes to existing visible columns
+      minutes.forEach(min => {
+        ['crUR' + min, 'crLR' + min, 'crRng' + min, 'crMxR' + min].forEach(id => visibleColumns.add(id));
+      });
       document.querySelectorAll('#col-grid input').forEach((cb, i) => cb.checked = visibleColumns.has(ALL_COLUMNS[i].id));
       renderTable();
       updateMobileColumnGrid();
