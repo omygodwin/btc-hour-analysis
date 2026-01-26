@@ -1548,6 +1548,9 @@
               <option value="column">Per Column</option>
             </select>
           </div>
+          <div class="option-toggle">
+            <label><input type="checkbox" id="pct-checkbox" onchange="togglePercentiles()"> Percentiles</label>
+          </div>
         </div>
       </div>
 
@@ -2107,9 +2110,6 @@
               <button id="mobile-btn-show-dt-cols" class="mobile-action-btn-large" onclick="toggleShowDayCols()" style="width:100%;margin-bottom:12px;">
                 <span id="mobile-show-dt-text">Show Day Totals</span>
               </button>
-              <button id="mobile-btn-pct" class="mobile-action-btn-large" onclick="togglePercentiles()" style="width:100%;margin-bottom:12px;">
-                <span id="mobile-pct-text">Show Percentiles</span>
-              </button>
             </div>
 
             <div class="mobile-filter-section">
@@ -2180,6 +2180,22 @@
                 <button class="mobile-action-btn-large" onclick="resetAll(); closeMobileFilterModal();">↺ Reset All Filters</button>
                 <button class="mobile-action-btn-large" onclick="setRTH(); closeMobileFilterModal();">🕐 US RTH (9-16, Weekdays)</button>
                 <button class="mobile-action-btn-large" onclick="loadNewFile(); closeMobileFilterModal();">📁 Load New File</button>
+              </div>
+            </div>
+
+            <div class="mobile-filter-section">
+              <h3>Display Options</h3>
+              <div style="display:flex;flex-direction:column;gap:8px;">
+                <button id="mobile-btn-pct" class="mobile-action-btn-large" onclick="togglePercentiles()">
+                  <span id="mobile-pct-text">Show Percentiles</span>
+                </button>
+                <div class="mobile-settings-row">
+                  <span class="mobile-settings-label">Gradient Mode:</span>
+                  <select id="mobile-gradient-mode" class="mobile-settings-input" style="flex:1;" onchange="document.getElementById('gradient-mode').value=this.value; renderTable();">
+                    <option value="row">Per Row</option>
+                    <option value="column">Per Column</option>
+                  </select>
+                </div>
               </div>
             </div>
 
@@ -6167,7 +6183,8 @@ function populateDatePicker() {
       const container = document.getElementById('percentiles-table-wrap');
       if (!container) return;
 
-      const percentiles = [10, 25, 50, 75, 90];
+      // Descending order: P90 on top, P10 on bottom
+      const percentiles = [90, 75, 50, 25, 10];
 
       // Helper to calculate percentile
       function calcPct(arr, p) {
@@ -6223,50 +6240,69 @@ function populateDatePicker() {
         });
       });
 
-      // Build table HTML
-      let html = '<table class="percentiles-table"><thead><tr>';
-      html += '<th class="pct-corner">P%</th>';
+      // Calculate day total column widths (matching main table)
+      const getDTColWidth = (id) => {
+        if (['dOpen','dHigh','dLow','dClose'].includes(id)) return 52;
+        if (['dOC','dOCH','d5pmOC','wOC'].includes(id)) return 48;
+        return 38;
+      };
+
+      // Build table HTML - use sticky positioning to align with main table
+      // Date (65px) + Day (28px) + # (20px) = 113px for the P% column area
+      let html = '<table class="percentiles-table" style="table-layout:fixed;">';
+
+      // Header row 1: P% label + Day Totals header (if shown) + Hour headers
+      html += '<thead><tr>';
+      html += '<th class="pct-corner" style="width:113px;min-width:113px;text-align:right;padding-right:8px;">P%</th>';
 
       // Day total headers
       if (showDayCols && dtCols.length > 0) {
-        dtCols.forEach(c => {
-          html += `<th title="${c.desc}">${c.label}</th>`;
+        dtCols.forEach((c, i) => {
+          const w = getDTColWidth(c.id);
+          const isLast = i === dtCols.length - 1;
+          html += `<th style="width:${w}px;min-width:${w}px;${isLast ? 'border-right:2px solid rgba(100,149,237,0.3);' : ''}" title="${c.desc}">${c.label}</th>`;
         });
-        html += '<th style="background:transparent;border:none;width:8px;"></th>'; // Separator
       }
 
       // Hour headers
-      realHours.forEach(h => {
+      realHours.forEach((h, hi) => {
         html += `<th colspan="${cols.length}" style="border-left:2px solid rgba(247,147,26,0.3);">${formatHourHeader(h)}</th>`;
       });
-      html += '</tr><tr>';
-      html += '<th class="pct-corner"></th>';
+      html += '</tr>';
 
-      // Day total column labels (second row)
+      // Header row 2: Empty P% cell + Day total column labels + Hourly column labels
+      html += '<tr>';
+      html += '<th class="pct-corner" style="width:113px;min-width:113px;"></th>';
+
+      // Day total column labels
       if (showDayCols && dtCols.length > 0) {
-        dtCols.forEach(c => { html += '<th></th>'; });
-        html += '<th style="background:transparent;border:none;"></th>';
+        dtCols.forEach((c, i) => {
+          const w = getDTColWidth(c.id);
+          const isLast = i === dtCols.length - 1;
+          html += `<th style="width:${w}px;min-width:${w}px;font-size:0.55rem;${isLast ? 'border-right:2px solid rgba(100,149,237,0.3);' : ''}">${c.label}</th>`;
+        });
       }
 
       // Hourly column labels
       realHours.forEach(h => {
         cols.forEach((col, ci) => {
-          html += `<th${ci === 0 ? ' style="border-left:2px solid rgba(247,147,26,0.3);"' : ''} title="${col.desc}">${col.label}</th>`;
+          html += `<th style="font-size:0.55rem;${ci === 0 ? 'border-left:2px solid rgba(247,147,26,0.3);' : ''}" title="${col.desc}">${col.label}</th>`;
         });
       });
       html += '</tr></thead><tbody>';
 
-      // Percentile rows
+      // Percentile rows (descending: P90, P75, P50, P25, P10)
       percentiles.forEach(p => {
-        html += `<tr><td class="pct-label">P${p}</td>`;
+        html += `<tr><td class="pct-label" style="width:113px;min-width:113px;text-align:right;padding-right:8px;">P${p}</td>`;
 
         // Day total percentiles
         if (showDayCols && dtCols.length > 0) {
-          dtCols.forEach(c => {
+          dtCols.forEach((c, i) => {
             const v = calcPct(dayColVals[c.id], p);
-            html += `<td>${fmtPct(v)}</td>`;
+            const w = getDTColWidth(c.id);
+            const isLast = i === dtCols.length - 1;
+            html += `<td style="width:${w}px;min-width:${w}px;${isLast ? 'border-right:2px solid rgba(100,149,237,0.3);' : ''}">${fmtPct(v)}</td>`;
           });
-          html += '<td style="background:transparent;border:none;"></td>';
         }
 
         // Hourly percentiles
@@ -8117,7 +8153,11 @@ function populateDatePicker() {
     }
     function togglePercentiles() {
       showPercentiles = !showPercentiles;
-      document.getElementById('btn-pct').classList.toggle('active', showPercentiles);
+      // Sync all UI elements
+      const btnPct = document.getElementById('btn-pct');
+      if (btnPct) btnPct.classList.toggle('active', showPercentiles);
+      const pctCheckbox = document.getElementById('pct-checkbox');
+      if (pctCheckbox) pctCheckbox.checked = showPercentiles;
       document.getElementById('percentiles-container').style.display = showPercentiles ? 'block' : 'none';
       // Update mobile button text
       const mobilePctBtn = document.getElementById('mobile-pct-text');
@@ -9456,6 +9496,7 @@ function populateDatePicker() {
       document.getElementById('level-size').value = 250;
       document.getElementById('btn-day-cols').classList.add('active');
       document.getElementById('btn-pct').classList.remove('active');
+      document.getElementById('pct-checkbox').checked = false;
       document.getElementById('percentiles-container').style.display = 'none';
       const mobilePctBtn = document.getElementById('mobile-pct-text');
       if (mobilePctBtn) mobilePctBtn.textContent = 'Show Percentiles';
@@ -10828,6 +10869,27 @@ document.addEventListener('click',e=>{
     e.target.style.display='none';
   }
 });
+
+/* SYNC PERCENTILES TABLE SCROLL WITH MAIN TABLE */
+(function setupPercentileScrollSync() {
+  const tableContainer = document.getElementById('table-container');
+  const pctWrap = document.getElementById('percentiles-table-wrap');
+  if (!tableContainer || !pctWrap) return;
+
+  let syncing = false;
+  tableContainer.addEventListener('scroll', () => {
+    if (syncing) return;
+    syncing = true;
+    pctWrap.scrollLeft = tableContainer.scrollLeft;
+    syncing = false;
+  });
+  pctWrap.addEventListener('scroll', () => {
+    if (syncing) return;
+    syncing = true;
+    tableContainer.scrollLeft = pctWrap.scrollLeft;
+    syncing = false;
+  });
+})();
 
 /* AUTO HIDE BOTTOM TABS ON SCROLL */
 let lastY=0;
