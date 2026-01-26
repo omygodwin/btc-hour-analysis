@@ -1959,6 +1959,27 @@
             </div>
 
             <div class="mobile-filter-section">
+              <h3>Close-to-Rest (CR) Presets</h3>
+              <div class="mobile-filter-btns" style="margin-bottom:8px;">
+                <button class="mobile-filter-btn quick" onclick="setCRAllCols()">All CR</button>
+                <button class="mobile-filter-btn quick" onclick="setCRMaxCols()">MxR Only</button>
+              </div>
+              <div class="mobile-filter-btns" style="flex-wrap:wrap;gap:4px;">
+                <button class="mobile-filter-btn" onclick="setCRCols('00')">:00</button>
+                <button class="mobile-filter-btn" onclick="setCRCols('05')">:05</button>
+                <button class="mobile-filter-btn" onclick="setCRCols('10')">:10</button>
+                <button class="mobile-filter-btn" onclick="setCRCols('15')">:15</button>
+                <button class="mobile-filter-btn" onclick="setCRCols('20')">:20</button>
+                <button class="mobile-filter-btn" onclick="setCRCols('25')">:25</button>
+                <button class="mobile-filter-btn" onclick="setCRCols('30')">:30</button>
+                <button class="mobile-filter-btn" onclick="setCRCols('35')">:35</button>
+                <button class="mobile-filter-btn" onclick="setCRCols('40')">:40</button>
+                <button class="mobile-filter-btn" onclick="setCRCols('45')">:45</button>
+                <button class="mobile-filter-btn" onclick="setCRCols('50')">:50</button>
+              </div>
+            </div>
+
+            <div class="mobile-filter-section">
               <h3>Gradient Mode</h3>
               <select id="mobile-gradient-mode" class="mobile-settings-input" style="width:100%;" onchange="document.getElementById('gradient-mode').value=this.value; renderTable();">
                 <option value="row">Per Row</option>
@@ -2311,6 +2332,63 @@
       { id: 'buyStr', label: 'BuyStr', desc: 'Buy Strength: (C-L)/(H-L)*100', default: false, gradient: 'orange', group: 'strength' },
       { id: 'sellStr', label: 'SellStr', desc: 'Sell Strength: (H-C)/(H-L)*100', default: false, gradient: 'orange', group: 'strength' },
       { id: 'overallStr', label: 'NetStr', desc: 'Overall Strength: (C-O)/(H-L)*100', default: false, gradient: 'rg', group: 'strength' },
+
+      // ===== CLOSE-TO-REST-OF-HOUR METRICS (from bar close to rest of hour H/L) =====
+      // :00 bar
+      { id: 'crUR00', label: 'UR00', desc: ':00 close to rest of hour high', default: false, gradient: 'orange', group: 'cr00' },
+      { id: 'crLR00', label: 'LR00', desc: ':00 close to rest of hour low', default: false, gradient: 'orange', group: 'cr00' },
+      { id: 'crRng00', label: 'Rng00', desc: ':00 close to rest of hour total range', default: false, gradient: 'orange', group: 'cr00' },
+      { id: 'crMxR00', label: 'MxR00', desc: ':00 close to rest of hour max range', default: false, gradient: 'orange', group: 'cr00' },
+      // :05 bar
+      { id: 'crUR05', label: 'UR05', desc: ':05 close to rest of hour high', default: false, gradient: 'orange', group: 'cr05' },
+      { id: 'crLR05', label: 'LR05', desc: ':05 close to rest of hour low', default: false, gradient: 'orange', group: 'cr05' },
+      { id: 'crRng05', label: 'Rng05', desc: ':05 close to rest of hour total range', default: false, gradient: 'orange', group: 'cr05' },
+      { id: 'crMxR05', label: 'MxR05', desc: ':05 close to rest of hour max range', default: false, gradient: 'orange', group: 'cr05' },
+      // :10 bar
+      { id: 'crUR10', label: 'UR10', desc: ':10 close to rest of hour high', default: false, gradient: 'orange', group: 'cr10' },
+      { id: 'crLR10', label: 'LR10', desc: ':10 close to rest of hour low', default: false, gradient: 'orange', group: 'cr10' },
+      { id: 'crRng10', label: 'Rng10', desc: ':10 close to rest of hour total range', default: false, gradient: 'orange', group: 'cr10' },
+      { id: 'crMxR10', label: 'MxR10', desc: ':10 close to rest of hour max range', default: false, gradient: 'orange', group: 'cr10' },
+      // :15 bar
+      { id: 'crUR15', label: 'UR15', desc: ':15 close to rest of hour high', default: false, gradient: 'orange', group: 'cr15' },
+      { id: 'crLR15', label: 'LR15', desc: ':15 close to rest of hour low', default: false, gradient: 'orange', group: 'cr15' },
+      { id: 'crRng15', label: 'Rng15', desc: ':15 close to rest of hour total range', default: false, gradient: 'orange', group: 'cr15' },
+      { id: 'crMxR15', label: 'MxR15', desc: ':15 close to rest of hour max range', default: false, gradient: 'orange', group: 'cr15' },
+      // :20 bar
+      { id: 'crUR20', label: 'UR20', desc: ':20 close to rest of hour high', default: false, gradient: 'orange', group: 'cr20' },
+      { id: 'crLR20', label: 'LR20', desc: ':20 close to rest of hour low', default: false, gradient: 'orange', group: 'cr20' },
+      { id: 'crRng20', label: 'Rng20', desc: ':20 close to rest of hour total range', default: false, gradient: 'orange', group: 'cr20' },
+      { id: 'crMxR20', label: 'MxR20', desc: ':20 close to rest of hour max range', default: false, gradient: 'orange', group: 'cr20' },
+      // :25 bar
+      { id: 'crUR25', label: 'UR25', desc: ':25 close to rest of hour high', default: false, gradient: 'orange', group: 'cr25' },
+      { id: 'crLR25', label: 'LR25', desc: ':25 close to rest of hour low', default: false, gradient: 'orange', group: 'cr25' },
+      { id: 'crRng25', label: 'Rng25', desc: ':25 close to rest of hour total range', default: false, gradient: 'orange', group: 'cr25' },
+      { id: 'crMxR25', label: 'MxR25', desc: ':25 close to rest of hour max range', default: false, gradient: 'orange', group: 'cr25' },
+      // :30 bar
+      { id: 'crUR30', label: 'UR30', desc: ':30 close to rest of hour high', default: false, gradient: 'orange', group: 'cr30' },
+      { id: 'crLR30', label: 'LR30', desc: ':30 close to rest of hour low', default: false, gradient: 'orange', group: 'cr30' },
+      { id: 'crRng30', label: 'Rng30', desc: ':30 close to rest of hour total range', default: false, gradient: 'orange', group: 'cr30' },
+      { id: 'crMxR30', label: 'MxR30', desc: ':30 close to rest of hour max range', default: false, gradient: 'orange', group: 'cr30' },
+      // :35 bar
+      { id: 'crUR35', label: 'UR35', desc: ':35 close to rest of hour high', default: false, gradient: 'orange', group: 'cr35' },
+      { id: 'crLR35', label: 'LR35', desc: ':35 close to rest of hour low', default: false, gradient: 'orange', group: 'cr35' },
+      { id: 'crRng35', label: 'Rng35', desc: ':35 close to rest of hour total range', default: false, gradient: 'orange', group: 'cr35' },
+      { id: 'crMxR35', label: 'MxR35', desc: ':35 close to rest of hour max range', default: false, gradient: 'orange', group: 'cr35' },
+      // :40 bar
+      { id: 'crUR40', label: 'UR40', desc: ':40 close to rest of hour high', default: false, gradient: 'orange', group: 'cr40' },
+      { id: 'crLR40', label: 'LR40', desc: ':40 close to rest of hour low', default: false, gradient: 'orange', group: 'cr40' },
+      { id: 'crRng40', label: 'Rng40', desc: ':40 close to rest of hour total range', default: false, gradient: 'orange', group: 'cr40' },
+      { id: 'crMxR40', label: 'MxR40', desc: ':40 close to rest of hour max range', default: false, gradient: 'orange', group: 'cr40' },
+      // :45 bar
+      { id: 'crUR45', label: 'UR45', desc: ':45 close to rest of hour high', default: false, gradient: 'orange', group: 'cr45' },
+      { id: 'crLR45', label: 'LR45', desc: ':45 close to rest of hour low', default: false, gradient: 'orange', group: 'cr45' },
+      { id: 'crRng45', label: 'Rng45', desc: ':45 close to rest of hour total range', default: false, gradient: 'orange', group: 'cr45' },
+      { id: 'crMxR45', label: 'MxR45', desc: ':45 close to rest of hour max range', default: false, gradient: 'orange', group: 'cr45' },
+      // :50 bar
+      { id: 'crUR50', label: 'UR50', desc: ':50 close to rest of hour high', default: false, gradient: 'orange', group: 'cr50' },
+      { id: 'crLR50', label: 'LR50', desc: ':50 close to rest of hour low', default: false, gradient: 'orange', group: 'cr50' },
+      { id: 'crRng50', label: 'Rng50', desc: ':50 close to rest of hour total range', default: false, gradient: 'orange', group: 'cr50' },
+      { id: 'crMxR50', label: 'MxR50', desc: ':50 close to rest of hour max range', default: false, gradient: 'orange', group: 'cr50' },
     ];
     
     const DAY_TOTAL_COLS = [
@@ -2631,7 +2709,12 @@
       if (!container) return;
       container.innerHTML = '';
 
-      ALL_COLUMNS.forEach(col => {
+      // Separate CR columns from other columns
+      const crCols = ALL_COLUMNS.filter(c => c.id.startsWith('cr'));
+      const otherCols = ALL_COLUMNS.filter(c => !c.id.startsWith('cr'));
+
+      // Render other columns first
+      otherCols.forEach(col => {
         const item = document.createElement('div');
         item.className = 'mobile-settings-item';
         item.style.padding = '8px';
@@ -2660,6 +2743,74 @@
         item.appendChild(label);
         container.appendChild(item);
       });
+
+      // Add CR columns section header
+      if (crCols.length > 0) {
+        const crHeader = document.createElement('div');
+        crHeader.style.cssText = 'margin-top:16px;padding:8px 4px;background:rgba(247,147,26,0.1);border-radius:4px;font-weight:600;color:var(--accent-btc);font-size:0.75rem;cursor:pointer;display:flex;align-items:center;gap:8px;';
+        crHeader.innerHTML = `<span id="cr-section-arrow" style="transition:transform 0.2s;">▼</span> Close-to-Rest Metrics (${crCols.length} columns)`;
+        crHeader.onclick = () => {
+          const section = document.getElementById('cr-cols-section');
+          const arrow = document.getElementById('cr-section-arrow');
+          if (section.style.display === 'none') {
+            section.style.display = 'block';
+            arrow.style.transform = 'rotate(0deg)';
+          } else {
+            section.style.display = 'none';
+            arrow.style.transform = 'rotate(-90deg)';
+          }
+        };
+        container.appendChild(crHeader);
+
+        const crSection = document.createElement('div');
+        crSection.id = 'cr-cols-section';
+        crSection.style.cssText = 'padding-left:8px;border-left:2px solid rgba(247,147,26,0.3);margin-left:4px;';
+
+        // Group CR columns by minute
+        const crMinutes = ['00', '05', '10', '15', '20', '25', '30', '35', '40', '45', '50'];
+        crMinutes.forEach(min => {
+          const minCols = crCols.filter(c => c.id.endsWith(min));
+          if (minCols.length > 0) {
+            const minHeader = document.createElement('div');
+            minHeader.style.cssText = 'margin-top:8px;padding:4px;font-size:0.65rem;color:var(--accent-blue);font-weight:500;';
+            minHeader.textContent = `:${min} Bar`;
+            crSection.appendChild(minHeader);
+
+            minCols.forEach(col => {
+              const item = document.createElement('div');
+              item.className = 'mobile-settings-item';
+              item.style.padding = '6px 8px';
+              item.style.cursor = 'pointer';
+              item.onclick = () => {
+                toggleColumn(col.id);
+                updateMobileColumnGrid();
+              };
+
+              const checkbox = document.createElement('input');
+              checkbox.type = 'checkbox';
+              checkbox.checked = visibleColumns.has(col.id);
+              checkbox.style.accentColor = 'var(--accent-btc)';
+              checkbox.onclick = (e) => e.stopPropagation();
+              checkbox.onchange = () => {
+                toggleColumn(col.id);
+              };
+
+              const label = document.createElement('span');
+              label.className = 'mobile-settings-label';
+              label.textContent = `${col.label} (${col.desc})`;
+              label.style.flex = '1';
+              label.style.marginLeft = '8px';
+              label.style.fontSize = '0.65rem';
+
+              item.appendChild(checkbox);
+              item.appendChild(label);
+              crSection.appendChild(item);
+            });
+          }
+        });
+
+        container.appendChild(crSection);
+      }
     }
 
     function updateMobileDayTotalsGrid() {
@@ -3892,6 +4043,28 @@
             }
           }
 
+          // Calculate close-to-rest-of-hour metrics for each 5-min bar (:00 through :50)
+          // These use the already-calculated afterBarHigh and afterBarLow values
+          const crMetrics = {};
+          const crMinutes = [0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50];
+          crMinutes.forEach(min => {
+            const minStr = min.toString().padStart(2, '0');
+            const bar = hourBars.find(b => b.etMin === min);
+            if (bar) {
+              const ur = bar.afterBarHigh != null ? Math.max(0, bar.afterBarHigh) : null;
+              const lr = bar.afterBarLow != null ? Math.max(0, bar.afterBarLow) : null;
+              crMetrics['crUR' + minStr] = ur;
+              crMetrics['crLR' + minStr] = lr;
+              crMetrics['crRng' + minStr] = (ur != null && lr != null) ? ur + lr : null;
+              crMetrics['crMxR' + minStr] = (ur != null && lr != null) ? Math.max(ur, lr) : (ur ?? lr);
+            } else {
+              crMetrics['crUR' + minStr] = null;
+              crMetrics['crLR' + minStr] = null;
+              crMetrics['crRng' + minStr] = null;
+              crMetrics['crMxR' + minStr] = null;
+            }
+          });
+
           // Calculate max BXHL
           let maxBXHL = null;
           if (barXAfterHi != null && barXAfterLo != null) {
@@ -4008,6 +4181,8 @@
             rthCumGreenBars: null,
             rthCumRedBars: null,
             rthBarDelta: null,
+            // Close-to-rest-of-hour metrics for each 5-min bar
+            ...crMetrics,
           };
 
           // Calculate strength indicators
@@ -5307,7 +5482,9 @@ function populateDatePicker() {
           cdrRG: [], cdr: [], mxcd: [], rsi: [], sig: [], vol: [],
           wcdr: [], wcdrRG: [], wmxcd: [],
           p5cdr: [], p5cdrRG: [], p5mxcd: [],
-          bx: [], cons: [], consrev: [], obosrev: [], ah4pm: [], bars: [], interval: [], afterbar: [], maxrngbar: [], strength: [], m15rng: []
+          bx: [], cons: [], consrev: [], obosrev: [], ah4pm: [], bars: [], interval: [], afterbar: [], maxrngbar: [], strength: [], m15rng: [],
+          // Close-to-rest-of-hour metric groups (one per minute)
+          cr00: [], cr05: [], cr10: [], cr15: [], cr20: [], cr25: [], cr30: [], cr35: [], cr40: [], cr45: [], cr50: []
         };
 
         data.forEach(d => {
@@ -5405,6 +5582,15 @@ function populateDatePicker() {
           if (m.buyStr != null) s[h].strength.push(m.buyStr);
           if (m.sellStr != null) s[h].strength.push(m.sellStr);
           if (m.overallStr != null) s[h].strength.push(m.overallStr);
+
+          // Close-to-rest-of-hour metrics (one group per minute)
+          const crMins = ['00', '05', '10', '15', '20', '25', '30', '35', '40', '45', '50'];
+          crMins.forEach(min => {
+            const grp = 'cr' + min;
+            ['crUR' + min, 'crLR' + min, 'crRng' + min, 'crMxR' + min].forEach(key => {
+              if (m[key] != null) s[h][grp].push(m[key]);
+            });
+          });
         });
       });
       const r = {};
@@ -8524,7 +8710,41 @@ function populateDatePicker() {
     function setRangeCols() { visibleColumns = new Set(['rng','ur','lr','mxr','mxrRk','rngRk']); document.querySelectorAll('#col-grid input').forEach((cb, i) => cb.checked = visibleColumns.has(ALL_COLUMNS[i].id)); renderTable(); updateMobileColumnGrid(); }
     function setOHLCVCols() { visibleColumns = new Set(['o','hi','lo','c','v']); document.querySelectorAll('#col-grid input').forEach((cb, i) => cb.checked = visibleColumns.has(ALL_COLUMNS[i].id)); renderTable(); updateMobileColumnGrid(); }
     function setRSICols() { visibleColumns = new Set(['rsiMax','rsiMin','rsiAvg','rsiOpen','rsiClose','rsiDelta','rsiOBmin','rsiOSmin','sigMax','sigMin','sigAvg','obos']); document.querySelectorAll('#col-grid input').forEach((cb, i) => cb.checked = visibleColumns.has(ALL_COLUMNS[i].id)); renderTable(); updateMobileColumnGrid(); }
-    
+
+    // Close-to-rest-of-hour metrics preset functions
+    function setCRCols(minute) {
+      // Set columns for a specific minute (e.g., '00', '05', etc.)
+      const cols = ['crUR' + minute, 'crLR' + minute, 'crRng' + minute, 'crMxR' + minute];
+      visibleColumns = new Set(cols);
+      document.querySelectorAll('#col-grid input').forEach((cb, i) => cb.checked = visibleColumns.has(ALL_COLUMNS[i].id));
+      renderTable();
+      updateMobileColumnGrid();
+    }
+
+    function setCRAllCols() {
+      // Set all close-to-rest columns
+      const cols = [];
+      ['00', '05', '10', '15', '20', '25', '30', '35', '40', '45', '50'].forEach(min => {
+        cols.push('crUR' + min, 'crLR' + min, 'crRng' + min, 'crMxR' + min);
+      });
+      visibleColumns = new Set(cols);
+      document.querySelectorAll('#col-grid input').forEach((cb, i) => cb.checked = visibleColumns.has(ALL_COLUMNS[i].id));
+      renderTable();
+      updateMobileColumnGrid();
+    }
+
+    function setCRMaxCols() {
+      // Set only the MxR columns for all minutes (most useful summary view)
+      const cols = [];
+      ['00', '05', '10', '15', '20', '25', '30', '35', '40', '45', '50'].forEach(min => {
+        cols.push('crMxR' + min);
+      });
+      visibleColumns = new Set(cols);
+      document.querySelectorAll('#col-grid input').forEach((cb, i) => cb.checked = visibleColumns.has(ALL_COLUMNS[i].id));
+      renderTable();
+      updateMobileColumnGrid();
+    }
+
     function resetAll() {
       selectedYears = new Set(availableYears);
       selectedMonths = new Set([1,2,3,4,5,6,7,8,9,10,11,12]);
