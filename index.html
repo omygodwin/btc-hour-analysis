@@ -398,7 +398,12 @@
     .f-btn.active { background: var(--accent-btc-dim); border-color: rgba(247,147,26,0.4); color: var(--accent-btc); }
     .f-btn.quick { background: rgba(100,149,237,0.1); border-color: rgba(100,149,237,0.2); color: var(--accent-blue); }
     .f-btn.none-btn { background: rgba(248,113,113,0.1); border-color: rgba(248,113,113,0.25); color: var(--accent-red); }
-    
+
+    .hour-buttons { display: flex; flex-wrap: wrap; gap: 2px; }
+    .hour-btn { padding: 3px 6px; background: rgba(255,255,255,0.04); border: 1px solid var(--border-medium); border-radius: 2px; color: var(--text-muted); font-size: 0.55rem; font-family: 'JetBrains Mono', monospace; cursor: pointer; transition: all 0.15s; min-width: 32px; text-align: center; }
+    .hour-btn:hover { background: rgba(255,255,255,0.08); }
+    .hour-btn.active { background: var(--accent-btc-dim); border-color: rgba(247,147,26,0.4); color: var(--accent-btc); }
+
     .range-row { display: flex; align-items: center; gap: 5px; flex-wrap: wrap; }
     .range-row label { display: flex; align-items: center; gap: 2px; font-size: 0.6rem; color: var(--text-muted); }
     .range-row select { padding: 2px 4px; background: rgba(255,255,255,0.05); border: 1px solid var(--border-medium); border-radius: 2px; color: var(--text-primary); font-family: 'JetBrains Mono', monospace; font-size: 0.6rem; }
@@ -1502,16 +1507,21 @@
         
         <div class="filter-group">
           <h3>Hours (Eastern Time)</h3>
-          <div class="range-row">
-            <label>From: <select id="hour-from" onchange="updateHourRange()"></select></label>
-            <label>To: <select id="hour-to" onchange="updateHourRange()"></select></label>
-            <div class="hour-presets">
-              <button onclick="setHours(0, 23)">All</button>
-              <button onclick="setHours(9, 16)">RTH</button>
-              <button onclick="setHours(4, 9)">Pre</button>
-              <button onclick="setHours(16, 20)">AH</button>
-            </div>
+          <div class="hour-selection-presets" style="margin-bottom:8px;display:flex;gap:4px;flex-wrap:wrap;">
+            <button class="filter-btn" onclick="selectAllHours()">All</button>
+            <button class="filter-btn" onclick="selectNoHours()">None</button>
+            <button class="filter-btn" onclick="selectHoursRange(9, 16)">RTH</button>
+            <button class="filter-btn" onclick="selectHoursRange(4, 9)">Pre</button>
+            <button class="filter-btn" onclick="selectHoursRange(16, 20)">AH</button>
+            <button class="filter-btn" onclick="selectHoursRange(17, 23)">5PM+</button>
+            <button class="filter-btn" onclick="invertHours()">Invert</button>
           </div>
+          <div id="hour-buttons" class="hour-buttons" style="display:flex;flex-wrap:wrap;gap:2px;">
+            <!-- Hour buttons will be populated by JS -->
+          </div>
+          <!-- Keep hidden dropdowns for compatibility -->
+          <select id="hour-from" style="display:none;"></select>
+          <select id="hour-to" style="display:none;"></select>
         </div>
         
         <div class="filter-group">
@@ -1977,22 +1987,19 @@
 
             <div class="mobile-filter-section">
               <h3>Hours (Eastern Time)</h3>
-              <div style="display:flex;gap:8px;margin-bottom:8px;flex-wrap:wrap;">
-                <div style="flex:1;min-width:120px;">
-                  <label style="font-size:0.65rem;color:var(--text-muted);display:block;margin-bottom:4px;">From Hour:</label>
-                  <select id="mobile-hour-from" class="mobile-settings-input" style="width:100%;" onchange="document.getElementById('hour-from').value=this.value; updateHourRange();"></select>
-                </div>
-                <div style="flex:1;min-width:120px;">
-                  <label style="font-size:0.65rem;color:var(--text-muted);display:block;margin-bottom:4px;">To Hour:</label>
-                  <select id="mobile-hour-to" class="mobile-settings-input" style="width:100%;" onchange="document.getElementById('hour-to').value=this.value; updateHourRange();"></select>
-                </div>
+              <div class="mobile-filter-btns" style="margin-bottom:8px;">
+                <button class="mobile-filter-btn quick" onclick="selectAllHours()">All</button>
+                <button class="mobile-filter-btn none-btn" onclick="selectNoHours()">None</button>
+                <button class="mobile-filter-btn quick" onclick="selectHoursRange(9, 16)">RTH</button>
+                <button class="mobile-filter-btn quick" onclick="selectHoursRange(4, 9)">Pre</button>
+                <button class="mobile-filter-btn quick" onclick="selectHoursRange(16, 20)">AH</button>
+                <button class="mobile-filter-btn quick" onclick="selectHoursRange(17, 23)">5PM+</button>
+                <button class="mobile-filter-btn quick" onclick="invertHours()">Invert</button>
               </div>
-              <div class="mobile-filter-btns">
-                <button class="mobile-filter-btn quick" onclick="setHours(0, 23)">All (0-23)</button>
-                <button class="mobile-filter-btn quick" onclick="setHours(9, 16)">RTH (9-16)</button>
-                <button class="mobile-filter-btn quick" onclick="setHours(4, 9)">Pre (4-9)</button>
-                <button class="mobile-filter-btn quick" onclick="setHours(16, 20)">AH (16-20)</button>
-              </div>
+              <div id="mobile-hour-buttons" class="mobile-filter-btns" style="gap:3px;"></div>
+              <!-- Keep hidden dropdowns for compatibility -->
+              <select id="mobile-hour-from" style="display:none;"></select>
+              <select id="mobile-hour-to" style="display:none;"></select>
             </div>
 
             <div class="mobile-filter-section">
@@ -2650,6 +2657,7 @@
     let useDateFilter = false;
     let hourFrom = 0;
     let hourTo = 23;
+    let selectedHours = new Set([0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23]); // All hours selected by default
     let levelSize = 250;
     let visibleColumns = new Set(ALL_COLUMNS.filter(c => c.default).map(c => c.id));
     let visibleDTCols = new Set(DAY_TOTAL_COLS.filter(c => c.default).map(c => c.id));
@@ -5093,6 +5101,9 @@
       const dayHlToEl = document.getElementById('day-hl-to');
       if (dayHlFromEl) dayHlFromEl.value = 9;
       if (dayHlToEl) dayHlToEl.value = 15;
+
+      // Populate hour selection buttons
+      populateHourButtons();
     }
 
     function updateLevel() {
@@ -5613,8 +5624,7 @@ function populateDatePicker() {
         sortColumn,
         sortDirection,
         sortHour,
-        hourFrom,
-        hourTo
+        selectedHours: Array.from(selectedHours).sort((a,b) => a-b)
       });
     }
 
@@ -5667,7 +5677,7 @@ function populateDatePicker() {
       return data;
     }
     
-    function getVisibleHours() { return HOURS.filter(h => h >= hourFrom && h <= hourTo); }
+    function getVisibleHours() { return HOURS.filter(h => selectedHours.has(h)); }
     function getActiveColumns() { return ALL_COLUMNS.filter(c => visibleColumns.has(c.id)); }
     function getActiveDTCols() { return DAY_TOTAL_COLS.filter(c => visibleDTCols.has(c.id)); }
     
@@ -9218,32 +9228,122 @@ function populateDatePicker() {
     function setQ3() { selectedMonths = new Set([7,8,9]); document.querySelectorAll('[data-month]').forEach(b => b.classList.toggle('active', selectedMonths.has(+b.dataset.month))); useDateFilter = false; selectedDates.clear(); updateDatePickerUI(); renderTable(); render5pmSession(); if(typeof renderCalendar === 'function') renderCalendar(); updateMobileFilterUI(); }
     function setQ4() { selectedMonths = new Set([10,11,12]); document.querySelectorAll('[data-month]').forEach(b => b.classList.toggle('active', selectedMonths.has(+b.dataset.month))); useDateFilter = false; selectedDates.clear(); updateDatePickerUI(); renderTable(); render5pmSession(); if(typeof renderCalendar === 'function') renderCalendar(); updateMobileFilterUI(); }
     
-    function updateHourRange() {
-      hourFrom = +document.getElementById('hour-from').value;
-      hourTo = +document.getElementById('hour-to').value;
-      // Sync mobile
-      const mobileFrom = document.getElementById('mobile-hour-from');
-      const mobileTo = document.getElementById('mobile-hour-to');
-      if (mobileFrom) mobileFrom.value = hourFrom;
-      if (mobileTo) mobileTo.value = hourTo;
+    // ===== HOUR SELECTION FUNCTIONS =====
+    function toggleHour(h) {
+      if (selectedHours.has(h)) {
+        selectedHours.delete(h);
+      } else {
+        selectedHours.add(h);
+      }
+      updateHourButtonsUI();
       renderTable();
       render5pmSession();
       if(typeof renderCalendar === 'function') renderCalendar();
       updateMobileFilterUI();
     }
-    function setHours(f, t) {
-      hourFrom = f;
-      hourTo = t;
-      document.getElementById('hour-from').value = f;
-      document.getElementById('hour-to').value = t;
-      const mobileFrom = document.getElementById('mobile-hour-from');
-      const mobileTo = document.getElementById('mobile-hour-to');
-      if (mobileFrom) mobileFrom.value = f;
-      if (mobileTo) mobileTo.value = t;
+
+    function selectAllHours() {
+      selectedHours = new Set([0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23]);
+      updateHourButtonsUI();
       renderTable();
       render5pmSession();
       if(typeof renderCalendar === 'function') renderCalendar();
       updateMobileFilterUI();
+    }
+
+    function selectNoHours() {
+      selectedHours.clear();
+      updateHourButtonsUI();
+      renderTable();
+      render5pmSession();
+      if(typeof renderCalendar === 'function') renderCalendar();
+      updateMobileFilterUI();
+    }
+
+    function selectHoursRange(from, to) {
+      selectedHours.clear();
+      if (from <= to) {
+        for (let h = from; h <= to; h++) selectedHours.add(h);
+      } else {
+        // Wrap around midnight (e.g., 17-23 then 0-4)
+        for (let h = from; h <= 23; h++) selectedHours.add(h);
+        for (let h = 0; h <= to; h++) selectedHours.add(h);
+      }
+      updateHourButtonsUI();
+      renderTable();
+      render5pmSession();
+      if(typeof renderCalendar === 'function') renderCalendar();
+      updateMobileFilterUI();
+    }
+
+    function invertHours() {
+      const newSet = new Set();
+      for (let h = 0; h < 24; h++) {
+        if (!selectedHours.has(h)) newSet.add(h);
+      }
+      selectedHours = newSet;
+      updateHourButtonsUI();
+      renderTable();
+      render5pmSession();
+      if(typeof renderCalendar === 'function') renderCalendar();
+      updateMobileFilterUI();
+    }
+
+    function updateHourButtonsUI() {
+      // Update both desktop and mobile hour buttons
+      document.querySelectorAll('[data-hour]').forEach(btn => {
+        const h = parseInt(btn.dataset.hour);
+        btn.classList.toggle('active', selectedHours.has(h));
+      });
+    }
+
+    function populateHourButtons() {
+      // Populate desktop hour buttons
+      const container = document.getElementById('hour-buttons');
+      if (container) {
+        container.innerHTML = '';
+        for (let h = 0; h < 24; h++) {
+          const ampm = h >= 12 ? 'p' : 'a';
+          const disp = h === 0 ? 12 : h > 12 ? h - 12 : h;
+          const btn = document.createElement('button');
+          btn.className = 'hour-btn' + (selectedHours.has(h) ? ' active' : '');
+          btn.dataset.hour = h;
+          btn.textContent = disp + ampm;
+          btn.onclick = () => toggleHour(h);
+          container.appendChild(btn);
+        }
+      }
+
+      // Populate mobile hour buttons
+      const mobileContainer = document.getElementById('mobile-hour-buttons');
+      if (mobileContainer) {
+        mobileContainer.innerHTML = '';
+        for (let h = 0; h < 24; h++) {
+          const ampm = h >= 12 ? 'p' : 'a';
+          const disp = h === 0 ? 12 : h > 12 ? h - 12 : h;
+          const btn = document.createElement('button');
+          btn.className = 'mobile-filter-btn' + (selectedHours.has(h) ? ' active' : '');
+          btn.dataset.hour = h;
+          btn.textContent = disp + ampm;
+          btn.style.minWidth = '36px';
+          btn.style.padding = '4px 6px';
+          btn.onclick = () => toggleHour(h);
+          mobileContainer.appendChild(btn);
+        }
+      }
+    }
+
+    // Legacy compatibility - map to new functions
+    function updateHourRange() {
+      // Called by old dropdowns - now just uses selectedHours directly
+      renderTable();
+      render5pmSession();
+      if(typeof renderCalendar === 'function') renderCalendar();
+      updateMobileFilterUI();
+    }
+
+    function setHours(f, t) {
+      selectHoursRange(f, t);
     }
 
     document.addEventListener('DOMContentLoaded', function() {
@@ -9479,17 +9579,19 @@ function populateDatePicker() {
       selectedDays = new Set([0,1,2,3,4,5,6]);
       selectedOccs = new Set([1,2,3,4,5]);
       selectedDates.clear(); useDateFilter = false;
+      selectedHours = new Set([0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23]);
       hourFrom = 0; hourTo = 23; levelSize = 250;
       visibleColumns = new Set(ALL_COLUMNS.filter(c => c.default).map(c => c.id));
       visibleDTCols = new Set(DAY_TOTAL_COLS.filter(c => c.default).map(c => c.id));
       showDayCols = true; showPercentiles = false;
       sortColumn = 'date'; sortDirection = 'desc'; sortHour = null;
       columnFilters = [];
-      
+
       document.querySelectorAll('[data-year]').forEach(b => b.classList.add('active'));
       document.querySelectorAll('[data-month]').forEach(b => b.classList.add('active'));
       document.querySelectorAll('[data-day]').forEach(b => b.classList.add('active'));
       document.querySelectorAll('[data-occ]').forEach(b => b.classList.add('active'));
+      document.querySelectorAll('[data-hour]').forEach(b => b.classList.add('active'));
       document.getElementById('hour-from').value = 0;
       document.getElementById('hour-to').value = 23;
       document.getElementById('level-size').value = 250;
