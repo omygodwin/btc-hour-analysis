@@ -1915,11 +1915,11 @@
               <div style="display:flex;gap:8px;margin-bottom:8px;flex-wrap:wrap;">
                 <div style="flex:1;min-width:120px;">
                   <label style="font-size:0.65rem;color:var(--text-muted);display:block;margin-bottom:4px;">From Hour:</label>
-                  <select id="mobile-hour-from" class="mobile-settings-input" style="width:100%;" onchange="updateHourRange()"></select>
+                  <select id="mobile-hour-from" class="mobile-settings-input" style="width:100%;" onchange="document.getElementById('hour-from').value=this.value; updateHourRange();"></select>
                 </div>
                 <div style="flex:1;min-width:120px;">
                   <label style="font-size:0.65rem;color:var(--text-muted);display:block;margin-bottom:4px;">To Hour:</label>
-                  <select id="mobile-hour-to" class="mobile-settings-input" style="width:100%;" onchange="updateHourRange()"></select>
+                  <select id="mobile-hour-to" class="mobile-settings-input" style="width:100%;" onchange="document.getElementById('hour-to').value=this.value; updateHourRange();"></select>
                 </div>
               </div>
               <div class="mobile-filter-btns">
