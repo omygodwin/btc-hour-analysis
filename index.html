@@ -284,69 +284,6 @@
     .btc-sym { font-size: 1.2rem; background: linear-gradient(135deg, #f7931a, #ffc73b); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
     .sub { display: block; font-size: 0.55rem; color: var(--text-muted); margin-top: 1px; }
 
-    /* Live Indicator */
-    .live-indicator {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      padding: 3px 8px;
-      background: rgba(74, 222, 128, 0.1);
-      border: 1px solid rgba(74, 222, 128, 0.3);
-      border-radius: 12px;
-      font-size: 0.65rem;
-      font-weight: 600;
-      color: var(--accent-green);
-      cursor: pointer;
-      transition: all 0.2s ease;
-      user-select: none;
-      margin-left: 12px;
-    }
-    .live-indicator:hover {
-      background: rgba(74, 222, 128, 0.2);
-      border-color: rgba(74, 222, 128, 0.5);
-      transform: scale(1.05);
-    }
-    .live-indicator:active {
-      transform: scale(0.95);
-    }
-    .live-indicator::before {
-      content: '';
-      width: 8px;
-      height: 8px;
-      background: var(--accent-green);
-      border-radius: 50%;
-      animation: pulse 2s ease-in-out infinite;
-    }
-    @keyframes pulse {
-      0%, 100% { opacity: 1; }
-      50% { opacity: 0.5; }
-    }
-
-    @media (max-width: 768px) {
-      .live-indicator {
-        font-size: 0.55rem;
-        padding: 2px 6px;
-        gap: 4px;
-        margin-left: 8px;
-      }
-      .live-indicator::before {
-        width: 6px;
-        height: 6px;
-      }
-    }
-
-    @media (max-width: 480px) {
-      .live-indicator {
-        font-size: 0.5rem;
-        padding: 2px 5px;
-        gap: 3px;
-        margin-left: 6px;
-      }
-      .live-indicator::before {
-        width: 5px;
-        height: 5px;
-      }
-    }
 
     .header-stats { display: flex; gap: 8px; }
     .stat { display: flex; flex-direction: column; align-items: center; padding: 4px 10px; background: rgba(255,255,255,0.04); border-radius: 5px; border: 1px solid var(--border-medium); }
@@ -1189,32 +1126,32 @@
   color:#fff;
 }
 
-/* Live Status Indicator */
-.live-status-container {
-  position: fixed;
-  top: 65px;
-  right: 20px;
-  margin: 0;
-  z-index: 1001;
-}
-
+/* Live Status Indicator - positioned in nav bar */
 .live-status-indicator {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  padding: 5px 12px;
+  gap: 5px;
+  padding: 4px 10px;
   background: rgba(74, 222, 128, 0.1);
   border: 1px solid rgba(74, 222, 128, 0.3);
-  border-radius: 4px;
-  font-size: 11px;
-  font-weight: 500;
+  border-radius: 12px;
+  font-size: 0.65rem;
+  font-weight: 600;
+  color: var(--accent-green);
   cursor: pointer;
   transition: all 0.2s ease;
+  user-select: none;
+  margin-left: auto;
 }
 
 .live-status-indicator:hover {
-  background: rgba(74, 222, 128, 0.15);
+  background: rgba(74, 222, 128, 0.2);
   border-color: rgba(74, 222, 128, 0.5);
+  transform: scale(1.02);
+}
+
+.live-status-indicator:active {
+  transform: scale(0.98);
 }
 
 .live-dot {
@@ -1222,12 +1159,12 @@
   height: 8px;
   border-radius: 50%;
   background: #4ade80;
-  animation: pulse 2s ease-in-out infinite;
+  animation: livePulse 2s ease-in-out infinite;
 }
 
 .live-status-indicator.loading .live-dot {
   background: #fbbf24;
-  animation: pulse 1s ease-in-out infinite;
+  animation: livePulse 1s ease-in-out infinite;
 }
 
 .live-status-indicator.error .live-dot {
@@ -1237,48 +1174,33 @@
 
 .live-status-indicator.refreshing .live-dot {
   background: #60a5fa;
-  animation: pulse 0.5s ease-in-out infinite;
+  animation: livePulse 0.5s ease-in-out infinite;
 }
 
-@keyframes pulse {
+.live-status-indicator.disabled .live-dot,
+.live-status-indicator.stopped .live-dot {
+  background: #6b7280;
+  animation: none;
+}
+
+@keyframes livePulse {
   0%, 100% { opacity: 1; }
   50% { opacity: 0.4; }
 }
 
 .live-text {
-  color: var(--text-primary);
+  color: inherit;
 }
 
 @media (max-width: 768px) {
-  .live-status-container {
-    top: 55px;
-    right: 10px;
-  }
   .live-status-indicator {
-    font-size: 9px;
-    padding: 3px 6px;
-    gap: 3px;
+    font-size: 0.55rem;
+    padding: 3px 7px;
+    gap: 4px;
   }
   .live-dot {
     width: 6px;
     height: 6px;
-  }
-}
-
-/* Show compact "Live" text on mobile, full details on hover/desktop */
-.live-status-indicator .live-text-full {
-  display: inline;
-}
-.live-status-indicator .live-text-short {
-  display: none;
-}
-
-@media (max-width: 768px) {
-  .live-status-indicator .live-text-full {
-    display: none !important;
-  }
-  .live-status-indicator .live-text-short {
-    display: inline !important;
   }
 }
 </style>
@@ -1324,18 +1246,11 @@
       <button class="tab-btn" onclick="switchTab('hourview')">🕐 Hour View</button>
       <button class="tab-btn" onclick="switchTab('calendar')">🗓 Calendar</button>
       <button class="tab-btn" onclick="switchTab('query')">🔎 Query</button>
-    </nav>
-
-    <!-- Live Status Indicator - Fixed position, visible across all tabs -->
-    <div class="live-status-container">
-      <div class="live-status-indicator" id="live-status">
+      <div class="live-status-indicator" id="live-status" onclick="manualRefresh()" title="Click to refresh data">
         <span class="live-dot"></span>
-        <span class="live-text">
-          <span class="live-text-short">Live</span>
-          <span class="live-text-full">Initializing...</span>
-        </span>
+        <span class="live-text">Live</span>
       </div>
-    </div>
+    </nav>
 
     <!-- Overview Tab -->
     <div id="tab-overview" class="tab-content active">
@@ -1358,7 +1273,6 @@
         <button class="tb-btn mobile-hide" id="btn-pct" onclick="togglePercentiles()">📈 Pctiles</button>
         <button class="tb-btn filter-btn mobile-hide" id="btn-col-filter" onclick="toggleColFilterPanel()">🔍 ColFilter</button>
         <button class="tb-btn mobile-hide" id="btn-rsi" onclick="toggleRsiSettings()" style="background:rgba(167,139,250,0.1);border-color:rgba(167,139,250,0.3);color:var(--accent-purple)">📉 RSI</button>
-        <button class="tb-btn mobile-hide" id="btn-refresh" onclick="manualRefresh()" title="Refresh live data">🔄 Refresh</button>
 
         <div class="tb-group">
           <label>Font:</label>
@@ -1594,7 +1508,6 @@
         <div class="day-view-header-top">
           <div style="display: flex; align-items: center;">
             <div class="day-view-title" id="day-view-title">Select a Date</div>
-            <span class="live-indicator" onclick="manualRefresh()" title="Click to refresh live data">Live</span>
           </div>
           <button class="day-view-collapse-btn collapsed" id="day-view-collapse-btn" onclick="toggleDayViewStats()">▼</button>
         </div>
@@ -1649,7 +1562,6 @@
     <!-- Calendar View Tab -->
     <div id="tab-calendar" class="tab-content">
       <div class="calendar-toolbar">
-        <span class="live-indicator" onclick="manualRefresh()" title="Click to refresh live data">Live</span>
         <label>Color By:</label>
         <select id="calendar-color-by" onchange="renderCalendar()">
           <option value="dMxToHr" selected>Max DUR/DLR to Hour</option>
@@ -1694,7 +1606,6 @@
             <h1 style="color:#a78bfa;"><span class="btc-sym">₿</span> 5PM Session Analysis</h1>
             <span class="sub">5PM Previous Day → 4PM Current Day • Cumulative Ranges • Eastern Time</span>
           </div>
-          <span class="live-indicator" onclick="manualRefresh()" title="Click to refresh live data">Live</span>
         </div>
         <div class="header-stats">
           <div class="stat"><span class="stat-val" id="pm5-stat-days">0</span><span class="stat-lbl">Days</span></div>
@@ -1781,7 +1692,6 @@
       <div class="day-view-header" style="background:linear-gradient(180deg, rgba(167,139,250,0.15) 0%, var(--bg-primary) 100%);border-bottom-color:rgba(167,139,250,0.3);">
         <div style="display: flex; align-items: center; margin-bottom: 8px;">
           <div class="day-view-title" id="hour-view-title" style="color:var(--accent-purple); margin-bottom: 0;">Select an Hour</div>
-          <span class="live-indicator" onclick="manualRefresh()" title="Click to refresh live data">Live</span>
         </div>
         <div class="day-stats-grid" id="hour-stats-grid"></div>
       </div>
@@ -1820,7 +1730,6 @@
     <!-- Day of Week Analysis Tab -->
     <div id="tab-dowanalysis" class="tab-content">
       <div class="calendar-toolbar">
-        <span class="live-indicator" onclick="manualRefresh()" title="Click to refresh live data">Live</span>
         <h2 style="margin: 0; font-size: 0.85rem; color: var(--accent-btc);">📈 Day of Week Analysis</h2>
         <div style="display: flex; gap: 6px; align-items: center;">
           <label style="font-size: 0.65rem;">Min Sample Size:</label>
@@ -3396,10 +3305,20 @@
 
             // Update UI (only if not first load)
             if (document.getElementById('app').classList.contains('visible')) {
+              // Always render the main table (overview)
               renderTable();
-              if (window.location.hash === '#dayview') renderDayView();
-              if (window.location.hash === '#hourview') renderHourView();
-              if (window.location.hash === '#pm5session') render5pmSession();
+
+              // Also refresh the currently active tab
+              const activeTab = document.querySelector('.tab-content.active');
+              if (activeTab) {
+                const tabId = activeTab.id;
+                if (tabId === 'tab-dayview' && typeof renderDayView === 'function') renderDayView();
+                else if (tabId === 'tab-hourview' && typeof renderHourView === 'function') renderHourView();
+                else if (tabId === 'tab-pm5session' && typeof render5pmSession === 'function') render5pmSession();
+                else if (tabId === 'tab-calendar' && typeof renderCalendar === 'function') renderCalendar();
+                else if (tabId === 'tab-dowanalysis' && typeof renderDOWAnalysis === 'function') renderDOWAnalysis();
+                else if (tabId === 'tab-query' && typeof renderQueryResults === 'function') renderQueryResults();
+              }
               console.log('✓ Data refreshed and UI updated');
             } else {
               // First load - initialize UI
@@ -3441,28 +3360,22 @@
       // Update status class
       indicator.className = 'live-status-indicator ' + statusInfo.status;
 
-      // Update text - set both short and full versions
-      const textShort = indicator.querySelector('.live-text-short');
-      const textFull = indicator.querySelector('.live-text-full');
-
-      if (textShort && textFull) {
-        // Short text: just status
-        const shortTexts = {
+      // Update text element
+      const textEl = indicator.querySelector('.live-text');
+      if (textEl) {
+        const statusTexts = {
           'loading': 'Loading',
           'live': 'Live',
-          'refreshing': 'Sync',
+          'refreshing': 'Syncing',
           'error': 'Error',
           'disabled': 'Off',
           'stopped': 'Off'
         };
-        textShort.textContent = shortTexts[statusInfo.status] || 'Live';
-
-        // Full text: complete message
-        textFull.textContent = statusInfo.message;
+        textEl.textContent = statusTexts[statusInfo.status] || 'Live';
       }
 
       // Update title with details
-      const details = `Historical: ${statusInfo.historicalBarCount.toLocaleString()} bars\nLive: ${statusInfo.liveBarCount.toLocaleString()} bars\nLast update: ${statusInfo.timestamp.toLocaleTimeString()}`;
+      const details = `${statusInfo.message}\nHistorical: ${statusInfo.historicalBarCount.toLocaleString()} bars\nLive: ${statusInfo.liveBarCount.toLocaleString()} bars\nLast update: ${statusInfo.timestamp.toLocaleTimeString()}\n\nClick to refresh`;
       indicator.title = details;
     }
 
