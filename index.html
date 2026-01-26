@@ -2337,15 +2337,17 @@
     const MINS = ['00', '05', '10', '15', '20', '25', '30', '35', '40', '45', '50', '55'];
     
     const ALL_COLUMNS = [
+      // ===== RANGE METRICS (grouped together) =====
       { id: 'rng', label: 'Rng', desc: 'Range', default: false, gradient: 'orange', group: 'rng' },
+      { id: 'rngPct', label: 'Rng%', desc: 'Hourly Range Percentile (0-100%)', default: false, gradient: 'orange', group: 'rng' },
+      { id: 'rngRk', label: 'Rng#', desc: 'Range Rank', default: false, gradient: 'orange-inv', group: 'rank' },
       { id: 'ur', label: 'UR', desc: 'Upper Rng', default: false, gradient: 'orange', group: 'urlr' },
+      { id: 'urRk', label: 'UR#', desc: 'Upper Rng Rank', default: false, gradient: 'orange-inv', group: 'rank' },
       { id: 'lr', label: 'LR', desc: 'Lower Rng', default: false, gradient: 'orange', group: 'urlr' },
+      { id: 'lrRk', label: 'LR#', desc: 'Lower Rng Rank', default: false, gradient: 'orange-inv', group: 'rank' },
       { id: 'mxr', label: 'MxR', desc: 'Max Range', default: true, gradient: 'orange', group: 'mxr' },
       { id: 'mxrPct', label: 'MxR%', desc: 'Max Range Percentile (0-100%)', default: true, gradient: 'orange', group: 'mxr' },
       { id: 'mxrRk', label: 'MxR#', desc: 'Max Rng Rank', default: false, gradient: 'orange-inv', group: 'rank' },
-      { id: 'rngRk', label: 'Rng#', desc: 'Range Rank', default: false, gradient: 'orange-inv', group: 'rank' },
-      { id: 'urRk', label: 'UR#', desc: 'Upper Rng Rank', default: false, gradient: 'orange-inv', group: 'rank' },
-      { id: 'lrRk', label: 'LR#', desc: 'Lower Rng Rank', default: false, gradient: 'orange-inv', group: 'rank' },
       { id: 'up', label: '#Up', desc: 'Lvls Up', default: false, gradient: null },
       { id: 'dn', label: '#Dn', desc: 'Lvls Down', default: false, gradient: null },
       { id: 'totl', label: 'TotL', desc: 'Total Levels', default: false, gradient: 'orange', group: 'mxl' },
@@ -2442,8 +2444,6 @@
       { id: 'ah4pmDn', label: 'AH4D', desc: 'Down range to 4pm: hour close - min to 4pm', default: false, gradient: 'orange', group: 'ah4pm' },
       { id: 'ah4pmMx', label: 'AH4Mx', desc: 'Max of up/down range to 4pm', default: false, gradient: 'orange', group: 'ah4pm' },
       { id: 'ah4pmRng', label: 'AH4Rng', desc: 'H-L range from close to 4pm', default: false, gradient: 'orange', group: 'ah4pm' },
-      // Hourly range percentile
-      { id: 'rngPct', label: 'Rng%', desc: 'Hourly Range Percentile (0-100%)', default: false, gradient: 'orange', group: 'rng' },
       // Strength indicators
       { id: 'buyStr', label: 'BuyStr', desc: 'Buy Strength: (C-L)/(H-L)*100', default: false, gradient: 'orange', group: 'strength' },
       { id: 'sellStr', label: 'SellStr', desc: 'Sell Strength: (H-C)/(H-L)*100', default: false, gradient: 'orange', group: 'strength' },
