@@ -1959,16 +1959,32 @@
             </div>
 
             <div class="mobile-filter-section">
-              <h3>Close-to-Rest (CR) Presets</h3>
-              <div class="mobile-filter-btns" style="margin-bottom:8px;">
-                <button class="mobile-filter-btn quick" onclick="setCRAllCols()">All</button>
-                <button class="mobile-filter-btn none-btn" onclick="setCRNoneCols()">None</button>
-                <button class="mobile-filter-btn quick" onclick="setCRMaxCols()">MxR Only</button>
-                <button class="mobile-filter-btn quick" onclick="setCR3055Cols()">:30-:55</button>
-                <button class="mobile-filter-btn quick" onclick="setCR4555Cols()">:45-:55</button>
+              <h3>5-Minute Interval Range Presets</h3>
+              <div style="font-size:0.65rem;color:var(--text-muted);margin-bottom:8px;">Combined (Open & Close ranges):</div>
+              <div class="mobile-filter-btns" style="margin-bottom:12px;">
+                <button class="mobile-filter-btn quick" onclick="setAllIntervalCols()">All 5-min</button>
+                <button class="mobile-filter-btn none-btn" onclick="setNoIntervalCols()">None</button>
+                <button class="mobile-filter-btn quick" onclick="setAllIntervalMxRCols()">All MxR</button>
               </div>
-              <div style="font-size:0.65rem;color:var(--text-muted);margin-bottom:4px;">Individual minutes:</div>
-              <div class="mobile-filter-btns" style="flex-wrap:wrap;gap:4px;">
+
+              <div style="font-size:0.65rem;color:var(--accent-btc);margin-bottom:4px;font-weight:500;">Close-to-Rest (vs Close):</div>
+              <div class="mobile-filter-btns" style="margin-bottom:8px;">
+                <button class="mobile-filter-btn quick" onclick="setCRAllCols()">All CR</button>
+                <button class="mobile-filter-btn none-btn" onclick="setCRNoneCols()">None</button>
+                <button class="mobile-filter-btn quick" onclick="setCRMaxCols()">MxR</button>
+                <button class="mobile-filter-btn quick" onclick="setCR3055Cols()">:30-:55</button>
+              </div>
+
+              <div style="font-size:0.65rem;color:var(--accent-blue);margin-bottom:4px;font-weight:500;">Open-to-Bar (vs Open):</div>
+              <div class="mobile-filter-btns" style="margin-bottom:8px;">
+                <button class="mobile-filter-btn quick" onclick="setORAllCols()">All OR</button>
+                <button class="mobile-filter-btn none-btn" onclick="setORNoneCols()">None</button>
+                <button class="mobile-filter-btn quick" onclick="setORMaxCols()">MxR</button>
+                <button class="mobile-filter-btn quick" onclick="setOR3055Cols()">:30-:55</button>
+              </div>
+
+              <div style="font-size:0.65rem;color:var(--text-muted);margin-bottom:4px;">Individual minutes (CR):</div>
+              <div class="mobile-filter-btns" style="flex-wrap:wrap;gap:4px;margin-bottom:8px;">
                 <button class="mobile-filter-btn" onclick="setCRCols('00')">:00</button>
                 <button class="mobile-filter-btn" onclick="setCRCols('05')">:05</button>
                 <button class="mobile-filter-btn" onclick="setCRCols('10')">:10</button>
@@ -1980,6 +1996,21 @@
                 <button class="mobile-filter-btn" onclick="setCRCols('40')">:40</button>
                 <button class="mobile-filter-btn" onclick="setCRCols('45')">:45</button>
                 <button class="mobile-filter-btn" onclick="setCRCols('50')">:50</button>
+              </div>
+              <div style="font-size:0.65rem;color:var(--text-muted);margin-bottom:4px;">Individual minutes (OR):</div>
+              <div class="mobile-filter-btns" style="flex-wrap:wrap;gap:4px;">
+                <button class="mobile-filter-btn" onclick="setORCols('00')">:00</button>
+                <button class="mobile-filter-btn" onclick="setORCols('05')">:05</button>
+                <button class="mobile-filter-btn" onclick="setORCols('10')">:10</button>
+                <button class="mobile-filter-btn" onclick="setORCols('15')">:15</button>
+                <button class="mobile-filter-btn" onclick="setORCols('20')">:20</button>
+                <button class="mobile-filter-btn" onclick="setORCols('25')">:25</button>
+                <button class="mobile-filter-btn" onclick="setORCols('30')">:30</button>
+                <button class="mobile-filter-btn" onclick="setORCols('35')">:35</button>
+                <button class="mobile-filter-btn" onclick="setORCols('40')">:40</button>
+                <button class="mobile-filter-btn" onclick="setORCols('45')">:45</button>
+                <button class="mobile-filter-btn" onclick="setORCols('50')">:50</button>
+                <button class="mobile-filter-btn" onclick="setORCols('55')">:55</button>
               </div>
             </div>
 
@@ -2393,6 +2424,74 @@
       { id: 'crLR50', label: 'LR50', desc: ':50 close to rest of hour low', default: false, gradient: 'orange', group: 'cr50' },
       { id: 'crRng50', label: 'Rng50', desc: ':50 close to rest of hour total range', default: false, gradient: 'orange', group: 'cr50' },
       { id: 'crMxR50', label: 'MxR50', desc: ':50 close to rest of hour max range', default: false, gradient: 'orange', group: 'cr50' },
+
+      // ===== VOLATILITY METRICS =====
+      { id: 'hVol', label: 'hVol', desc: 'Hourly volatility (sum of bar ranges / hour range)', default: false, gradient: 'orange', group: 'hvol' },
+      { id: 'hVolRaw', label: 'hVolR', desc: 'Hourly volatility raw (sum of bar ranges)', default: false, gradient: 'orange', group: 'hvol' },
+      { id: 'cumVol5pm', label: 'cVol', desc: 'Cumulative volatility since 5PM (per hour avg)', default: false, gradient: 'orange', group: 'cvol' },
+      { id: 'cumVolRaw5pm', label: 'cVolR', desc: 'Cumulative volatility raw since 5PM', default: false, gradient: 'orange', group: 'cvol' },
+
+      // ===== OPEN-TO-BAR RANGE METRICS (from hour open to running H/L through each minute) =====
+      // :00 bar
+      { id: 'orUR00', label: 'oUR00', desc: ':00 running high - hour open', default: false, gradient: 'orange', group: 'or00' },
+      { id: 'orLR00', label: 'oLR00', desc: 'hour open - :00 running low', default: false, gradient: 'orange', group: 'or00' },
+      { id: 'orRng00', label: 'oRng00', desc: ':00 running range (high - low)', default: false, gradient: 'orange', group: 'or00' },
+      { id: 'orMxR00', label: 'oMxR00', desc: ':00 max of upper/lower from open', default: false, gradient: 'orange', group: 'or00' },
+      // :05 bar
+      { id: 'orUR05', label: 'oUR05', desc: ':05 running high - hour open', default: false, gradient: 'orange', group: 'or05' },
+      { id: 'orLR05', label: 'oLR05', desc: 'hour open - :05 running low', default: false, gradient: 'orange', group: 'or05' },
+      { id: 'orRng05', label: 'oRng05', desc: ':05 running range (high - low)', default: false, gradient: 'orange', group: 'or05' },
+      { id: 'orMxR05', label: 'oMxR05', desc: ':05 max of upper/lower from open', default: false, gradient: 'orange', group: 'or05' },
+      // :10 bar
+      { id: 'orUR10', label: 'oUR10', desc: ':10 running high - hour open', default: false, gradient: 'orange', group: 'or10' },
+      { id: 'orLR10', label: 'oLR10', desc: 'hour open - :10 running low', default: false, gradient: 'orange', group: 'or10' },
+      { id: 'orRng10', label: 'oRng10', desc: ':10 running range (high - low)', default: false, gradient: 'orange', group: 'or10' },
+      { id: 'orMxR10', label: 'oMxR10', desc: ':10 max of upper/lower from open', default: false, gradient: 'orange', group: 'or10' },
+      // :15 bar
+      { id: 'orUR15', label: 'oUR15', desc: ':15 running high - hour open', default: false, gradient: 'orange', group: 'or15' },
+      { id: 'orLR15', label: 'oLR15', desc: 'hour open - :15 running low', default: false, gradient: 'orange', group: 'or15' },
+      { id: 'orRng15', label: 'oRng15', desc: ':15 running range (high - low)', default: false, gradient: 'orange', group: 'or15' },
+      { id: 'orMxR15', label: 'oMxR15', desc: ':15 max of upper/lower from open', default: false, gradient: 'orange', group: 'or15' },
+      // :20 bar
+      { id: 'orUR20', label: 'oUR20', desc: ':20 running high - hour open', default: false, gradient: 'orange', group: 'or20' },
+      { id: 'orLR20', label: 'oLR20', desc: 'hour open - :20 running low', default: false, gradient: 'orange', group: 'or20' },
+      { id: 'orRng20', label: 'oRng20', desc: ':20 running range (high - low)', default: false, gradient: 'orange', group: 'or20' },
+      { id: 'orMxR20', label: 'oMxR20', desc: ':20 max of upper/lower from open', default: false, gradient: 'orange', group: 'or20' },
+      // :25 bar
+      { id: 'orUR25', label: 'oUR25', desc: ':25 running high - hour open', default: false, gradient: 'orange', group: 'or25' },
+      { id: 'orLR25', label: 'oLR25', desc: 'hour open - :25 running low', default: false, gradient: 'orange', group: 'or25' },
+      { id: 'orRng25', label: 'oRng25', desc: ':25 running range (high - low)', default: false, gradient: 'orange', group: 'or25' },
+      { id: 'orMxR25', label: 'oMxR25', desc: ':25 max of upper/lower from open', default: false, gradient: 'orange', group: 'or25' },
+      // :30 bar
+      { id: 'orUR30', label: 'oUR30', desc: ':30 running high - hour open', default: false, gradient: 'orange', group: 'or30' },
+      { id: 'orLR30', label: 'oLR30', desc: 'hour open - :30 running low', default: false, gradient: 'orange', group: 'or30' },
+      { id: 'orRng30', label: 'oRng30', desc: ':30 running range (high - low)', default: false, gradient: 'orange', group: 'or30' },
+      { id: 'orMxR30', label: 'oMxR30', desc: ':30 max of upper/lower from open', default: false, gradient: 'orange', group: 'or30' },
+      // :35 bar
+      { id: 'orUR35', label: 'oUR35', desc: ':35 running high - hour open', default: false, gradient: 'orange', group: 'or35' },
+      { id: 'orLR35', label: 'oLR35', desc: 'hour open - :35 running low', default: false, gradient: 'orange', group: 'or35' },
+      { id: 'orRng35', label: 'oRng35', desc: ':35 running range (high - low)', default: false, gradient: 'orange', group: 'or35' },
+      { id: 'orMxR35', label: 'oMxR35', desc: ':35 max of upper/lower from open', default: false, gradient: 'orange', group: 'or35' },
+      // :40 bar
+      { id: 'orUR40', label: 'oUR40', desc: ':40 running high - hour open', default: false, gradient: 'orange', group: 'or40' },
+      { id: 'orLR40', label: 'oLR40', desc: 'hour open - :40 running low', default: false, gradient: 'orange', group: 'or40' },
+      { id: 'orRng40', label: 'oRng40', desc: ':40 running range (high - low)', default: false, gradient: 'orange', group: 'or40' },
+      { id: 'orMxR40', label: 'oMxR40', desc: ':40 max of upper/lower from open', default: false, gradient: 'orange', group: 'or40' },
+      // :45 bar
+      { id: 'orUR45', label: 'oUR45', desc: ':45 running high - hour open', default: false, gradient: 'orange', group: 'or45' },
+      { id: 'orLR45', label: 'oLR45', desc: 'hour open - :45 running low', default: false, gradient: 'orange', group: 'or45' },
+      { id: 'orRng45', label: 'oRng45', desc: ':45 running range (high - low)', default: false, gradient: 'orange', group: 'or45' },
+      { id: 'orMxR45', label: 'oMxR45', desc: ':45 max of upper/lower from open', default: false, gradient: 'orange', group: 'or45' },
+      // :50 bar
+      { id: 'orUR50', label: 'oUR50', desc: ':50 running high - hour open', default: false, gradient: 'orange', group: 'or50' },
+      { id: 'orLR50', label: 'oLR50', desc: 'hour open - :50 running low', default: false, gradient: 'orange', group: 'or50' },
+      { id: 'orRng50', label: 'oRng50', desc: ':50 running range (high - low)', default: false, gradient: 'orange', group: 'or50' },
+      { id: 'orMxR50', label: 'oMxR50', desc: ':50 max of upper/lower from open', default: false, gradient: 'orange', group: 'or50' },
+      // :55 bar (full hour)
+      { id: 'orUR55', label: 'oUR55', desc: ':55 running high - hour open (full hour)', default: false, gradient: 'orange', group: 'or55' },
+      { id: 'orLR55', label: 'oLR55', desc: 'hour open - :55 running low (full hour)', default: false, gradient: 'orange', group: 'or55' },
+      { id: 'orRng55', label: 'oRng55', desc: ':55 running range (full hour high - low)', default: false, gradient: 'orange', group: 'or55' },
+      { id: 'orMxR55', label: 'oMxR55', desc: ':55 max of upper/lower from open (full hour)', default: false, gradient: 'orange', group: 'or55' },
     ];
     
     const DAY_TOTAL_COLS = [
@@ -2445,6 +2544,9 @@
       // Top X hourly metrics (configurable X, default 7)
       { id: 'dTopXRngAvg', label: 'TopRng', desc: 'Avg of top X hourly ranges', default: false, gradient: 'orange' },
       { id: 'dTopXMxRAvg', label: 'TopMxR', desc: 'Avg of top X hourly max ranges', default: false, gradient: 'orange' },
+      // Volatility metrics
+      { id: 'dVola', label: 'dVol', desc: 'Day volatility (avg hourly vol ratio)', default: false, gradient: 'orange' },
+      { id: 'dVolaRaw', label: 'dVolR', desc: 'Day volatility raw (sum of all bar ranges)', default: false, gradient: 'orange' },
     ];
     
     // ==================== STATE ====================
@@ -2713,9 +2815,10 @@
       if (!container) return;
       container.innerHTML = '';
 
-      // Separate CR columns from other columns
+      // Separate CR and OR columns from other columns
       const crCols = ALL_COLUMNS.filter(c => c.id.startsWith('cr'));
-      const otherCols = ALL_COLUMNS.filter(c => !c.id.startsWith('cr'));
+      const orCols = ALL_COLUMNS.filter(c => c.id.startsWith('or'));
+      const otherCols = ALL_COLUMNS.filter(c => !c.id.startsWith('cr') && !c.id.startsWith('or'));
 
       // Render other columns first
       otherCols.forEach(col => {
@@ -2814,6 +2917,74 @@
         });
 
         container.appendChild(crSection);
+      }
+
+      // Add OR columns section header
+      if (orCols.length > 0) {
+        const orHeader = document.createElement('div');
+        orHeader.style.cssText = 'margin-top:16px;padding:8px 4px;background:rgba(100,149,237,0.1);border-radius:4px;font-weight:600;color:var(--accent-blue);font-size:0.75rem;cursor:pointer;display:flex;align-items:center;gap:8px;';
+        orHeader.innerHTML = `<span id="or-section-arrow" style="transition:transform 0.2s;">▼</span> Open-to-Bar Metrics (${orCols.length} columns)`;
+        orHeader.onclick = () => {
+          const section = document.getElementById('or-cols-section');
+          const arrow = document.getElementById('or-section-arrow');
+          if (section.style.display === 'none') {
+            section.style.display = 'block';
+            arrow.style.transform = 'rotate(0deg)';
+          } else {
+            section.style.display = 'none';
+            arrow.style.transform = 'rotate(-90deg)';
+          }
+        };
+        container.appendChild(orHeader);
+
+        const orSection = document.createElement('div');
+        orSection.id = 'or-cols-section';
+        orSection.style.cssText = 'padding-left:8px;border-left:2px solid rgba(100,149,237,0.3);margin-left:4px;';
+
+        // Group OR columns by minute
+        const orMinutes = ['00', '05', '10', '15', '20', '25', '30', '35', '40', '45', '50', '55'];
+        orMinutes.forEach(min => {
+          const minCols = orCols.filter(c => c.id.endsWith(min));
+          if (minCols.length > 0) {
+            const minHeader = document.createElement('div');
+            minHeader.style.cssText = 'margin-top:8px;padding:4px;font-size:0.65rem;color:var(--accent-btc);font-weight:500;';
+            minHeader.textContent = `:${min} Bar`;
+            orSection.appendChild(minHeader);
+
+            minCols.forEach(col => {
+              const item = document.createElement('div');
+              item.className = 'mobile-settings-item';
+              item.style.padding = '6px 8px';
+              item.style.cursor = 'pointer';
+              item.onclick = () => {
+                toggleColumn(col.id);
+                updateMobileColumnGrid();
+              };
+
+              const checkbox = document.createElement('input');
+              checkbox.type = 'checkbox';
+              checkbox.checked = visibleColumns.has(col.id);
+              checkbox.style.accentColor = 'var(--accent-blue)';
+              checkbox.onclick = (e) => e.stopPropagation();
+              checkbox.onchange = () => {
+                toggleColumn(col.id);
+              };
+
+              const label = document.createElement('span');
+              label.className = 'mobile-settings-label';
+              label.textContent = `${col.label} (${col.desc})`;
+              label.style.flex = '1';
+              label.style.marginLeft = '8px';
+              label.style.fontSize = '0.65rem';
+
+              item.appendChild(checkbox);
+              item.appendChild(label);
+              orSection.appendChild(item);
+            });
+          }
+        });
+
+        container.appendChild(orSection);
       }
     }
 
@@ -4069,6 +4240,43 @@
             }
           });
 
+          // Calculate open-to-bar range metrics (running H/L from hour open through each minute)
+          const orMetrics = {};
+          const orMinutes = [0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55];
+          let runningHigh = hd.o;
+          let runningLow = hd.o;
+          orMinutes.forEach(min => {
+            const minStr = min.toString().padStart(2, '0');
+            const bar = hourBars.find(b => b.etMin === min);
+            if (bar) {
+              // Update running high/low through this bar
+              runningHigh = Math.max(runningHigh, bar.high);
+              runningLow = Math.min(runningLow, bar.low);
+              const ur = Math.round(runningHigh - hd.o);
+              const lr = Math.round(hd.o - runningLow);
+              const rng = Math.round(runningHigh - runningLow);
+              orMetrics['orUR' + minStr] = ur;
+              orMetrics['orLR' + minStr] = lr;
+              orMetrics['orRng' + minStr] = rng;
+              orMetrics['orMxR' + minStr] = Math.max(ur, lr);
+            } else {
+              // If bar doesn't exist, use previous values (or null if first)
+              orMetrics['orUR' + minStr] = min === 0 ? null : orMetrics['orUR' + String(min - 5).padStart(2, '0')];
+              orMetrics['orLR' + minStr] = min === 0 ? null : orMetrics['orLR' + String(min - 5).padStart(2, '0')];
+              orMetrics['orRng' + minStr] = min === 0 ? null : orMetrics['orRng' + String(min - 5).padStart(2, '0')];
+              orMetrics['orMxR' + minStr] = min === 0 ? null : orMetrics['orMxR' + String(min - 5).padStart(2, '0')];
+            }
+          });
+
+          // Calculate hourly volatility (sum of individual bar ranges)
+          let hVolRaw = 0;
+          hourBars.forEach(bar => {
+            hVolRaw += Math.round(bar.high - bar.low);
+          });
+          const hourRange = Math.round(hd.h - hd.l);
+          // Volatility ratio: sum of bar ranges / hour range (higher = more back and forth movement)
+          const hVol = hourRange > 0 ? Math.round((hVolRaw / hourRange) * 100) / 100 : null;
+
           // Calculate max BXHL
           let maxBXHL = null;
           if (barXAfterHi != null && barXAfterLo != null) {
@@ -4187,6 +4395,13 @@
             rthBarDelta: null,
             // Close-to-rest-of-hour metrics for each 5-min bar
             ...crMetrics,
+            // Open-to-bar range metrics
+            ...orMetrics,
+            // Volatility metrics
+            hVol,
+            hVolRaw,
+            cumVol5pm: null, // Will be calculated in second pass
+            cumVolRaw5pm: null,
           };
 
           // Calculate strength indicators
@@ -4268,6 +4483,23 @@
           }
         }
         day.dRthRsiAvg = rthRsiCount > 0 ? Math.round((rthRsiSum / rthRsiCount) * 10) / 10 : null;
+
+        // Calculate day volatility (average hourly volatility ratio and sum of all bar ranges)
+        let dayVolRaw = 0;
+        let dayVolSum = 0;
+        let dayVolCount = 0;
+        getSortedHourKeys(day).forEach(h => {
+          const hd = day.hrs[h];
+          if (hd.m) {
+            if (hd.m.hVolRaw != null) dayVolRaw += hd.m.hVolRaw;
+            if (hd.m.hVol != null) {
+              dayVolSum += hd.m.hVol;
+              dayVolCount++;
+            }
+          }
+        });
+        day.dVolaRaw = dayVolRaw;
+        day.dVola = dayVolCount > 0 ? Math.round((dayVolSum / dayVolCount) * 100) / 100 : null;
       });
 
       // Calculate 5PM session metrics (5PM previous day to 4PM current day)
@@ -4407,6 +4639,8 @@
           const currentDayPm5Open = day.hrs[17].o;
           let p5RunH = currentDayPm5Open, p5RunL = currentDayPm5Open;
           let p5PrevCdrU = null, p5PrevCdrD = null, p5PrevMxcd = null;
+          let cumVolRaw5pm = 0;
+          let hoursElapsed5pm = 0;
 
           for (let h = 17; h <= 23; h++) {
             if (day.hrs[h] && day.hrs[h].m) {
@@ -4426,6 +4660,12 @@
               hd.m.p5CdrDActual = p5CdrD;
               hd.m.p5MxcdActual = p5Mxcd;
 
+              // Cumulative volatility since 5PM
+              cumVolRaw5pm += hd.m.hVolRaw || 0;
+              hoursElapsed5pm++;
+              hd.m.cumVolRaw5pm = cumVolRaw5pm;
+              hd.m.cumVol5pm = hoursElapsed5pm > 0 ? Math.round((cumVolRaw5pm / hoursElapsed5pm) * 100) / 100 : null;
+
               p5PrevCdrU = p5CdrU;
               p5PrevCdrD = p5CdrD;
               p5PrevMxcd = p5Mxcd;
@@ -4443,11 +4683,13 @@
           const prevDay = prevDateStr ? etDays[prevDateStr] : null;
 
           // Reset for continuation into next day (hours 0-16)
-          p5RunH = pm5Open;
-          p5RunL = pm5Open;
-          p5PrevCdrU = null;
-          p5PrevCdrD = null;
-          p5PrevMxcd = null;
+          let p5RunH = pm5Open;
+          let p5RunL = pm5Open;
+          let p5PrevCdrU = null;
+          let p5PrevCdrD = null;
+          let p5PrevMxcd = null;
+          let cumVolRaw5pm = 0;
+          let hoursElapsed5pm = 0;
 
           // First accumulate from 5PM-11PM of previous day
           if (prevDay) {
@@ -4455,6 +4697,8 @@
               if (prevDay.hrs[h]) {
                 p5RunH = Math.max(p5RunH, prevDay.hrs[h].h);
                 p5RunL = Math.min(p5RunL, prevDay.hrs[h].l);
+                cumVolRaw5pm += prevDay.hrs[h].m?.hVolRaw || 0;
+                hoursElapsed5pm++;
               }
             }
           }
@@ -4477,6 +4721,12 @@
               hd.m.p5CdrUActual = p5CdrU;
               hd.m.p5CdrDActual = p5CdrD;
               hd.m.p5MxcdActual = p5Mxcd;
+
+              // Cumulative volatility since 5PM
+              cumVolRaw5pm += hd.m.hVolRaw || 0;
+              hoursElapsed5pm++;
+              hd.m.cumVolRaw5pm = cumVolRaw5pm;
+              hd.m.cumVol5pm = hoursElapsed5pm > 0 ? Math.round((cumVolRaw5pm / hoursElapsed5pm) * 100) / 100 : null;
 
               p5PrevCdrU = p5CdrU;
               p5PrevCdrD = p5CdrD;
@@ -5384,7 +5634,11 @@ function populateDatePicker() {
       const s = {
         rng: [], urlr: [], mxr: [], mxl: [], rank: [], cl: [], oc: [], cdr: [], cdrRG: [], mxcd: [], rsi: [], sig: [], vol: [], bx: [], cons: [], consrev: [], obosrev: [], ah4pm: [], bars: [], interval: [], afterbar: [], maxrngbar: [], strength: [], m15rng: [],
         // Close-to-rest-of-hour metric groups (one per minute)
-        cr00: [], cr05: [], cr10: [], cr15: [], cr20: [], cr25: [], cr30: [], cr35: [], cr40: [], cr45: [], cr50: []
+        cr00: [], cr05: [], cr10: [], cr15: [], cr20: [], cr25: [], cr30: [], cr35: [], cr40: [], cr45: [], cr50: [],
+        // Open-to-bar range metric groups (one per minute)
+        or00: [], or05: [], or10: [], or15: [], or20: [], or25: [], or30: [], or35: [], or40: [], or45: [], or50: [], or55: [],
+        // Volatility groups
+        hvol: [], cvol: []
       };
       getSortedHourKeys(day).forEach(h => {
         const m = day.hrs[h].m;
@@ -5478,6 +5732,21 @@ function populateDatePicker() {
             if (m[key] != null) s[grp].push(m[key]);
           });
         });
+
+        // Open-to-bar range metrics (one group per minute)
+        const orMins = ['00', '05', '10', '15', '20', '25', '30', '35', '40', '45', '50', '55'];
+        orMins.forEach(min => {
+          const grp = 'or' + min;
+          ['orUR' + min, 'orLR' + min, 'orRng' + min, 'orMxR' + min].forEach(key => {
+            if (m[key] != null) s[grp].push(m[key]);
+          });
+        });
+
+        // Volatility metrics
+        if (m.hVol != null) s.hvol.push(m.hVol);
+        if (m.hVolRaw != null) s.hvol.push(m.hVolRaw);
+        if (m.cumVol5pm != null) s.cvol.push(m.cumVol5pm);
+        if (m.cumVolRaw5pm != null) s.cvol.push(m.cumVolRaw5pm);
       });
       const r = {};
       Object.keys(s).forEach(k => {
@@ -5501,7 +5770,11 @@ function populateDatePicker() {
           p5cdr: [], p5cdrRG: [], p5mxcd: [],
           bx: [], cons: [], consrev: [], obosrev: [], ah4pm: [], bars: [], interval: [], afterbar: [], maxrngbar: [], strength: [], m15rng: [],
           // Close-to-rest-of-hour metric groups (one per minute)
-          cr00: [], cr05: [], cr10: [], cr15: [], cr20: [], cr25: [], cr30: [], cr35: [], cr40: [], cr45: [], cr50: []
+          cr00: [], cr05: [], cr10: [], cr15: [], cr20: [], cr25: [], cr30: [], cr35: [], cr40: [], cr45: [], cr50: [],
+          // Open-to-bar range metric groups (one per minute)
+          or00: [], or05: [], or10: [], or15: [], or20: [], or25: [], or30: [], or35: [], or40: [], or45: [], or50: [], or55: [],
+          // Volatility groups
+          hvol: [], cvol: []
         };
 
         data.forEach(d => {
@@ -5608,6 +5881,21 @@ function populateDatePicker() {
               if (m[key] != null) s[h][grp].push(m[key]);
             });
           });
+
+          // Open-to-bar range metrics (one group per minute)
+          const orMins = ['00', '05', '10', '15', '20', '25', '30', '35', '40', '45', '50', '55'];
+          orMins.forEach(min => {
+            const grp = 'or' + min;
+            ['orUR' + min, 'orLR' + min, 'orRng' + min, 'orMxR' + min].forEach(key => {
+              if (m[key] != null) s[h][grp].push(m[key]);
+            });
+          });
+
+          // Volatility metrics
+          if (m.hVol != null) s[h].hvol.push(m.hVol);
+          if (m.hVolRaw != null) s[h].hvol.push(m.hVolRaw);
+          if (m.cumVol5pm != null) s[h].cvol.push(m.cumVol5pm);
+          if (m.cumVolRaw5pm != null) s[h].cvol.push(m.cumVolRaw5pm);
         });
       });
       const r = {};
@@ -5623,7 +5911,7 @@ function populateDatePicker() {
     }
     
     function calcDayTotalsStats(data) {
-      const s = { drng: [], durdlr: [], doc: [], doch: [], ddd: [], drev: [], d5pm: [], d5pmoc: [], weekly: [], woc: [], dRelVol: [], dRsi: [], dBars: [], dBarDelta: [], dHourlyMaxRng: [] };
+      const s = { drng: [], durdlr: [], doc: [], doch: [], ddd: [], drev: [], d5pm: [], d5pmoc: [], weekly: [], woc: [], dRelVol: [], dRsi: [], dBars: [], dBarDelta: [], dHourlyMaxRng: [], dvol: [] };
       data.forEach(d => {
         if (d.dRng != null) s.drng.push(d.dRng);
         if (d.dUR != null) s.durdlr.push(d.dUR);
@@ -5657,6 +5945,9 @@ function populateDatePicker() {
         if (d.dRthBarDelta != null) s.dBarDelta.push(d.dRthBarDelta);
         // Hourly max range
         if (d.dHourlyMaxRng != null) s.dHourlyMaxRng.push(d.dHourlyMaxRng);
+        // Volatility
+        if (d.dVola != null) s.dvol.push(d.dVola);
+        if (d.dVolaRaw != null) s.dvol.push(d.dVolaRaw);
       });
       return {
         drng: s.drng.length ? { min: Math.min(...s.drng), max: Math.max(...s.drng) } : { min: 0, max: 0 },
@@ -5673,6 +5964,7 @@ function populateDatePicker() {
         dBars: s.dBars.length ? { min: Math.min(...s.dBars), max: Math.max(...s.dBars) } : { min: 0, max: 288 },
         dBarDelta: s.dBarDelta.length ? { min: Math.min(...s.dBarDelta), max: Math.max(...s.dBarDelta) } : { min: -144, max: 144 },
         dHourlyMaxRng: s.dHourlyMaxRng.length ? { min: Math.min(...s.dHourlyMaxRng), max: Math.max(...s.dHourlyMaxRng) } : { min: 0, max: 2000 },
+        dvol: s.dvol.length ? { min: Math.min(...s.dvol), max: Math.max(...s.dvol) } : { min: 0, max: 10 },
       };
     }
     
@@ -8800,6 +9092,101 @@ function populateDatePicker() {
       minutes.forEach(min => {
         ['crUR' + min, 'crLR' + min, 'crRng' + min, 'crMxR' + min].forEach(id => visibleColumns.add(id));
       });
+      document.querySelectorAll('#col-grid input').forEach((cb, i) => cb.checked = visibleColumns.has(ALL_COLUMNS[i].id));
+      renderTable();
+      updateMobileColumnGrid();
+    }
+
+    // Open-to-bar range (OR) preset functions
+    function setORCols(minute) {
+      // Set columns for a specific minute (e.g., '00', '05', etc.)
+      const cols = ['orUR' + minute, 'orLR' + minute, 'orRng' + minute, 'orMxR' + minute];
+      visibleColumns = new Set(cols);
+      document.querySelectorAll('#col-grid input').forEach((cb, i) => cb.checked = visibleColumns.has(ALL_COLUMNS[i].id));
+      renderTable();
+      updateMobileColumnGrid();
+    }
+
+    function setORAllCols() {
+      // Set all open-to-bar columns
+      const cols = [];
+      ['00', '05', '10', '15', '20', '25', '30', '35', '40', '45', '50', '55'].forEach(min => {
+        cols.push('orUR' + min, 'orLR' + min, 'orRng' + min, 'orMxR' + min);
+      });
+      visibleColumns = new Set(cols);
+      document.querySelectorAll('#col-grid input').forEach((cb, i) => cb.checked = visibleColumns.has(ALL_COLUMNS[i].id));
+      renderTable();
+      updateMobileColumnGrid();
+    }
+
+    function setORMaxCols() {
+      // Set only the MxR columns for all minutes
+      const cols = [];
+      ['00', '05', '10', '15', '20', '25', '30', '35', '40', '45', '50', '55'].forEach(min => {
+        cols.push('orMxR' + min);
+      });
+      visibleColumns = new Set(cols);
+      document.querySelectorAll('#col-grid input').forEach((cb, i) => cb.checked = visibleColumns.has(ALL_COLUMNS[i].id));
+      renderTable();
+      updateMobileColumnGrid();
+    }
+
+    function setORNoneCols() {
+      // Remove all OR columns from visible columns
+      const orIds = ALL_COLUMNS.filter(c => c.id.startsWith('or')).map(c => c.id);
+      orIds.forEach(id => visibleColumns.delete(id));
+      document.querySelectorAll('#col-grid input').forEach((cb, i) => cb.checked = visibleColumns.has(ALL_COLUMNS[i].id));
+      renderTable();
+      updateMobileColumnGrid();
+    }
+
+    function setOR3055Cols() {
+      // Set :30, :35, :40, :45, :50, :55 minute columns
+      const cols = [];
+      ['30', '35', '40', '45', '50', '55'].forEach(min => {
+        cols.push('orUR' + min, 'orLR' + min, 'orRng' + min, 'orMxR' + min);
+      });
+      visibleColumns = new Set(cols);
+      document.querySelectorAll('#col-grid input').forEach((cb, i) => cb.checked = visibleColumns.has(ALL_COLUMNS[i].id));
+      renderTable();
+      updateMobileColumnGrid();
+    }
+
+    // Combined interval presets (both CR and OR)
+    function setAllIntervalCols() {
+      // Set all CR and OR columns
+      const cols = [];
+      ['00', '05', '10', '15', '20', '25', '30', '35', '40', '45', '50'].forEach(min => {
+        cols.push('crUR' + min, 'crLR' + min, 'crRng' + min, 'crMxR' + min);
+      });
+      ['00', '05', '10', '15', '20', '25', '30', '35', '40', '45', '50', '55'].forEach(min => {
+        cols.push('orUR' + min, 'orLR' + min, 'orRng' + min, 'orMxR' + min);
+      });
+      visibleColumns = new Set(cols);
+      document.querySelectorAll('#col-grid input').forEach((cb, i) => cb.checked = visibleColumns.has(ALL_COLUMNS[i].id));
+      renderTable();
+      updateMobileColumnGrid();
+    }
+
+    function setNoIntervalCols() {
+      // Remove all CR and OR columns
+      const ids = ALL_COLUMNS.filter(c => c.id.startsWith('cr') || c.id.startsWith('or')).map(c => c.id);
+      ids.forEach(id => visibleColumns.delete(id));
+      document.querySelectorAll('#col-grid input').forEach((cb, i) => cb.checked = visibleColumns.has(ALL_COLUMNS[i].id));
+      renderTable();
+      updateMobileColumnGrid();
+    }
+
+    function setAllIntervalMxRCols() {
+      // Set only MxR columns for both CR and OR
+      const cols = [];
+      ['00', '05', '10', '15', '20', '25', '30', '35', '40', '45', '50'].forEach(min => {
+        cols.push('crMxR' + min);
+      });
+      ['00', '05', '10', '15', '20', '25', '30', '35', '40', '45', '50', '55'].forEach(min => {
+        cols.push('orMxR' + min);
+      });
+      visibleColumns = new Set(cols);
       document.querySelectorAll('#col-grid input').forEach((cb, i) => cb.checked = visibleColumns.has(ALL_COLUMNS[i].id));
       renderTable();
       updateMobileColumnGrid();
