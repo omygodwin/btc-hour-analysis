@@ -2107,6 +2107,9 @@
               <button id="mobile-btn-show-dt-cols" class="mobile-action-btn-large" onclick="toggleShowDayCols()" style="width:100%;margin-bottom:12px;">
                 <span id="mobile-show-dt-text">Show Day Totals</span>
               </button>
+              <button id="mobile-btn-pct" class="mobile-action-btn-large" onclick="togglePercentiles()" style="width:100%;margin-bottom:12px;">
+                <span id="mobile-pct-text">Show Percentiles</span>
+              </button>
             </div>
 
             <div class="mobile-filter-section">
@@ -8116,6 +8119,11 @@ function populateDatePicker() {
       showPercentiles = !showPercentiles;
       document.getElementById('btn-pct').classList.toggle('active', showPercentiles);
       document.getElementById('percentiles-container').style.display = showPercentiles ? 'block' : 'none';
+      // Update mobile button text
+      const mobilePctBtn = document.getElementById('mobile-pct-text');
+      if (mobilePctBtn) {
+        mobilePctBtn.textContent = showPercentiles ? 'Hide Percentiles' : 'Show Percentiles';
+      }
       renderTable();
     }
     function toggleDayOHLC() { showDayOHLC = !showDayOHLC; document.getElementById('btn-day-ohlc').classList.toggle('active', showDayOHLC); renderDayView(); }
@@ -9449,6 +9457,8 @@ function populateDatePicker() {
       document.getElementById('btn-day-cols').classList.add('active');
       document.getElementById('btn-pct').classList.remove('active');
       document.getElementById('percentiles-container').style.display = 'none';
+      const mobilePctBtn = document.getElementById('mobile-pct-text');
+      if (mobilePctBtn) mobilePctBtn.textContent = 'Show Percentiles';
       document.getElementById('gradient-mode').value = 'row';
       document.querySelectorAll('#col-grid input').forEach((cb, i) => cb.checked = ALL_COLUMNS[i].default);
       document.querySelectorAll('[data-dtcol]').forEach(cb => cb.checked = DAY_TOTAL_COLS.find(c => c.id === cb.dataset.dtcol)?.default);
