@@ -563,12 +563,11 @@
     .percentiles-note { font-size: 0.6rem; color: var(--text-muted); }
     .percentiles-table-wrap { overflow-x: auto; max-height: 200px; }
     .percentiles-table {
-      width: 100%;
       border-collapse: collapse;
       font-size: 0.6rem;
     }
     .percentiles-table th, .percentiles-table td {
-      padding: 3px 6px;
+      padding: 2px 4px;
       text-align: center;
       border: 1px solid rgba(247,147,26,0.15);
       white-space: nowrap;
@@ -6247,20 +6246,20 @@ function populateDatePicker() {
         return 38;
       };
 
-      // Build table HTML - use sticky positioning to align with main table
+      // Build table HTML - columns should auto-size to match main table
       // Date (65px) + Day (28px) + # (20px) = 113px for the P% column area
-      let html = '<table class="percentiles-table" style="table-layout:fixed;">';
+      let html = '<table class="percentiles-table">';
 
       // Header row 1: P% label + Day Totals header (if shown) + Hour headers
       html += '<thead><tr>';
-      html += '<th class="pct-corner" style="width:113px;min-width:113px;text-align:right;padding-right:8px;">P%</th>';
+      html += '<th class="pct-corner" style="min-width:113px;width:113px;text-align:right;padding-right:8px;">P%</th>';
 
       // Day total headers
       if (showDayCols && dtCols.length > 0) {
         dtCols.forEach((c, i) => {
           const w = getDTColWidth(c.id);
           const isLast = i === dtCols.length - 1;
-          html += `<th style="width:${w}px;min-width:${w}px;${isLast ? 'border-right:2px solid rgba(100,149,237,0.3);' : ''}" title="${c.desc}">${c.label}</th>`;
+          html += `<th style="min-width:${w}px;${isLast ? 'border-right:2px solid rgba(100,149,237,0.3);' : ''}" title="${c.desc}">${c.label}</th>`;
         });
       }
 
@@ -6272,28 +6271,28 @@ function populateDatePicker() {
 
       // Header row 2: Empty P% cell + Day total column labels + Hourly column labels
       html += '<tr>';
-      html += '<th class="pct-corner" style="width:113px;min-width:113px;"></th>';
+      html += '<th class="pct-corner" style="min-width:113px;width:113px;"></th>';
 
       // Day total column labels
       if (showDayCols && dtCols.length > 0) {
         dtCols.forEach((c, i) => {
           const w = getDTColWidth(c.id);
           const isLast = i === dtCols.length - 1;
-          html += `<th style="width:${w}px;min-width:${w}px;font-size:0.55rem;${isLast ? 'border-right:2px solid rgba(100,149,237,0.3);' : ''}">${c.label}</th>`;
+          html += `<th style="min-width:${w}px;font-size:0.55rem;${isLast ? 'border-right:2px solid rgba(100,149,237,0.3);' : ''}">${c.label}</th>`;
         });
       }
 
-      // Hourly column labels
+      // Hourly column labels - no fixed width, let them auto-size
       realHours.forEach(h => {
         cols.forEach((col, ci) => {
-          html += `<th style="font-size:0.55rem;${ci === 0 ? 'border-left:2px solid rgba(247,147,26,0.3);' : ''}" title="${col.desc}">${col.label}</th>`;
+          html += `<th style="font-size:0.55rem;padding:2px 4px;${ci === 0 ? 'border-left:2px solid rgba(247,147,26,0.3);' : ''}" title="${col.desc}">${col.label}</th>`;
         });
       });
       html += '</tr></thead><tbody>';
 
       // Percentile rows (descending: P90, P75, P50, P25, P10)
       percentiles.forEach(p => {
-        html += `<tr><td class="pct-label" style="width:113px;min-width:113px;text-align:right;padding-right:8px;">P${p}</td>`;
+        html += `<tr><td class="pct-label" style="min-width:113px;width:113px;text-align:right;padding-right:8px;">P${p}</td>`;
 
         // Day total percentiles
         if (showDayCols && dtCols.length > 0) {
@@ -6301,15 +6300,15 @@ function populateDatePicker() {
             const v = calcPct(dayColVals[c.id], p);
             const w = getDTColWidth(c.id);
             const isLast = i === dtCols.length - 1;
-            html += `<td style="width:${w}px;min-width:${w}px;${isLast ? 'border-right:2px solid rgba(100,149,237,0.3);' : ''}">${fmtPct(v)}</td>`;
+            html += `<td style="min-width:${w}px;${isLast ? 'border-right:2px solid rgba(100,149,237,0.3);' : ''}">${fmtPct(v)}</td>`;
           });
         }
 
-        // Hourly percentiles
+        // Hourly percentiles - no fixed width, let them auto-size
         realHours.forEach(h => {
           cols.forEach((col, ci) => {
             const v = calcPct(hourColVals[h][col.id], p);
-            html += `<td${ci === 0 ? ' style="border-left:2px solid rgba(247,147,26,0.3);"' : ''}>${fmtPct(v)}</td>`;
+            html += `<td style="padding:2px 4px;${ci === 0 ? 'border-left:2px solid rgba(247,147,26,0.3);' : ''}">${fmtPct(v)}</td>`;
           });
         });
         html += '</tr>';
