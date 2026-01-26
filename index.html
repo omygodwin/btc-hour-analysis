@@ -541,7 +541,61 @@
     .grad-orange { background: linear-gradient(90deg, #0d0d12 0%, rgb(251,146,60) 100%); }
     .grad-rg { background: linear-gradient(90deg, rgb(248,113,113) 0%, #0d0d12 50%, rgb(74,222,128) 100%); }
     .grad-purple { background: linear-gradient(90deg, #0d0d12 0%, rgb(167,139,250) 100%); }
-    
+
+    /* Percentiles Summary Section */
+    .percentiles-container {
+      background: rgba(247,147,26,0.08);
+      border: 1px solid rgba(247,147,26,0.3);
+      border-radius: 6px;
+      margin: 0 8px 8px 8px;
+      overflow: hidden;
+      flex-shrink: 0;
+    }
+    .percentiles-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 6px 12px;
+      background: rgba(247,147,26,0.12);
+      border-bottom: 1px solid rgba(247,147,26,0.2);
+    }
+    .percentiles-title { font-weight: 600; color: var(--accent-btc); font-size: 0.75rem; }
+    .percentiles-note { font-size: 0.6rem; color: var(--text-muted); }
+    .percentiles-table-wrap { overflow-x: auto; max-height: 200px; }
+    .percentiles-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.6rem;
+    }
+    .percentiles-table th, .percentiles-table td {
+      padding: 3px 6px;
+      text-align: center;
+      border: 1px solid rgba(247,147,26,0.15);
+      white-space: nowrap;
+    }
+    .percentiles-table th {
+      background: rgba(247,147,26,0.1);
+      color: var(--accent-btc);
+      font-weight: 600;
+      position: sticky;
+      top: 0;
+      z-index: 1;
+    }
+    .percentiles-table td { color: var(--text-secondary); }
+    .percentiles-table .pct-label {
+      font-weight: 600;
+      color: var(--accent-btc);
+      background: rgba(247,147,26,0.08);
+      position: sticky;
+      left: 0;
+      z-index: 2;
+    }
+    .percentiles-table th.pct-corner {
+      position: sticky;
+      left: 0;
+      z-index: 3;
+    }
+
     ::-webkit-scrollbar { width: 8px; height: 8px; }
     ::-webkit-scrollbar-track { background: var(--bg-primary); }
     ::-webkit-scrollbar-thumb { background: rgba(247,147,26,0.28); border-radius: 4px; }
@@ -1495,6 +1549,15 @@
             </select>
           </div>
         </div>
+      </div>
+
+      <!-- Percentiles Summary Section (sticky above table) -->
+      <div id="percentiles-container" class="percentiles-container" style="display:none;">
+        <div class="percentiles-header">
+          <span class="percentiles-title">📊 Percentiles</span>
+          <span class="percentiles-note">(Based on visible data)</span>
+        </div>
+        <div id="percentiles-table-wrap" class="percentiles-table-wrap"></div>
       </div>
 
       <div class="table-container" id="table-container">
@@ -5280,6 +5343,75 @@
         vals.forEach((x, i) => { if (day.hrs[x.h]?.m) day.hrs[x.h].m[m + 'Rk'] = i + 1; });
       });
     }
+
+    // Calculate dynamic mxrPct and rngPct based on visible hours only
+    function calcDynamicRangePct(day, visibleHours) {
+      // Collect mxr and rng values only from visible hours
+      const dayMxrValues = [];
+      const dayRngValues = [];
+      visibleHours.forEach(h => {
+        const m = day.hrs[h]?.m;
+        if (m && m.mxr != null) dayMxrValues.push(m.mxr);
+        if (m && m.rng != null) dayRngValues.push(m.rng);
+      });
+
+      // Calculate mxrPct
+      if (dayMxrValues.length > 0) {
+        const dayMxrMin = Math.min(...dayMxrValues);
+        const dayMxrMax = Math.max(...dayMxrValues);
+        const dayMxrRange = dayMxrMax - dayMxrMin;
+        visibleHours.forEach(h => {
+          const m = day.hrs[h]?.m;
+          if (m && m.mxr != null) {
+            if (dayMxrRange > 0) {
+              m.mxrPct = Math.round(((m.mxr - dayMxrMin) / dayMxrRange) * 100 * 10) / 10;
+            } else {
+              m.mxrPct = 50;
+            }
+          }
+        });
+      }
+
+      // Calculate rngPct
+      if (dayRngValues.length > 0) {
+        const dayRngMin = Math.min(...dayRngValues);
+        const dayRngMax = Math.max(...dayRngValues);
+        const dayRngRange = dayRngMax - dayRngMin;
+        visibleHours.forEach(h => {
+          const m = day.hrs[h]?.m;
+          if (m && m.rng != null) {
+            if (dayRngRange > 0) {
+              m.rngPct = Math.round(((m.rng - dayRngMin) / dayRngRange) * 100 * 10) / 10;
+            } else {
+              m.rngPct = 50;
+            }
+          }
+        });
+      }
+    }
+
+    // Calculate Top X Range/MxR for visible hours only
+    function calcDynamicTopX(day, visibleHours, topN) {
+      const dayRngValues = [];
+      const dayMxrValues = [];
+      visibleHours.forEach(h => {
+        const m = day.hrs[h]?.m;
+        if (m && m.rng != null) dayRngValues.push(m.rng);
+        if (m && m.mxr != null) dayMxrValues.push(m.mxr);
+      });
+
+      if (dayRngValues.length > 0) {
+        const sortedRng = [...dayRngValues].sort((a, b) => b - a);
+        const topNRng = sortedRng.slice(0, Math.min(topN, sortedRng.length));
+        day.dTopXRngAvg = topNRng.length > 0 ? Math.round(topNRng.reduce((a, b) => a + b, 0) / topNRng.length) : null;
+      }
+
+      if (dayMxrValues.length > 0) {
+        const sortedMxr = [...dayMxrValues].sort((a, b) => b - a);
+        const topNMxr = sortedMxr.slice(0, Math.min(topN, sortedMxr.length));
+        day.dTopXMxRAvg = topNMxr.length > 0 ? Math.round(topNMxr.reduce((a, b) => a + b, 0) / topNMxr.length) : null;
+      }
+    }
     
     // ==================== DATE PICKER ====================
     
@@ -6027,6 +6159,127 @@ function populateDatePicker() {
       return disp + ampm;
     }
     
+    // ==================== PERCENTILES SUMMARY ====================
+    function renderPercentilesSummary(data, realHours, cols, dtCols, colStats) {
+      const container = document.getElementById('percentiles-table-wrap');
+      if (!container) return;
+
+      const percentiles = [10, 25, 50, 75, 90];
+
+      // Helper to calculate percentile
+      function calcPct(arr, p) {
+        if (!arr.length) return null;
+        const sorted = [...arr].sort((a, b) => a - b);
+        const idx = (p / 100) * (sorted.length - 1);
+        const lower = Math.floor(idx);
+        const upper = Math.ceil(idx);
+        if (lower === upper) return sorted[lower];
+        return sorted[lower] + (sorted[upper] - sorted[lower]) * (idx - lower);
+      }
+
+      // Helper to format percentile value
+      function fmtPct(v) {
+        if (v == null) return '—';
+        if (Math.abs(v) >= 100 || Number.isInteger(v)) return Math.round(v).toLocaleString();
+        return v.toFixed(Math.abs(v) < 10 ? 2 : 1);
+      }
+
+      // Collect values for each column including day totals
+      const dayColVals = {};
+      const hourColVals = {};
+
+      // Day total columns
+      if (showDayCols && dtCols.length > 0) {
+        dtCols.forEach(c => { dayColVals[c.id] = []; });
+        data.forEach(day => {
+          dtCols.forEach(c => {
+            const v = day[c.id];
+            if (v != null && typeof v === 'number') dayColVals[c.id].push(v);
+          });
+        });
+      }
+
+      // Hourly columns
+      realHours.forEach(h => {
+        hourColVals[h] = {};
+        cols.forEach(col => { hourColVals[h][col.id] = []; });
+      });
+
+      data.forEach(day => {
+        realHours.forEach(h => {
+          const m = day.hrs[h]?.m;
+          if (!m) return;
+          cols.forEach(col => {
+            let v;
+            if (col.id === 'cdrU') v = m.cdrUActual;
+            else if (col.id === 'cdrD') v = m.cdrDActual;
+            else if (col.id === 'mxcd') v = m.mxcdActual;
+            else v = m[col.id];
+            if (v != null && typeof v === 'number') hourColVals[h][col.id].push(v);
+          });
+        });
+      });
+
+      // Build table HTML
+      let html = '<table class="percentiles-table"><thead><tr>';
+      html += '<th class="pct-corner">P%</th>';
+
+      // Day total headers
+      if (showDayCols && dtCols.length > 0) {
+        dtCols.forEach(c => {
+          html += `<th title="${c.desc}">${c.label}</th>`;
+        });
+        html += '<th style="background:transparent;border:none;width:8px;"></th>'; // Separator
+      }
+
+      // Hour headers
+      realHours.forEach(h => {
+        html += `<th colspan="${cols.length}" style="border-left:2px solid rgba(247,147,26,0.3);">${formatHourHeader(h)}</th>`;
+      });
+      html += '</tr><tr>';
+      html += '<th class="pct-corner"></th>';
+
+      // Day total column labels (second row)
+      if (showDayCols && dtCols.length > 0) {
+        dtCols.forEach(c => { html += '<th></th>'; });
+        html += '<th style="background:transparent;border:none;"></th>';
+      }
+
+      // Hourly column labels
+      realHours.forEach(h => {
+        cols.forEach((col, ci) => {
+          html += `<th${ci === 0 ? ' style="border-left:2px solid rgba(247,147,26,0.3);"' : ''} title="${col.desc}">${col.label}</th>`;
+        });
+      });
+      html += '</tr></thead><tbody>';
+
+      // Percentile rows
+      percentiles.forEach(p => {
+        html += `<tr><td class="pct-label">P${p}</td>`;
+
+        // Day total percentiles
+        if (showDayCols && dtCols.length > 0) {
+          dtCols.forEach(c => {
+            const v = calcPct(dayColVals[c.id], p);
+            html += `<td>${fmtPct(v)}</td>`;
+          });
+          html += '<td style="background:transparent;border:none;"></td>';
+        }
+
+        // Hourly percentiles
+        realHours.forEach(h => {
+          cols.forEach((col, ci) => {
+            const v = calcPct(hourColVals[h][col.id], p);
+            html += `<td${ci === 0 ? ' style="border-left:2px solid rgba(247,147,26,0.3);"' : ''}>${fmtPct(v)}</td>`;
+          });
+        });
+        html += '</tr>';
+      });
+
+      html += '</tbody></table>';
+      container.innerHTML = html;
+    }
+
     // ==================== RENDER TABLE ====================
     // Main renderTable function (with debouncing)
     function renderTable() {
@@ -6066,12 +6319,19 @@ function populateDatePicker() {
       });
       
       data.forEach(d => calcRanks(d, hours));
-      
+
+      // Calculate dynamic mxrPct, rngPct, and TopX based on visible hours only
+      const topN = parseInt(document.getElementById('day-totals-topn')?.value) || 3;
+      data.forEach(d => {
+        calcDynamicRangePct(d, realHours);
+        calcDynamicTopX(d, realHours, topN);
+      });
+
       document.getElementById('stat-days').textContent = data.length;
       document.getElementById('stat-hours').textContent = hours.length;
       document.getElementById('stat-cols').textContent = cols.length;
 
-      // Use cached stats if available
+      // Use cached stats if available (cache invalidates when filters change)
       let dtStats, colStats;
       const cacheKey = filterCache.key;
       if (filterCache.dtStats && filterCache.colStats && cacheKey === generateFilterCacheKey()) {
@@ -6082,6 +6342,11 @@ function populateDatePicker() {
         colStats = calcColStats(data, hours);
         filterCache.dtStats = dtStats;
         filterCache.colStats = colStats;
+      }
+
+      // Render percentiles summary if enabled
+      if (showPercentiles) {
+        renderPercentilesSummary(data, realHours, cols, dtCols, colStats);
       }
       
       // Build header
@@ -6182,9 +6447,9 @@ function populateDatePicker() {
             else if (c.id === 'dRelVol' || c.id === 'dRelVolDOW') {
               bg = getPurpleGradient(val, dtStats.dRelVol?.min || 0, dtStats.dRelVol?.max || 2);
             }
-            // RSI metrics (purple gradient)
+            // RSI metrics (purple gradient) - fixed 0-100 range
             else if (c.id === 'dRsiMed' || c.id === 'dRthRsiAvg') {
-              bg = getPurpleGradient(val, dtStats.dRsi?.min || 0, dtStats.dRsi?.max || 100);
+              bg = getPurpleGradient(val, 0, 100);
             }
             // Bar count metrics (orange gradient)
             else if (c.id === 'dCumGreenBars' || c.id === 'dCumRedBars' || c.id === 'dRthCumGreenBars' || c.id === 'dRthCumRedBars') {
@@ -6246,6 +6511,18 @@ function populateDatePicker() {
             if ((col.id === 'mxrPct' || col.id === 'rngPct') && col.gradient === 'orange') {
               bg = getOrangeGradient(v, 0, 100);
             }
+            // Fixed-scale RSI metrics: always use 0-100 range (RSI is always 0-100)
+            else if (['rsiMax','rsiMin','rsiAvg','rsiOpen','rsiClose'].includes(col.id)) {
+              bg = getPurpleGradient(v, 0, 100);
+            }
+            // Fixed-scale rsiDelta: -100 to +100
+            else if (col.id === 'rsiDelta') {
+              bg = getPurpleGradient(v, -100, 100);
+            }
+            // Fixed-scale signal metrics: 0-100 range
+            else if (['sigMax','sigMin','sigAvg'].includes(col.id)) {
+              bg = getPurpleGradient(v, 0, 100);
+            }
             else if (col.gradient === 'orange' && stats[col.group]) bg = getOrangeGradient(v, stats[col.group].min, stats[col.group].max);
             else if (col.gradient === 'orange-inv' && stats[col.group]) bg = getOrangeGradientInverted(v, stats[col.group].min, stats[col.group].max);
             else if (col.gradient === 'rg' && stats[col.group]) {
@@ -6299,91 +6576,6 @@ function populateDatePicker() {
         });
         bd += '</tr>';
       });
-      
-      // Add percentile rows if enabled
-      if (showPercentiles && data.length > 0) {
-        const percentiles = [10, 25, 50, 75, 90];
-
-        // Calculate percentile values for day total columns
-        const dayColVals = {};
-        if (showDayCols && dtCols.length > 0) {
-          dtCols.forEach(col => {
-            dayColVals[col.id] = [];
-          });
-          data.forEach(day => {
-            dtCols.forEach(col => {
-              const v = day[col.id];
-              if (v != null && typeof v === 'number') dayColVals[col.id].push(v);
-            });
-          });
-        }
-
-        // Calculate percentile values for each hour and column
-        const hourColVals = {};
-        realHours.forEach(h => {
-          hourColVals[h] = {};
-          cols.forEach(col => {
-            hourColVals[h][col.id] = [];
-          });
-        });
-
-        data.forEach(day => {
-          realHours.forEach(h => {
-            const m = day.hrs[h]?.m;
-            if (!m) return;
-            cols.forEach(col => {
-              let v;
-              if (col.id === 'cdrU') v = m.cdrUActual;
-              else if (col.id === 'cdrD') v = m.cdrDActual;
-              else if (col.id === 'mxcd') v = m.mxcdActual;
-              else v = m[col.id];
-              if (v != null && typeof v === 'number') hourColVals[h][col.id].push(v);
-            });
-          });
-        });
-
-        // Calculate percentile function
-        function calcPercentile(arr, p) {
-          if (arr.length === 0) return null;
-          const sorted = [...arr].sort((a, b) => a - b);
-          const idx = (p / 100) * (sorted.length - 1);
-          const lower = Math.floor(idx);
-          const upper = Math.ceil(idx);
-          if (lower === upper) return sorted[lower];
-          return sorted[lower] + (sorted[upper] - sorted[lower]) * (idx - lower);
-        }
-
-        // Add percentile rows
-        percentiles.forEach(p => {
-          bd += `<tr class="percentile-row" style="background:rgba(247,147,26,0.08);border-top:2px solid rgba(247,147,26,0.3);">`;
-          bd += `<td class="sticky-col" style="left:0;min-width:65px;font-weight:600;color:var(--accent-btc)">P${p}</td>`;
-          bd += `<td class="sticky-col" style="left:65px;min-width:28px"></td>`;
-          bd += `<td class="sticky-col" style="left:93px;min-width:20px"></td>`;
-
-          if (showDayCols && dtCols.length > 0) {
-            let pos = 113;
-            dtCols.forEach((c, i) => {
-              const vals = dayColVals[c.id];
-              const pVal = calcPercentile(vals, p);
-              const display = pVal != null ? (Number.isInteger(pVal) ? pVal : pVal.toFixed(1)) : '—';
-              const w = ['dOpen','dHigh','dLow','dClose'].includes(c.id) ? 52 : ['dOC','dOCH','d5pmOC','wOC'].includes(c.id) ? 48 : 38;
-              const isLast = i === dtCols.length - 1;
-              bd += `<td class="sticky-col" style="left:${pos}px;min-width:${w}px;font-size:9px;color:var(--accent-btc)${isLast?';border-right:2px solid rgba(100,149,237,0.3)':''}";>${display}</td>`;
-              pos += w;
-            });
-          }
-
-          realHours.forEach((h, hi) => {
-            cols.forEach((col, ci) => {
-              const vals = hourColVals[h][col.id];
-              const pVal = calcPercentile(vals, p);
-              const display = pVal != null ? (Number.isInteger(pVal) ? pVal : pVal.toFixed(1)) : '—';
-              bd += `<td class="data-cell${ci===0?' hour-border-left':''}" style="font-size:9px;color:var(--accent-btc)">${display}</td>`;
-            });
-          });
-          bd += '</tr>';
-        });
-      }
       
       document.getElementById('table-body').innerHTML = bd;
     }
@@ -7920,7 +8112,12 @@ function populateDatePicker() {
       }
       renderTable();
     }
-    function togglePercentiles() { showPercentiles = !showPercentiles; document.getElementById('btn-pct').classList.toggle('active', showPercentiles); renderTable(); }
+    function togglePercentiles() {
+      showPercentiles = !showPercentiles;
+      document.getElementById('btn-pct').classList.toggle('active', showPercentiles);
+      document.getElementById('percentiles-container').style.display = showPercentiles ? 'block' : 'none';
+      renderTable();
+    }
     function toggleDayOHLC() { showDayOHLC = !showDayOHLC; document.getElementById('btn-day-ohlc').classList.toggle('active', showDayOHLC); renderDayView(); }
     function toggleCompareMode() {
       compareMode = !compareMode;
@@ -9251,6 +9448,7 @@ function populateDatePicker() {
       document.getElementById('level-size').value = 250;
       document.getElementById('btn-day-cols').classList.add('active');
       document.getElementById('btn-pct').classList.remove('active');
+      document.getElementById('percentiles-container').style.display = 'none';
       document.getElementById('gradient-mode').value = 'row';
       document.querySelectorAll('#col-grid input').forEach((cb, i) => cb.checked = ALL_COLUMNS[i].default);
       document.querySelectorAll('[data-dtcol]').forEach(cb => cb.checked = DAY_TOTAL_COLS.find(c => c.id === cb.dataset.dtcol)?.default);
