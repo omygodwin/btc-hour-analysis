@@ -2431,6 +2431,9 @@
       { id: 'cumVol5pm', label: 'cVol', desc: 'Cumulative volatility since 5PM (per hour avg)', default: false, gradient: 'orange-col', group: 'cvol' },
       { id: 'cumVolRaw5pm', label: 'cVolR', desc: 'Cumulative volatility raw since 5PM', default: false, gradient: 'orange-col', group: 'cvol' },
 
+      // ===== FRIDAY 5PM REFERENCE METRIC =====
+      { id: 'vsFri5pm', label: 'vFri5', desc: 'Close minus most recent Friday 5PM open', default: false, gradient: 'rg-col', group: 'fri5pm' },
+
       // ===== OPEN-TO-BAR RANGE METRICS (from hour open to running H/L through each minute) =====
       // :00 bar
       { id: 'orUR00', label: 'oUR00', desc: ':00 running high - hour open', default: false, gradient: 'orange', group: 'or00' },
@@ -2547,6 +2550,8 @@
       // Volatility metrics
       { id: 'dVola', label: 'dVol', desc: 'Day volatility (avg hourly vol ratio)', default: false, gradient: 'orange' },
       { id: 'dVolaRaw', label: 'dVolR', desc: 'Day volatility raw (sum of all bar ranges)', default: false, gradient: 'orange' },
+      // Friday 5PM reference
+      { id: 'dVsFri5pm', label: 'vFri5', desc: 'Day close minus most recent Friday 5PM open', default: false, gradient: 'rg' },
     ];
     
     // ==================== STATE ====================
@@ -4630,7 +4635,29 @@
             wPrevMxcd = wMxcd;
           });
         }
-        
+
+        // Calculate Friday 5PM reference metric (close minus most recent Friday 5PM open)
+        // Friday = dayOfWeek 5
+        const daysToFriday = (dayOfWeek + 2) % 7; // Days since last Friday (0 if today is Friday)
+        const fridayDate = new Date(dateObj);
+        fridayDate.setUTCDate(fridayDate.getUTCDate() - daysToFriday);
+        const fridayStr = fridayDate.toISOString().split('T')[0];
+        const fridayDay = etDays[fridayStr];
+        const fri5pmOpen = fridayDay?.hrs?.[17]?.o; // Friday 5PM open
+
+        if (fri5pmOpen != null) {
+          day.dFri5pmOpen = fri5pmOpen;
+          day.dVsFri5pm = day.dC ? Math.round(day.dC - fri5pmOpen) : null;
+
+          // Calculate hourly Friday 5PM reference
+          getSortedHourKeys(day).forEach(h => {
+            const hd = day.hrs[h];
+            if (hd?.m) {
+              hd.m.vsFri5pm = Math.round(hd.c - fri5pmOpen);
+            }
+          });
+        }
+
         // Calculate 5PM hourly cumulative metrics for hours after 5PM session starts
         // For hours 17-23 of current day: use current day's hour 17 open (reset at 5PM)
         // For hours 0-16 of current day: use previous day's hour 17 open (continuation of 5PM session)
@@ -5638,7 +5665,9 @@ function populateDatePicker() {
         // Open-to-bar range metric groups (one per minute)
         or00: [], or05: [], or10: [], or15: [], or20: [], or25: [], or30: [], or35: [], or40: [], or45: [], or50: [], or55: [],
         // Volatility groups
-        hvol: [], cvol: []
+        hvol: [], cvol: [],
+        // Friday 5PM reference
+        fri5pm: []
       };
       getSortedHourKeys(day).forEach(h => {
         const m = day.hrs[h].m;
@@ -5747,6 +5776,9 @@ function populateDatePicker() {
         if (m.hVolRaw != null) s.hvol.push(m.hVolRaw);
         if (m.cumVol5pm != null) s.cvol.push(m.cumVol5pm);
         if (m.cumVolRaw5pm != null) s.cvol.push(m.cumVolRaw5pm);
+
+        // Friday 5PM reference metric
+        if (m.vsFri5pm != null) s.fri5pm.push(m.vsFri5pm);
       });
       const r = {};
       Object.keys(s).forEach(k => {
@@ -5754,7 +5786,7 @@ function populateDatePicker() {
       });
       return r;
     }
-    
+
     function calcColStats(data, hours) {
       const s = {};
       const hourSet = new Set();
@@ -5774,7 +5806,9 @@ function populateDatePicker() {
           // Open-to-bar range metric groups (one per minute)
           or00: [], or05: [], or10: [], or15: [], or20: [], or25: [], or30: [], or35: [], or40: [], or45: [], or50: [], or55: [],
           // Volatility groups
-          hvol: [], cvol: []
+          hvol: [], cvol: [],
+          // Friday 5PM reference
+          fri5pm: []
         };
 
         data.forEach(d => {
@@ -5896,6 +5930,9 @@ function populateDatePicker() {
           if (m.hVolRaw != null) s[h].hvol.push(m.hVolRaw);
           if (m.cumVol5pm != null) s[h].cvol.push(m.cumVol5pm);
           if (m.cumVolRaw5pm != null) s[h].cvol.push(m.cumVolRaw5pm);
+
+          // Friday 5PM reference metric
+          if (m.vsFri5pm != null) s[h].fri5pm.push(m.vsFri5pm);
         });
       });
       const r = {};
