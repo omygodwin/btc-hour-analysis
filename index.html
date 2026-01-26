@@ -2426,10 +2426,10 @@
       { id: 'crMxR50', label: 'MxR50', desc: ':50 close to rest of hour max range', default: false, gradient: 'orange', group: 'cr50' },
 
       // ===== VOLATILITY METRICS =====
-      { id: 'hVol', label: 'hVol', desc: 'Hourly volatility (sum of bar ranges / hour range)', default: false, gradient: 'orange', group: 'hvol' },
-      { id: 'hVolRaw', label: 'hVolR', desc: 'Hourly volatility raw (sum of bar ranges)', default: false, gradient: 'orange', group: 'hvol' },
-      { id: 'cumVol5pm', label: 'cVol', desc: 'Cumulative volatility since 5PM (per hour avg)', default: false, gradient: 'orange', group: 'cvol' },
-      { id: 'cumVolRaw5pm', label: 'cVolR', desc: 'Cumulative volatility raw since 5PM', default: false, gradient: 'orange', group: 'cvol' },
+      { id: 'hVol', label: 'hVol', desc: 'Hourly volatility (sum of bar ranges / hour range)', default: false, gradient: 'orange-col', group: 'hvol' },
+      { id: 'hVolRaw', label: 'hVolR', desc: 'Hourly volatility raw (sum of bar ranges)', default: false, gradient: 'orange-col', group: 'hvol' },
+      { id: 'cumVol5pm', label: 'cVol', desc: 'Cumulative volatility since 5PM (per hour avg)', default: false, gradient: 'orange-col', group: 'cvol' },
+      { id: 'cumVolRaw5pm', label: 'cVolR', desc: 'Cumulative volatility raw since 5PM', default: false, gradient: 'orange-col', group: 'cvol' },
 
       // ===== OPEN-TO-BAR RANGE METRICS (from hour open to running H/L through each minute) =====
       // :00 bar
@@ -4664,7 +4664,7 @@
               cumVolRaw5pm += hd.m.hVolRaw || 0;
               hoursElapsed5pm++;
               hd.m.cumVolRaw5pm = cumVolRaw5pm;
-              hd.m.cumVol5pm = hoursElapsed5pm > 0 ? Math.round((cumVolRaw5pm / hoursElapsed5pm) * 100) / 100 : null;
+              hd.m.cumVol5pm = hoursElapsed5pm > 0 ? Math.round(cumVolRaw5pm / hoursElapsed5pm) : null;
 
               p5PrevCdrU = p5CdrU;
               p5PrevCdrD = p5CdrD;
@@ -4726,7 +4726,7 @@
               cumVolRaw5pm += hd.m.hVolRaw || 0;
               hoursElapsed5pm++;
               hd.m.cumVolRaw5pm = cumVolRaw5pm;
-              hd.m.cumVol5pm = hoursElapsed5pm > 0 ? Math.round((cumVolRaw5pm / hoursElapsed5pm) * 100) / 100 : null;
+              hd.m.cumVol5pm = hoursElapsed5pm > 0 ? Math.round(cumVolRaw5pm / hoursElapsed5pm) : null;
 
               p5PrevCdrU = p5CdrU;
               p5PrevCdrD = p5CdrD;
@@ -6219,8 +6219,8 @@ function populateDatePicker() {
                 bg = getRGGradient(v, stats[col.group].min, stats[col.group].max);
               }
             }
-            else if (col.gradient === 'orange-col' && cStats?.cdr) bg = getOrangeGradient(v, cStats.cdr.min, cStats.cdr.max);
-            else if (col.gradient === 'rg-col' && cStats?.cdrRG) bg = getRGGradient(v, cStats.cdrRG.min, cStats.cdrRG.max);
+            else if (col.gradient === 'orange-col' && cStats?.[col.group]) bg = getOrangeGradient(v, cStats[col.group].min, cStats[col.group].max);
+            else if (col.gradient === 'rg-col' && cStats?.[col.group]) bg = getRGGradient(v, cStats[col.group].min, cStats[col.group].max);
             else if (col.gradient === 'purple' && stats[col.group]) bg = getPurpleGradient(v, stats[col.group].min, stats[col.group].max);
             else if (col.gradient === 'minute') bg = getMinuteGradient(v);
             else if (col.gradient === 'esthr') bg = getEstablishedHourGradient(v);
