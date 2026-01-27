@@ -414,7 +414,27 @@
     .col-item input { accent-color: var(--accent-btc); cursor: pointer; }
     .col-item .col-label { font-weight: 500; color: var(--text-primary); }
     .col-item .col-desc { font-size: 0.5rem; color: var(--text-muted); margin-left: auto; }
-    
+
+    /* Collapsible Column Sections for 5-min Interval Metrics */
+    .col-section { margin-top: 8px; border: 1px solid var(--border-medium); border-radius: 4px; overflow: hidden; }
+    .col-section-header { display: flex; align-items: center; justify-content: space-between; padding: 6px 10px; background: rgba(247,147,26,0.1); cursor: pointer; user-select: none; }
+    .col-section-header:hover { background: rgba(247,147,26,0.15); }
+    .col-section-title { font-size: 0.6rem; font-weight: 600; color: var(--accent-btc); text-transform: uppercase; letter-spacing: 0.5px; }
+    .col-section-toggle { font-size: 0.7rem; color: var(--text-muted); transition: transform 0.2s; }
+    .col-section.collapsed .col-section-toggle { transform: rotate(-90deg); }
+    .col-section-content { padding: 8px; background: rgba(0,0,0,0.2); max-height: 500px; overflow: hidden; transition: max-height 0.3s ease, padding 0.3s ease; }
+    .col-section.collapsed .col-section-content { max-height: 0; padding: 0 8px; }
+    .col-section-actions { display: flex; gap: 4px; flex-wrap: wrap; margin-bottom: 6px; padding-bottom: 6px; border-bottom: 1px solid var(--border-subtle); }
+    .col-section-actions button { padding: 2px 6px; background: rgba(100,149,237,0.15); border: 1px solid rgba(100,149,237,0.25); border-radius: 2px; color: var(--accent-blue); font-size: 0.5rem; cursor: pointer; }
+    .col-section-actions button:hover { background: rgba(100,149,237,0.25); }
+    .col-minute-group { margin-bottom: 6px; padding: 4px; background: rgba(255,255,255,0.02); border-radius: 3px; }
+    .col-minute-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px; }
+    .col-minute-label { font-size: 0.55rem; font-weight: 500; color: var(--text-muted); }
+    .col-minute-btns { display: flex; gap: 3px; }
+    .col-minute-btns button { padding: 1px 4px; background: rgba(255,255,255,0.05); border: 1px solid var(--border-subtle); border-radius: 2px; color: var(--text-muted); font-size: 0.45rem; cursor: pointer; }
+    .col-minute-btns button:hover { background: rgba(255,255,255,0.1); color: var(--text-primary); }
+    .col-minute-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 2px; }
+
     .col-presets { display: flex; gap: 4px; flex-wrap: wrap; align-items: center; }
     .col-presets button { padding: 2px 6px; background: rgba(100,149,237,0.1); border: 1px solid rgba(100,149,237,0.18); border-radius: 2px; color: var(--accent-blue); font-size: 0.55rem; cursor: pointer; }
     
@@ -3585,9 +3605,133 @@
     }
     
     const colGrid = document.getElementById('col-grid');
+
+    // Define 5-minute interval section groups (these will be collapsible)
+    const fiveMinSections = {
+      cr: { label: 'Close-to-Rest-of-Hour', prefix: 'cr', minutes: ['00','05','10','15','20','25','30','35','40','45','50'] },
+      or: { label: 'Open-to-Bar Range', prefix: 'or', minutes: ['00','05','10','15','20','25','30','35','40','45','50','55'] },
+      lv: { label: 'Bar Level Metrics', prefix: 'lv', minutes: ['00','05','10','15','20','25','30','35','40','45','50','55'] }
+    };
+
+    // Separate columns into regular and 5-min interval groups
+    const regularCols = [];
+    const sectionCols = { cr: {}, or: {}, lv: {} };
+
     ALL_COLUMNS.forEach(col => {
+      const group = col.group || '';
+      let matched = false;
+
+      for (const [secKey, secDef] of Object.entries(fiveMinSections)) {
+        for (const min of secDef.minutes) {
+          if (group === `${secKey}${min}`) {
+            if (!sectionCols[secKey][min]) sectionCols[secKey][min] = [];
+            sectionCols[secKey][min].push(col);
+            matched = true;
+            break;
+          }
+        }
+        if (matched) break;
+      }
+
+      if (!matched) {
+        regularCols.push(col);
+      }
+    });
+
+    // Render regular columns first
+    regularCols.forEach(col => {
       colGrid.innerHTML += `<label class="col-item" title="${col.desc}" for="col-${col.id}"><input type="checkbox" id="col-${col.id}" ${col.default ? 'checked' : ''} onchange="toggleColumn('${col.id}')"><span class="col-label">${col.label}</span><span class="col-desc">${col.desc}</span></label>`;
     });
+
+    // Render collapsible sections for 5-min interval metrics
+    for (const [secKey, secDef] of Object.entries(fiveMinSections)) {
+      const hasColumns = Object.values(sectionCols[secKey]).some(arr => arr.length > 0);
+      if (!hasColumns) continue;
+
+      let sectionHtml = `
+        <div class="col-section collapsed" id="col-section-${secKey}">
+          <div class="col-section-header" onclick="toggleColSection('${secKey}')">
+            <span class="col-section-title">${secDef.label}</span>
+            <span class="col-section-toggle">▼</span>
+          </div>
+          <div class="col-section-content">
+            <div class="col-section-actions">
+              <button onclick="event.stopPropagation(); showAllSectionCols('${secKey}')">Show All</button>
+              <button onclick="event.stopPropagation(); hideAllSectionCols('${secKey}')">Hide All</button>
+            </div>`;
+
+      for (const min of secDef.minutes) {
+        const minCols = sectionCols[secKey][min];
+        if (!minCols || minCols.length === 0) continue;
+
+        sectionHtml += `
+            <div class="col-minute-group" data-section="${secKey}" data-minute="${min}">
+              <div class="col-minute-header">
+                <span class="col-minute-label">:${min} Bar</span>
+                <div class="col-minute-btns">
+                  <button onclick="event.stopPropagation(); showMinuteCols('${secKey}', '${min}')">Show</button>
+                  <button onclick="event.stopPropagation(); hideMinuteCols('${secKey}', '${min}')">Hide</button>
+                </div>
+              </div>
+              <div class="col-minute-grid">`;
+
+        minCols.forEach(col => {
+          sectionHtml += `<label class="col-item" title="${col.desc}" for="col-${col.id}"><input type="checkbox" id="col-${col.id}" ${col.default ? 'checked' : ''} onchange="toggleColumn('${col.id}')"><span class="col-label">${col.label}</span><span class="col-desc">${col.desc}</span></label>`;
+        });
+
+        sectionHtml += `
+              </div>
+            </div>`;
+      }
+
+      sectionHtml += `
+          </div>
+        </div>`;
+
+      colGrid.innerHTML += sectionHtml;
+    }
+
+    // Functions to toggle collapsible sections
+    function toggleColSection(secKey) {
+      const section = document.getElementById(`col-section-${secKey}`);
+      if (section) section.classList.toggle('collapsed');
+    }
+
+    function showAllSectionCols(secKey) {
+      document.querySelectorAll(`[data-section="${secKey}"] input[type="checkbox"]`).forEach(cb => {
+        if (!cb.checked) {
+          cb.checked = true;
+          toggleColumn(cb.id.replace('col-', ''));
+        }
+      });
+    }
+
+    function hideAllSectionCols(secKey) {
+      document.querySelectorAll(`[data-section="${secKey}"] input[type="checkbox"]`).forEach(cb => {
+        if (cb.checked) {
+          cb.checked = false;
+          toggleColumn(cb.id.replace('col-', ''));
+        }
+      });
+    }
+
+    function showMinuteCols(secKey, min) {
+      document.querySelectorAll(`[data-section="${secKey}"][data-minute="${min}"] input[type="checkbox"]`).forEach(cb => {
+        if (!cb.checked) {
+          cb.checked = true;
+          toggleColumn(cb.id.replace('col-', ''));
+        }
+      });
+    }
+
+    function hideMinuteCols(secKey, min) {
+      document.querySelectorAll(`[data-section="${secKey}"][data-minute="${min}"] input[type="checkbox"]`).forEach(cb => {
+        if (cb.checked) {
+          cb.checked = false;
+          toggleColumn(cb.id.replace('col-', ''));
+        }
+      });
+    }
     
     const dtColGrid = document.getElementById('dt-col-grid');
     DAY_TOTAL_COLS.forEach(col => {
@@ -9742,19 +9886,19 @@ function populateDatePicker() {
     function hideAllDTCols() { visibleDTCols.clear(); document.querySelectorAll('[data-dtcol]').forEach(cb => cb.checked = false); renderTable(); updateMobileDayTotalsGrid(); }
     function defaultDTCols() { visibleDTCols = new Set(DAY_TOTAL_COLS.filter(c => c.default).map(c => c.id)); document.querySelectorAll('[data-dtcol]').forEach(cb => cb.checked = visibleDTCols.has(cb.dataset.dtcol)); renderTable(); updateMobileDayTotalsGrid(); }
 
-    function setDefaultCols() { visibleColumns = new Set(ALL_COLUMNS.filter(c => c.default).map(c => c.id)); document.querySelectorAll('#col-grid input').forEach((cb, i) => cb.checked = ALL_COLUMNS[i].default); renderTable(); updateMobileColumnGrid(); }
+    function setDefaultCols() { visibleColumns = new Set(ALL_COLUMNS.filter(c => c.default).map(c => c.id)); document.querySelectorAll('#col-grid input').forEach(cb => { const colId = cb.id.replace('col-', ''); cb.checked = visibleColumns.has(colId); }); renderTable(); updateMobileColumnGrid(); }
     function setAllCols() { visibleColumns = new Set(ALL_COLUMNS.map(c => c.id)); document.querySelectorAll('#col-grid input').forEach(cb => cb.checked = true); renderTable(); updateMobileColumnGrid(); }
     function setNoCols() { visibleColumns = new Set([]); document.querySelectorAll('#col-grid input').forEach(cb => cb.checked = false); renderTable(); updateMobileColumnGrid(); }
-    function setRangeCols() { visibleColumns = new Set(['rng','ur','lr','mxr','mxrRk','rngRk']); document.querySelectorAll('#col-grid input').forEach((cb, i) => cb.checked = visibleColumns.has(ALL_COLUMNS[i].id)); renderTable(); updateMobileColumnGrid(); }
-    function setOHLCVCols() { visibleColumns = new Set(['o','hi','lo','c','v']); document.querySelectorAll('#col-grid input').forEach((cb, i) => cb.checked = visibleColumns.has(ALL_COLUMNS[i].id)); renderTable(); updateMobileColumnGrid(); }
-    function setRSICols() { visibleColumns = new Set(['rsiMax','rsiMin','rsiAvg','rsiOpen','rsiClose','rsiDelta','rsiOBmin','rsiOSmin','sigMax','sigMin','sigAvg','obos']); document.querySelectorAll('#col-grid input').forEach((cb, i) => cb.checked = visibleColumns.has(ALL_COLUMNS[i].id)); renderTable(); updateMobileColumnGrid(); }
+    function setRangeCols() { visibleColumns = new Set(['rng','ur','lr','mxr','mxrRk','rngRk']); document.querySelectorAll('#col-grid input').forEach(cb => { const colId = cb.id.replace('col-', ''); cb.checked = visibleColumns.has(colId); }); renderTable(); updateMobileColumnGrid(); }
+    function setOHLCVCols() { visibleColumns = new Set(['o','hi','lo','c','v']); document.querySelectorAll('#col-grid input').forEach(cb => { const colId = cb.id.replace('col-', ''); cb.checked = visibleColumns.has(colId); }); renderTable(); updateMobileColumnGrid(); }
+    function setRSICols() { visibleColumns = new Set(['rsiMax','rsiMin','rsiAvg','rsiOpen','rsiClose','rsiDelta','rsiOBmin','rsiOSmin','sigMax','sigMin','sigAvg','obos']); document.querySelectorAll('#col-grid input').forEach(cb => { const colId = cb.id.replace('col-', ''); cb.checked = visibleColumns.has(colId); }); renderTable(); updateMobileColumnGrid(); }
 
     // Close-to-rest-of-hour metrics preset functions
     function setCRCols(minute) {
       // Set columns for a specific minute (e.g., '00', '05', etc.)
       const cols = ['crUR' + minute, 'crLR' + minute, 'crRng' + minute, 'crMxR' + minute];
       visibleColumns = new Set(cols);
-      document.querySelectorAll('#col-grid input').forEach((cb, i) => cb.checked = visibleColumns.has(ALL_COLUMNS[i].id));
+      document.querySelectorAll('#col-grid input').forEach(cb => { const colId = cb.id.replace('col-', ''); cb.checked = visibleColumns.has(colId); });
       renderTable();
       updateMobileColumnGrid();
     }
@@ -9766,7 +9910,7 @@ function populateDatePicker() {
         cols.push('crUR' + min, 'crLR' + min, 'crRng' + min, 'crMxR' + min);
       });
       visibleColumns = new Set(cols);
-      document.querySelectorAll('#col-grid input').forEach((cb, i) => cb.checked = visibleColumns.has(ALL_COLUMNS[i].id));
+      document.querySelectorAll('#col-grid input').forEach(cb => { const colId = cb.id.replace('col-', ''); cb.checked = visibleColumns.has(colId); });
       renderTable();
       updateMobileColumnGrid();
     }
@@ -9778,7 +9922,7 @@ function populateDatePicker() {
         cols.push('crMxR' + min);
       });
       visibleColumns = new Set(cols);
-      document.querySelectorAll('#col-grid input').forEach((cb, i) => cb.checked = visibleColumns.has(ALL_COLUMNS[i].id));
+      document.querySelectorAll('#col-grid input').forEach(cb => { const colId = cb.id.replace('col-', ''); cb.checked = visibleColumns.has(colId); });
       renderTable();
       updateMobileColumnGrid();
     }
@@ -9787,7 +9931,7 @@ function populateDatePicker() {
       // Remove all CR columns from visible columns
       const crIds = ALL_COLUMNS.filter(c => c.id.startsWith('cr')).map(c => c.id);
       crIds.forEach(id => visibleColumns.delete(id));
-      document.querySelectorAll('#col-grid input').forEach((cb, i) => cb.checked = visibleColumns.has(ALL_COLUMNS[i].id));
+      document.querySelectorAll('#col-grid input').forEach(cb => { const colId = cb.id.replace('col-', ''); cb.checked = visibleColumns.has(colId); });
       renderTable();
       updateMobileColumnGrid();
     }
@@ -9799,7 +9943,7 @@ function populateDatePicker() {
         cols.push('crUR' + min, 'crLR' + min, 'crRng' + min, 'crMxR' + min);
       });
       visibleColumns = new Set(cols);
-      document.querySelectorAll('#col-grid input').forEach((cb, i) => cb.checked = visibleColumns.has(ALL_COLUMNS[i].id));
+      document.querySelectorAll('#col-grid input').forEach(cb => { const colId = cb.id.replace('col-', ''); cb.checked = visibleColumns.has(colId); });
       renderTable();
       updateMobileColumnGrid();
     }
@@ -9811,7 +9955,7 @@ function populateDatePicker() {
         cols.push('crUR' + min, 'crLR' + min, 'crRng' + min, 'crMxR' + min);
       });
       visibleColumns = new Set(cols);
-      document.querySelectorAll('#col-grid input').forEach((cb, i) => cb.checked = visibleColumns.has(ALL_COLUMNS[i].id));
+      document.querySelectorAll('#col-grid input').forEach(cb => { const colId = cb.id.replace('col-', ''); cb.checked = visibleColumns.has(colId); });
       renderTable();
       updateMobileColumnGrid();
     }
@@ -9821,7 +9965,7 @@ function populateDatePicker() {
       minutes.forEach(min => {
         ['crUR' + min, 'crLR' + min, 'crRng' + min, 'crMxR' + min].forEach(id => visibleColumns.add(id));
       });
-      document.querySelectorAll('#col-grid input').forEach((cb, i) => cb.checked = visibleColumns.has(ALL_COLUMNS[i].id));
+      document.querySelectorAll('#col-grid input').forEach(cb => { const colId = cb.id.replace('col-', ''); cb.checked = visibleColumns.has(colId); });
       renderTable();
       updateMobileColumnGrid();
     }
@@ -9831,7 +9975,7 @@ function populateDatePicker() {
       // Set columns for a specific minute (e.g., '00', '05', etc.)
       const cols = ['orUR' + minute, 'orLR' + minute, 'orRng' + minute, 'orMxR' + minute];
       visibleColumns = new Set(cols);
-      document.querySelectorAll('#col-grid input').forEach((cb, i) => cb.checked = visibleColumns.has(ALL_COLUMNS[i].id));
+      document.querySelectorAll('#col-grid input').forEach(cb => { const colId = cb.id.replace('col-', ''); cb.checked = visibleColumns.has(colId); });
       renderTable();
       updateMobileColumnGrid();
     }
@@ -9843,7 +9987,7 @@ function populateDatePicker() {
         cols.push('orUR' + min, 'orLR' + min, 'orRng' + min, 'orMxR' + min);
       });
       visibleColumns = new Set(cols);
-      document.querySelectorAll('#col-grid input').forEach((cb, i) => cb.checked = visibleColumns.has(ALL_COLUMNS[i].id));
+      document.querySelectorAll('#col-grid input').forEach(cb => { const colId = cb.id.replace('col-', ''); cb.checked = visibleColumns.has(colId); });
       renderTable();
       updateMobileColumnGrid();
     }
@@ -9855,7 +9999,7 @@ function populateDatePicker() {
         cols.push('orMxR' + min);
       });
       visibleColumns = new Set(cols);
-      document.querySelectorAll('#col-grid input').forEach((cb, i) => cb.checked = visibleColumns.has(ALL_COLUMNS[i].id));
+      document.querySelectorAll('#col-grid input').forEach(cb => { const colId = cb.id.replace('col-', ''); cb.checked = visibleColumns.has(colId); });
       renderTable();
       updateMobileColumnGrid();
     }
@@ -9864,7 +10008,7 @@ function populateDatePicker() {
       // Remove all OR columns from visible columns
       const orIds = ALL_COLUMNS.filter(c => c.id.startsWith('or')).map(c => c.id);
       orIds.forEach(id => visibleColumns.delete(id));
-      document.querySelectorAll('#col-grid input').forEach((cb, i) => cb.checked = visibleColumns.has(ALL_COLUMNS[i].id));
+      document.querySelectorAll('#col-grid input').forEach(cb => { const colId = cb.id.replace('col-', ''); cb.checked = visibleColumns.has(colId); });
       renderTable();
       updateMobileColumnGrid();
     }
@@ -9876,7 +10020,7 @@ function populateDatePicker() {
         cols.push('orUR' + min, 'orLR' + min, 'orRng' + min, 'orMxR' + min);
       });
       visibleColumns = new Set(cols);
-      document.querySelectorAll('#col-grid input').forEach((cb, i) => cb.checked = visibleColumns.has(ALL_COLUMNS[i].id));
+      document.querySelectorAll('#col-grid input').forEach(cb => { const colId = cb.id.replace('col-', ''); cb.checked = visibleColumns.has(colId); });
       renderTable();
       updateMobileColumnGrid();
     }
@@ -9892,7 +10036,7 @@ function populateDatePicker() {
         cols.push('orUR' + min, 'orLR' + min, 'orRng' + min, 'orMxR' + min);
       });
       visibleColumns = new Set(cols);
-      document.querySelectorAll('#col-grid input').forEach((cb, i) => cb.checked = visibleColumns.has(ALL_COLUMNS[i].id));
+      document.querySelectorAll('#col-grid input').forEach(cb => { const colId = cb.id.replace('col-', ''); cb.checked = visibleColumns.has(colId); });
       renderTable();
       updateMobileColumnGrid();
     }
@@ -9901,7 +10045,7 @@ function populateDatePicker() {
       // Remove all CR and OR columns
       const ids = ALL_COLUMNS.filter(c => c.id.startsWith('cr') || c.id.startsWith('or')).map(c => c.id);
       ids.forEach(id => visibleColumns.delete(id));
-      document.querySelectorAll('#col-grid input').forEach((cb, i) => cb.checked = visibleColumns.has(ALL_COLUMNS[i].id));
+      document.querySelectorAll('#col-grid input').forEach(cb => { const colId = cb.id.replace('col-', ''); cb.checked = visibleColumns.has(colId); });
       renderTable();
       updateMobileColumnGrid();
     }
@@ -9916,7 +10060,7 @@ function populateDatePicker() {
         cols.push('orMxR' + min);
       });
       visibleColumns = new Set(cols);
-      document.querySelectorAll('#col-grid input').forEach((cb, i) => cb.checked = visibleColumns.has(ALL_COLUMNS[i].id));
+      document.querySelectorAll('#col-grid input').forEach(cb => { const colId = cb.id.replace('col-', ''); cb.checked = visibleColumns.has(colId); });
       renderTable();
       updateMobileColumnGrid();
     }
@@ -9950,7 +10094,7 @@ function populateDatePicker() {
       const mobilePctBtn = document.getElementById('mobile-pct-text');
       if (mobilePctBtn) mobilePctBtn.textContent = 'Show Percentiles';
       document.getElementById('gradient-mode').value = 'row';
-      document.querySelectorAll('#col-grid input').forEach((cb, i) => cb.checked = ALL_COLUMNS[i].default);
+      document.querySelectorAll('#col-grid input').forEach(cb => { const col = ALL_COLUMNS.find(c => c.id === cb.id.replace('col-', '')); cb.checked = col?.default || false; });
       document.querySelectorAll('[data-dtcol]').forEach(cb => cb.checked = DAY_TOTAL_COLS.find(c => c.id === cb.dataset.dtcol)?.default);
       updateFilterUI();
       updateDatePickerUI();
