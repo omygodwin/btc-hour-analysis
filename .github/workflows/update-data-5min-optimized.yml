@@ -58,19 +58,20 @@ jobs:
             echo "strategy=new" >> $GITHUB_OUTPUT
           fi
 
-      - name: Commit and push (amend today's commits)
-        if: steps.check_changes.outputs.changes == 'true'
+      - name: Commit and push (main branch only)
+        if: |
+          github.ref == 'refs/heads/main' &&
+          steps.check_changes.outputs.changes == 'true'
         run: |
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
           git add data/
-
+      
           if [[ "${{ steps.commit_strategy.outputs.strategy }}" == "amend" ]]; then
-            # Amend the last commit to keep only one commit per day
             git commit --amend -m "📊 Auto-update Bitcoin data ${{ steps.time.outputs.datetime }}"
             git push --force-with-lease
           else
-            # Create new commit (first commit of the day)
             git commit -m "📊 Auto-update Bitcoin data ${{ steps.time.outputs.datetime }}"
             git push
           fi
+
