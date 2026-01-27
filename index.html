@@ -2268,6 +2268,10 @@
       { id: 'dn', label: '#Dn', desc: 'Lvls Down', default: false, gradient: null },
       { id: 'totl', label: 'TotL', desc: 'Total Levels', default: false, gradient: 'orange', group: 'mxl' },
       { id: 'toNxtLvl', label: 'ToNxt', desc: 'Distance to next levels (up - down)', default: false, gradient: 'rg' },
+      { id: 'dLvlUpO', label: 'dLvU_O', desc: 'Distance to level up at open', default: false, gradient: 'orange', group: 'dlvl' },
+      { id: 'dLvlDnO', label: 'dLvD_O', desc: 'Distance to level down at open', default: false, gradient: 'orange', group: 'dlvl' },
+      { id: 'dLvlUpC', label: 'dLvU_C', desc: 'Distance to level up at close', default: false, gradient: 'orange', group: 'dlvl' },
+      { id: 'dLvlDnC', label: 'dLvD_C', desc: 'Distance to level down at close', default: false, gradient: 'orange', group: 'dlvl' },
       { id: 'mxl', label: 'MxL', desc: 'Max Level', default: false, gradient: 'orange', group: 'mxl' },
       { id: 'mxlRk', label: 'MxL#', desc: 'Max Lvl Rank', default: false, gradient: 'orange-inv', group: 'rank' },
       { id: 'cl', label: '#Cl', desc: 'Net Lvls', default: false, gradient: 'rg', group: 'cl' },
@@ -4022,6 +4026,15 @@
           const nextLevelDown = closeLevel * levelSize;
           const toNxtLvl = Math.round((nextLevelUp - hd.c) - (hd.c - nextLevelDown));
 
+          // Calculate distance to level metrics at open and close
+          const openLevel = getLevel(hd.o);
+          const nextLevelUpO = (openLevel + 1) * levelSize;
+          const nextLevelDownO = openLevel * levelSize;
+          const dLvlUpO = Math.round(nextLevelUpO - hd.o);
+          const dLvlDnO = Math.round(hd.o - nextLevelDownO);
+          const dLvlUpC = Math.round(nextLevelUp - hd.c);
+          const dLvlDnC = Math.round(hd.c - nextLevelDown);
+
           // Calculate interval close-open metrics (15-minute intervals)
           let oc0010 = null, oc1525 = null, oc3040 = null, oc4555 = null;
           if (hourBars.length > 0) {
@@ -4365,6 +4378,10 @@
             sigAvg: sigAvg ? Math.round(sigAvg * 10) / 10 : null,
             obos,
             toNxtLvl,
+            dLvlUpO,
+            dLvlDnO,
+            dLvlUpC,
+            dLvlDnC,
             oc0010,
             oc1525,
             oc3040,
@@ -5037,6 +5054,15 @@
           const nextLevelUp = (closeLevel + 1) * levelSize;
           const nextLevelDown = closeLevel * levelSize;
           hd.m.toNxtLvl = Math.round((nextLevelUp - hd.c) - (hd.c - nextLevelDown));
+
+          // Recalculate distance to level metrics at open and close
+          const openLevel = getLevel(hd.o);
+          const nextLevelUpO = (openLevel + 1) * levelSize;
+          const nextLevelDownO = openLevel * levelSize;
+          hd.m.dLvlUpO = Math.round(nextLevelUpO - hd.o);
+          hd.m.dLvlDnO = Math.round(hd.o - nextLevelDownO);
+          hd.m.dLvlUpC = Math.round(nextLevelUp - hd.c);
+          hd.m.dLvlDnC = Math.round(hd.c - nextLevelDown);
         });
       });
       renderTable();
