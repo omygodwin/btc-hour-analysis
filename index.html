@@ -2966,10 +2966,11 @@
       if (!container) return;
       container.innerHTML = '';
 
-      // Separate CR and OR columns from other columns
+      // Separate CR, OR, and LV columns from other columns
       const crCols = ALL_COLUMNS.filter(c => c.id.startsWith('cr'));
       const orCols = ALL_COLUMNS.filter(c => c.id.startsWith('or'));
-      const otherCols = ALL_COLUMNS.filter(c => !c.id.startsWith('cr') && !c.id.startsWith('or'));
+      const lvCols = ALL_COLUMNS.filter(c => c.id.startsWith('lv'));
+      const otherCols = ALL_COLUMNS.filter(c => !c.id.startsWith('cr') && !c.id.startsWith('or') && !c.id.startsWith('lv'));
 
       // Render other columns first
       otherCols.forEach(col => {
@@ -3136,6 +3137,74 @@
         });
 
         container.appendChild(orSection);
+      }
+
+      // Add LV columns section header
+      if (lvCols.length > 0) {
+        const lvHeader = document.createElement('div');
+        lvHeader.style.cssText = 'margin-top:16px;padding:8px 4px;background:rgba(147,112,219,0.1);border-radius:4px;font-weight:600;color:var(--accent-purple);font-size:0.75rem;cursor:pointer;display:flex;align-items:center;gap:8px;';
+        lvHeader.innerHTML = `<span id="lv-section-arrow" style="transition:transform 0.2s;">▼</span> Bar Level Metrics (${lvCols.length} columns)`;
+        lvHeader.onclick = () => {
+          const section = document.getElementById('lv-cols-section');
+          const arrow = document.getElementById('lv-section-arrow');
+          if (section.style.display === 'none') {
+            section.style.display = 'block';
+            arrow.style.transform = 'rotate(0deg)';
+          } else {
+            section.style.display = 'none';
+            arrow.style.transform = 'rotate(-90deg)';
+          }
+        };
+        container.appendChild(lvHeader);
+
+        const lvSection = document.createElement('div');
+        lvSection.id = 'lv-cols-section';
+        lvSection.style.cssText = 'padding-left:8px;border-left:2px solid rgba(147,112,219,0.3);margin-left:4px;';
+
+        // Group LV columns by minute
+        const lvMinutes = ['00', '05', '10', '15', '20', '25', '30', '35', '40', '45', '50', '55'];
+        lvMinutes.forEach(min => {
+          const minCols = lvCols.filter(c => c.id.endsWith(min));
+          if (minCols.length > 0) {
+            const minHeader = document.createElement('div');
+            minHeader.style.cssText = 'margin-top:8px;padding:4px;font-size:0.65rem;color:var(--accent-purple);font-weight:500;';
+            minHeader.textContent = `:${min} Bar`;
+            lvSection.appendChild(minHeader);
+
+            minCols.forEach(col => {
+              const item = document.createElement('div');
+              item.className = 'mobile-settings-item';
+              item.style.padding = '6px 8px';
+              item.style.cursor = 'pointer';
+              item.onclick = () => {
+                toggleColumn(col.id);
+                updateMobileColumnGrid();
+              };
+
+              const checkbox = document.createElement('input');
+              checkbox.type = 'checkbox';
+              checkbox.checked = visibleColumns.has(col.id);
+              checkbox.style.accentColor = 'var(--accent-purple)';
+              checkbox.onclick = (e) => e.stopPropagation();
+              checkbox.onchange = () => {
+                toggleColumn(col.id);
+              };
+
+              const label = document.createElement('span');
+              label.className = 'mobile-settings-label';
+              label.textContent = `${col.label} (${col.desc})`;
+              label.style.flex = '1';
+              label.style.marginLeft = '8px';
+              label.style.fontSize = '0.65rem';
+
+              item.appendChild(checkbox);
+              item.appendChild(label);
+              lvSection.appendChild(item);
+            });
+          }
+        });
+
+        container.appendChild(lvSection);
       }
     }
 
@@ -9565,15 +9634,130 @@ function populateDatePicker() {
       const grid = document.getElementById('query-col-grid');
       if (!grid) return;
 
+      // Separate CR, OR, and LV columns from other columns
+      const crCols = ALL_COLUMNS.filter(c => c.id.startsWith('cr'));
+      const orCols = ALL_COLUMNS.filter(c => c.id.startsWith('or'));
+      const lvCols = ALL_COLUMNS.filter(c => c.id.startsWith('lv'));
+      const otherCols = ALL_COLUMNS.filter(c => !c.id.startsWith('cr') && !c.id.startsWith('or') && !c.id.startsWith('lv'));
+
       let html = '';
-      ALL_COLUMNS.forEach(col => {
+
+      // Render other columns first
+      otherCols.forEach(col => {
         const checked = querySelectedCols.has(col.id) ? 'checked' : '';
         html += `<label class="col-item">
           <input type="checkbox" ${checked} onchange="toggleQueryCol('${col.id}')">
           <span class="col-label">${col.label}</span>
         </label>`;
       });
+
+      // Define 5-min sections
+      const fiveMinSectionsQuery = {
+        cr: { label: 'Close-to-Rest-of-Hour', prefix: 'cr', minutes: ['00','05','10','15','20','25','30','35','40','45','50'], color: 'var(--accent-btc)' },
+        or: { label: 'Open-to-Bar Range', prefix: 'or', minutes: ['00','05','10','15','20','25','30','35','40','45','50','55'], color: 'var(--accent-blue)' },
+        lv: { label: 'Bar Level Metrics', prefix: 'lv', minutes: ['00','05','10','15','20','25','30','35','40','45','50','55'], color: 'var(--accent-purple)' }
+      };
+
+      // Render collapsible sections
+      for (const [secKey, secDef] of Object.entries(fiveMinSectionsQuery)) {
+        const secCols = secKey === 'cr' ? crCols : secKey === 'or' ? orCols : lvCols;
+        if (secCols.length === 0) continue;
+
+        html += `
+          <div class="col-section collapsed" id="query-col-section-${secKey}">
+            <div class="col-section-header" onclick="toggleQueryColSection('${secKey}')" style="background:rgba(${secKey === 'cr' ? '247,147,26' : secKey === 'or' ? '100,149,237' : '147,112,219'},0.1);">
+              <span class="col-section-title" style="color:${secDef.color}">${secDef.label}</span>
+              <span class="col-section-toggle">▼</span>
+            </div>
+            <div class="col-section-content">
+              <div class="col-section-actions">
+                <button onclick="event.stopPropagation(); showAllQuerySectionCols('${secKey}')">Show All</button>
+                <button onclick="event.stopPropagation(); hideAllQuerySectionCols('${secKey}')">Hide All</button>
+              </div>`;
+
+        for (const min of secDef.minutes) {
+          const minCols = secCols.filter(c => c.id.endsWith(min));
+          if (minCols.length === 0) continue;
+
+          html += `
+              <div class="col-minute-group" data-query-section="${secKey}" data-minute="${min}">
+                <div class="col-minute-header">
+                  <span class="col-minute-label">:${min} Bar</span>
+                  <div class="col-minute-btns">
+                    <button onclick="event.stopPropagation(); showQueryMinuteCols('${secKey}', '${min}')">Show</button>
+                    <button onclick="event.stopPropagation(); hideQueryMinuteCols('${secKey}', '${min}')">Hide</button>
+                  </div>
+                </div>
+                <div class="col-minute-grid">`;
+
+          minCols.forEach(col => {
+            const checked = querySelectedCols.has(col.id) ? 'checked' : '';
+            html += `<label class="col-item" title="${col.desc}">
+              <input type="checkbox" ${checked} onchange="toggleQueryCol('${col.id}')">
+              <span class="col-label">${col.label}</span>
+            </label>`;
+          });
+
+          html += `
+                </div>
+              </div>`;
+        }
+
+        html += `
+            </div>
+          </div>`;
+      }
+
       grid.innerHTML = html;
+    }
+
+    function toggleQueryColSection(secKey) {
+      const section = document.getElementById(`query-col-section-${secKey}`);
+      if (section) section.classList.toggle('collapsed');
+    }
+
+    function showAllQuerySectionCols(secKey) {
+      document.querySelectorAll(`[data-query-section="${secKey}"] input[type="checkbox"]`).forEach(cb => {
+        if (!cb.checked) {
+          cb.checked = true;
+          const colId = cb.parentElement.querySelector('.col-label').textContent;
+          const col = ALL_COLUMNS.find(c => c.label === colId);
+          if (col) toggleQueryCol(col.id);
+        }
+      });
+    }
+
+    function hideAllQuerySectionCols(secKey) {
+      document.querySelectorAll(`[data-query-section="${secKey}"] input[type="checkbox"]`).forEach(cb => {
+        if (cb.checked) {
+          cb.checked = false;
+          const colId = cb.parentElement.querySelector('.col-label').textContent;
+          const col = ALL_COLUMNS.find(c => c.label === colId);
+          if (col) toggleQueryCol(col.id);
+        }
+      });
+    }
+
+    function showQueryMinuteCols(secKey, min) {
+      document.querySelectorAll(`[data-query-section="${secKey}"][data-minute="${min}"] input[type="checkbox"]`).forEach(cb => {
+        if (!cb.checked) {
+          cb.checked = true;
+          const colId = cb.parentElement.querySelector('.col-label').textContent;
+          const col = ALL_COLUMNS.find(c => c.label === colId);
+          if (col) toggleQueryCol(col.id);
+        }
+      });
+    }
+
+    function hideQueryMinuteCols(secKey, min) {
+      document.querySelectorAll(`[data-query-section="${secKey}"][data-minute="${min}"] input[type="checkbox"]`).forEach(cb => {
+        if (cb.checked) {
+          cb.checked = false;
+          const colId = cb.parentElement.querySelector('.col-label').textContent;
+          const col = ALL_COLUMNS.find(c => c.label === colId);
+          if (col) toggleQueryCol(col.id);
+        }
+      });
     }
 
     function toggleQueryCol(colId) {
