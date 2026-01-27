@@ -2414,6 +2414,10 @@
       { id: 'buyStr', label: 'BuyStr', desc: 'Buy Strength: (C-L)/(H-L)*100', default: false, gradient: 'orange', group: 'strength' },
       { id: 'sellStr', label: 'SellStr', desc: 'Sell Strength: (H-C)/(H-L)*100', default: false, gradient: 'orange', group: 'strength' },
       { id: 'overallStr', label: 'NetStr', desc: 'Overall Strength: (C-O)/(H-L)*100', default: false, gradient: 'rg', group: 'strength' },
+      // Cumulative strength since 5PM open
+      { id: 'cumBuyStr', label: 'cBuyStr', desc: 'Cumulative Buy Strength since 5PM: sum(C-L)/sum(H-L)*100', default: false, gradient: 'orange', group: 'cumStrength' },
+      { id: 'cumSellStr', label: 'cSellStr', desc: 'Cumulative Sell Strength since 5PM: sum(H-C)/sum(H-L)*100', default: false, gradient: 'orange', group: 'cumStrength' },
+      { id: 'cumNetStr', label: 'cNetStr', desc: 'Cumulative Net Strength since 5PM: sum(C-O)/sum(H-L)*100', default: false, gradient: 'rg', group: 'cumStrength' },
 
       // ===== CLOSE-TO-REST-OF-HOUR METRICS (from bar close to rest of hour H/L) =====
       // :00 bar
@@ -5067,6 +5071,8 @@
           let p5PrevCdrU = null, p5PrevCdrD = null, p5PrevMxcd = null;
           let cumVolRaw5pm = 0;
           let hoursElapsed5pm = 0;
+          // Cumulative strength accumulators (reset at 5PM)
+          let cumBuyNum = 0, cumSellNum = 0, cumNetNum = 0, cumDenom = 0;
 
           for (let h = 17; h <= 23; h++) {
             if (day.hrs[h] && day.hrs[h].m) {
@@ -5092,6 +5098,18 @@
               hd.m.cumVolRaw5pm = cumVolRaw5pm;
               hd.m.cumVol5pm = hoursElapsed5pm > 0 ? Math.round(cumVolRaw5pm / hoursElapsed5pm) : null;
 
+              // Cumulative strength since 5PM
+              const hrRng = hd.h - hd.l;
+              if (hrRng > 0) {
+                cumBuyNum += (hd.c - hd.l);
+                cumSellNum += (hd.h - hd.c);
+                cumNetNum += (hd.c - hd.o);
+                cumDenom += hrRng;
+              }
+              hd.m.cumBuyStr = cumDenom > 0 ? Math.round((cumBuyNum / cumDenom) * 100) : null;
+              hd.m.cumSellStr = cumDenom > 0 ? Math.round((cumSellNum / cumDenom) * 100) : null;
+              hd.m.cumNetStr = cumDenom > 0 ? Math.round((cumNetNum / cumDenom) * 100) : null;
+
               p5PrevCdrU = p5CdrU;
               p5PrevCdrD = p5CdrD;
               p5PrevMxcd = p5Mxcd;
@@ -5116,15 +5134,26 @@
           let p5PrevMxcd = null;
           let cumVolRaw5pm = 0;
           let hoursElapsed5pm = 0;
+          // Cumulative strength accumulators (continuation from previous day's 5PM)
+          let cumBuyNum = 0, cumSellNum = 0, cumNetNum = 0, cumDenom = 0;
 
           // First accumulate from 5PM-11PM of previous day
           if (prevDay) {
             for (let h = 17; h <= 23; h++) {
               if (prevDay.hrs[h]) {
-                p5RunH = Math.max(p5RunH, prevDay.hrs[h].h);
-                p5RunL = Math.min(p5RunL, prevDay.hrs[h].l);
-                cumVolRaw5pm += prevDay.hrs[h].m?.hVolRaw || 0;
+                const prevHd = prevDay.hrs[h];
+                p5RunH = Math.max(p5RunH, prevHd.h);
+                p5RunL = Math.min(p5RunL, prevHd.l);
+                cumVolRaw5pm += prevHd.m?.hVolRaw || 0;
                 hoursElapsed5pm++;
+                // Accumulate strength from previous day
+                const prevHrRng = prevHd.h - prevHd.l;
+                if (prevHrRng > 0) {
+                  cumBuyNum += (prevHd.c - prevHd.l);
+                  cumSellNum += (prevHd.h - prevHd.c);
+                  cumNetNum += (prevHd.c - prevHd.o);
+                  cumDenom += prevHrRng;
+                }
               }
             }
           }
@@ -5153,6 +5182,18 @@
               hoursElapsed5pm++;
               hd.m.cumVolRaw5pm = cumVolRaw5pm;
               hd.m.cumVol5pm = hoursElapsed5pm > 0 ? Math.round(cumVolRaw5pm / hoursElapsed5pm) : null;
+
+              // Cumulative strength since 5PM (continuation)
+              const hrRng = hd.h - hd.l;
+              if (hrRng > 0) {
+                cumBuyNum += (hd.c - hd.l);
+                cumSellNum += (hd.h - hd.c);
+                cumNetNum += (hd.c - hd.o);
+                cumDenom += hrRng;
+              }
+              hd.m.cumBuyStr = cumDenom > 0 ? Math.round((cumBuyNum / cumDenom) * 100) : null;
+              hd.m.cumSellStr = cumDenom > 0 ? Math.round((cumSellNum / cumDenom) * 100) : null;
+              hd.m.cumNetStr = cumDenom > 0 ? Math.round((cumNetNum / cumDenom) * 100) : null;
 
               p5PrevCdrU = p5CdrU;
               p5PrevCdrD = p5CdrD;
