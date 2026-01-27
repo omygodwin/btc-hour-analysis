@@ -2233,6 +2233,29 @@
                 Day Totals Top N: Number of top hourly values to average for TopRng and TopMxR.
               </p>
             </div>
+
+            <div class="mobile-filter-section">
+              <h3>Relative Volume Lookback</h3>
+              <div class="mobile-settings-row">
+                <div class="mobile-settings-item">
+                  <span class="mobile-settings-label">rVol (Hour):</span>
+                  <input type="number" id="mobile-rvol-lookback-hour" value="2500" min="1" max="10000" class="mobile-settings-input" style="width:80px;" onchange="updateRVolLookback('hour', this.value);">
+                </div>
+                <div class="mobile-settings-item">
+                  <span class="mobile-settings-label">rVolC (Days):</span>
+                  <input type="number" id="mobile-rvol-lookback-day" value="30" min="1" max="365" class="mobile-settings-input" style="width:80px;" onchange="updateRVolLookback('day', this.value);">
+                </div>
+                <div class="mobile-settings-item">
+                  <span class="mobile-settings-label">rVolDOW:</span>
+                  <input type="number" id="mobile-rvol-lookback-dow" value="10" min="1" max="100" class="mobile-settings-input" style="width:80px;" onchange="updateRVolLookback('dow', this.value);">
+                </div>
+              </div>
+              <p style="font-size:0.65rem;color:var(--text-muted);margin-top:8px;line-height:1.3;">
+                Number of historical bars used for relative volume calculations.<br>
+                <span style="color:var(--accent-purple);">rVol</span>: same hour, <span style="color:var(--accent-purple);">rVolC</span>: cumulative days, <span style="color:var(--accent-purple);">rVolDOW</span>: same hour + same day of week.<br>
+                <span id="rvol-bars-indicator" style="color:var(--accent-orange);"></span>
+              </p>
+            </div>
           </div>
         </div>
       </div>
@@ -2246,9 +2269,11 @@
     // ==================== CONSTANTS ====================
     const HOURS = Array.from({ length: 24 }, (_, i) => i);
     // ================= RELATIVE VOLUME SETTINGS =================
-    const RELVOL_LOOKBACK_HOUR = 2500; // per-hour history
-    const RELVOL_LOOKBACK_DAY  = 30;   // cumulative day comparison
-    const RELVOL_LOOKBACK_DOW  = 10;   // same hour + same DOW
+    // These are now adjustable via settings
+    let rvolLookbackHour = 2500; // per-hour history (rVol)
+    let rvolLookbackDay  = 30;   // cumulative day comparison (rVolC)
+    let rvolLookbackDow  = 10;   // same hour + same DOW (rVolDOW)
+    let rvolUseUnfilteredData = true; // Calculate RVOL from all data, not filtered view
     const DAYS_SHORT = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
     const MONTHS_SHORT = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
     const MINS = ['00', '05', '10', '15', '20', '25', '30', '35', '40', '45', '50', '55'];
@@ -3182,6 +3207,17 @@
       if (afterBarMinEl) afterBarMinEl.value = afterBarMinute;
       const dayTotalsTopNEl = document.getElementById('mobile-day-totals-top-n');
       if (dayTotalsTopNEl) dayTotalsTopNEl.value = dayTotalsTopN;
+
+      // Sync RVOL lookback settings
+      const rvolLookbackHourEl = document.getElementById('mobile-rvol-lookback-hour');
+      if (rvolLookbackHourEl) rvolLookbackHourEl.value = rvolLookbackHour;
+      const rvolLookbackDayEl = document.getElementById('mobile-rvol-lookback-day');
+      if (rvolLookbackDayEl) rvolLookbackDayEl.value = rvolLookbackDay;
+      const rvolLookbackDowEl = document.getElementById('mobile-rvol-lookback-dow');
+      if (rvolLookbackDowEl) rvolLookbackDowEl.value = rvolLookbackDow;
+
+      // Update the bars indicator
+      updateRVolBarsIndicator();
     }
 
     // Close modal when clicking outside
@@ -3724,13 +3760,15 @@
       Object.keys(barsByHourMin).forEach(key => {
         const bars = barsByHourMin[key];
         bars.forEach((bar, idx) => {
-          // Get historical bars for same hour:minute (lookback 2500)
-          const historicalBars = bars.slice(Math.max(0, idx - RELVOL_LOOKBACK_HOUR), idx);
+          // Get historical bars for same hour:minute (using adjustable lookback)
+          const historicalBars = bars.slice(Math.max(0, idx - rvolLookbackHour), idx);
           if (historicalBars.length > 0) {
             const avgVol = historicalBars.reduce((sum, b) => sum + b.volume, 0) / historicalBars.length;
             bar.rVol = avgVol > 0 ? bar.volume / avgVol : null;
+            bar.rVolBars = historicalBars.length; // Track bars used for calculation
           } else {
             bar.rVol = null;
+            bar.rVolBars = 0;
           }
         });
       });
@@ -4998,6 +5036,7 @@
       populatePm5DatePicker();
       computeEstablishedHours();
       computeRelativeVolume();
+      updateRVolBarsIndicator();
 
       // Clear filter cache when data is reprocessed
       clearFilterCache();
@@ -5395,9 +5434,14 @@ function getFilteredDays() {
 function computeRelativeVolume() {
   console.log("computeRelativeVolume() RUNNING");
   try {
-    const days = getFilteredDays ? getFilteredDays() : Object.values(etDays);
+    // Get all days sorted by date for historical calculations
+    const allDays = Object.values(etDays).sort((a, b) => a.date.localeCompare(b.date));
+    // Create a map for quick lookup of day index in allDays
+    const dayIndexMap = new Map(allDays.map((d, i) => [d.date, i]));
 
-    days.forEach((day, idx) => {
+    // We iterate over ALL days to calculate RVOL (not filtered data)
+    // This ensures RVOL is always based on proper historical context
+    allDays.forEach((day, idx) => {
       if (!day.hrs) return;
 
       const hourKeys = Object.keys(day.hrs)
@@ -5418,47 +5462,53 @@ function computeRelativeVolume() {
         /* ======================
            Hourly Relative Volume
         ====================== */
-        const hourHist = days
+        // Get historical data for same hour from all preceding days
+        const hourHist = allDays.slice(0, idx)
           .filter(d => d.hrs?.[h]?.m?.v != null)
           .map(d => d.hrs[h].m.v)
-          .slice(-RELVOL_LOOKBACK_HOUR);
+          .slice(-rvolLookbackHour);
 
         const hAvg = hourHist.reduce((a,b)=>a+b,0) / Math.max(1, hourHist.length);
         m.rVol = hAvg ? m.v / hAvg : null;
+        m.rVolBars = hourHist.length; // Track how many bars were used
 
         /* ======================
            Cumulative Relative Vol
         ====================== */
-        const prevDays = days.slice(0, idx).slice(-RELVOL_LOOKBACK_DAY);
+        const prevDays = allDays.slice(0, idx).slice(-rvolLookbackDay);
         const cumHist = prevDays
           .map(d => d.hrs?.[h]?.m?.cumVol)
           .filter(v => v != null);
 
         const cAvg = cumHist.reduce((a,b)=>a+b,0) / Math.max(1, cumHist.length);
         m.rVolC = cAvg ? cumVol / cAvg : null;
+        m.rVolCBars = cumHist.length; // Track how many bars were used
 
         /* ======================
            Same Hour + Same DOW
         ====================== */
-        const dowHist = days
+        const dowHist = allDays.slice(0, idx)
           .filter(d => d.dow === day.dow && d.hrs?.[h]?.m?.v != null)
           .map(d => d.hrs[h].m.v)
-          .slice(-RELVOL_LOOKBACK_DOW);
+          .slice(-rvolLookbackDow);
 
         const dAvg = dowHist.reduce((a,b)=>a+b,0) / Math.max(1, dowHist.length);
         m.rVolDOW = dAvg ? m.v / dAvg : null;
+        m.rVolDOWBars = dowHist.length; // Track how many bars were used
       });
 
       /* ======================
          Day Total RV
       ====================== */
-      const prev = days.slice(0, idx).slice(-RELVOL_LOOKBACK_DAY);
+      const prev = allDays.slice(0, idx).slice(-rvolLookbackDay);
       const dayAvg = prev.reduce((s,d)=>s+(d.dayVol||0),0) / Math.max(1, prev.length);
       day.dRelVol = dayAvg ? day.dayVol / dayAvg : null;
+      day.dRelVolBars = prev.length;
 
       const dow = prev.filter(d=>d.dow===day.dow);
       const dowAvg = dow.reduce((s,d)=>s+(d.dayVol||0),0) / Math.max(1, dow.length);
       day.dRelVolDOW = dowAvg ? day.dayVol / dowAvg : null;
+      day.dRelVolDOWBars = dow.length;
     });
 
   } catch (e) {
@@ -8164,6 +8214,54 @@ function populateDatePicker() {
       renderDayView();
       renderHourView();
     }
+    function updateRVolLookback(type, val) {
+      const numVal = parseInt(val) || 1;
+      if (type === 'hour') {
+        rvolLookbackHour = Math.max(1, Math.min(10000, numVal));
+        document.getElementById('mobile-rvol-lookback-hour').value = rvolLookbackHour;
+      } else if (type === 'day') {
+        rvolLookbackDay = Math.max(1, Math.min(365, numVal));
+        document.getElementById('mobile-rvol-lookback-day').value = rvolLookbackDay;
+      } else if (type === 'dow') {
+        rvolLookbackDow = Math.max(1, Math.min(100, numVal));
+        document.getElementById('mobile-rvol-lookback-dow').value = rvolLookbackDow;
+      }
+      // Recalculate relative volume with new settings
+      computeRelativeVolume();
+      calculateBarMetrics(); // Recalculate 5-min bar metrics
+      renderTable();
+      renderDayView();
+      renderHourView();
+      updateRVolBarsIndicator();
+    }
+    function updateRVolBarsIndicator() {
+      const indicator = document.getElementById('rvol-bars-indicator');
+      if (!indicator) return;
+
+      // Check minimum bars available across all data
+      const allDays = Object.values(etDays);
+      const totalDays = allDays.length;
+
+      let warnings = [];
+      if (totalDays < rvolLookbackHour) {
+        warnings.push(`rVol: ${totalDays}/${rvolLookbackHour} days available`);
+      }
+      if (totalDays < rvolLookbackDay) {
+        warnings.push(`rVolC: ${totalDays}/${rvolLookbackDay} days available`);
+      }
+      // For DOW, check how many same-day-of-week entries exist (approx totalDays/7)
+      const approxDow = Math.floor(totalDays / 7);
+      if (approxDow < rvolLookbackDow) {
+        warnings.push(`rVolDOW: ~${approxDow}/${rvolLookbackDow} DOW entries`);
+      }
+
+      if (warnings.length > 0) {
+        indicator.innerHTML = '⚠ ' + warnings.join(' | ');
+      } else {
+        indicator.innerHTML = '✓ Sufficient historical data';
+        indicator.style.color = 'var(--accent-green)';
+      }
+    }
     function updateAfterBarThreshold() {
       const val = parseFloat(document.getElementById('mobile-after-bar-threshold')?.value);
       afterBarThreshold = !isNaN(val) ? val : 400;
@@ -10005,9 +10103,18 @@ function populateDatePicker() {
       // Relative Volume
       if (bar.rVol != null || bar.rVolC != null || bar.rVolDOW != null) {
         infoHTML += '<div class="info-section"><strong>Relative Volume:</strong></div>';
-        if (bar.rVol != null) infoHTML += `<div class="info-row">rVol (Hour): <span style="color:${bar.rVol >= rVolThreshold ? '#a78bfa' : ''}">${Math.round(bar.rVol * 100) / 100}x</span></div>`;
-        if (bar.rVolC != null) infoHTML += `<div class="info-row">rVol (Cum): <span style="color:${bar.rVolC >= rVolThreshold ? '#a78bfa' : ''}">${Math.round(bar.rVolC * 100) / 100}x</span></div>`;
-        if (bar.rVolDOW != null) infoHTML += `<div class="info-row">rVol (DOW): <span style="color:${bar.rVolDOW >= rVolThreshold ? '#a78bfa' : ''}">${Math.round(bar.rVolDOW * 100) / 100}x</span></div>`;
+        if (bar.rVol != null) {
+          const rVolBarsWarning = bar.rVolBars != null && bar.rVolBars < rvolLookbackHour ? ` <span style="color:var(--accent-orange);font-size:0.7em;">(${bar.rVolBars}/${rvolLookbackHour})</span>` : '';
+          infoHTML += `<div class="info-row">rVol (Hour): <span style="color:${bar.rVol >= rVolThreshold ? '#a78bfa' : ''}">${Math.round(bar.rVol * 100) / 100}x</span>${rVolBarsWarning}</div>`;
+        }
+        if (bar.rVolC != null) {
+          const rVolCBarsWarning = bar.rVolCBars != null && bar.rVolCBars < rvolLookbackDay ? ` <span style="color:var(--accent-orange);font-size:0.7em;">(${bar.rVolCBars}/${rvolLookbackDay}d)</span>` : '';
+          infoHTML += `<div class="info-row">rVol (Cum): <span style="color:${bar.rVolC >= rVolThreshold ? '#a78bfa' : ''}">${Math.round(bar.rVolC * 100) / 100}x</span>${rVolCBarsWarning}</div>`;
+        }
+        if (bar.rVolDOW != null) {
+          const rVolDOWBarsWarning = bar.rVolDOWBars != null && bar.rVolDOWBars < rvolLookbackDow ? ` <span style="color:var(--accent-orange);font-size:0.7em;">(${bar.rVolDOWBars}/${rvolLookbackDow})</span>` : '';
+          infoHTML += `<div class="info-row">rVol (DOW): <span style="color:${bar.rVolDOW >= rVolThreshold ? '#a78bfa' : ''}">${Math.round(bar.rVolDOW * 100) / 100}x</span>${rVolDOWBarsWarning}</div>`;
+        }
       }
 
       // Hour High/Low After Close
