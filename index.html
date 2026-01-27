@@ -2644,6 +2644,92 @@
       { id: 'lvTot55', label: 'lT55', desc: ':55 bar total levels (up + down)', default: false, gradient: 'orange', group: 'lv55' },
       { id: 'lvClU55', label: 'lCU55', desc: ':55 bar close - up levels', default: false, gradient: 'rg', group: 'lv55' },
       { id: 'lvClD55', label: 'lCD55', desc: ':55 bar close - down levels', default: false, gradient: 'rg', group: 'lv55' },
+
+      // ===== BAR VS PREVIOUS BAR METRICS (comparing current bar to previous bar's high/low) =====
+      // :00 bar (uses previous hour's :55 bar as reference)
+      { id: 'bHH00', label: 'HH00', desc: ':00 bar high vs prev high (+new high/-no)', default: false, gradient: 'rg', group: 'bp00' },
+      { id: 'bHL00', label: 'HL00', desc: ':00 bar high vs prev low', default: false, gradient: 'orange', group: 'bp00' },
+      { id: 'bLH00', label: 'LH00', desc: ':00 bar low vs prev high', default: false, gradient: 'orange', group: 'bp00' },
+      { id: 'bLL00', label: 'LL00', desc: ':00 bar low vs prev low (+higher/-new low)', default: false, gradient: 'rg', group: 'bp00' },
+      { id: 'bCH00', label: 'CH00', desc: ':00 bar prev high - close', default: false, gradient: 'orange', group: 'bp00' },
+      { id: 'bCL00', label: 'CL00', desc: ':00 bar close - prev low', default: false, gradient: 'orange', group: 'bp00' },
+      // :05 bar
+      { id: 'bHH05', label: 'HH05', desc: ':05 bar high vs prev high (+new high/-no)', default: false, gradient: 'rg', group: 'bp05' },
+      { id: 'bHL05', label: 'HL05', desc: ':05 bar high vs prev low', default: false, gradient: 'orange', group: 'bp05' },
+      { id: 'bLH05', label: 'LH05', desc: ':05 bar low vs prev high', default: false, gradient: 'orange', group: 'bp05' },
+      { id: 'bLL05', label: 'LL05', desc: ':05 bar low vs prev low (+higher/-new low)', default: false, gradient: 'rg', group: 'bp05' },
+      { id: 'bCH05', label: 'CH05', desc: ':05 bar prev high - close', default: false, gradient: 'orange', group: 'bp05' },
+      { id: 'bCL05', label: 'CL05', desc: ':05 bar close - prev low', default: false, gradient: 'orange', group: 'bp05' },
+      // :10 bar
+      { id: 'bHH10', label: 'HH10', desc: ':10 bar high vs prev high (+new high/-no)', default: false, gradient: 'rg', group: 'bp10' },
+      { id: 'bHL10', label: 'HL10', desc: ':10 bar high vs prev low', default: false, gradient: 'orange', group: 'bp10' },
+      { id: 'bLH10', label: 'LH10', desc: ':10 bar low vs prev high', default: false, gradient: 'orange', group: 'bp10' },
+      { id: 'bLL10', label: 'LL10', desc: ':10 bar low vs prev low (+higher/-new low)', default: false, gradient: 'rg', group: 'bp10' },
+      { id: 'bCH10', label: 'CH10', desc: ':10 bar prev high - close', default: false, gradient: 'orange', group: 'bp10' },
+      { id: 'bCL10', label: 'CL10', desc: ':10 bar close - prev low', default: false, gradient: 'orange', group: 'bp10' },
+      // :15 bar
+      { id: 'bHH15', label: 'HH15', desc: ':15 bar high vs prev high (+new high/-no)', default: false, gradient: 'rg', group: 'bp15' },
+      { id: 'bHL15', label: 'HL15', desc: ':15 bar high vs prev low', default: false, gradient: 'orange', group: 'bp15' },
+      { id: 'bLH15', label: 'LH15', desc: ':15 bar low vs prev high', default: false, gradient: 'orange', group: 'bp15' },
+      { id: 'bLL15', label: 'LL15', desc: ':15 bar low vs prev low (+higher/-new low)', default: false, gradient: 'rg', group: 'bp15' },
+      { id: 'bCH15', label: 'CH15', desc: ':15 bar prev high - close', default: false, gradient: 'orange', group: 'bp15' },
+      { id: 'bCL15', label: 'CL15', desc: ':15 bar close - prev low', default: false, gradient: 'orange', group: 'bp15' },
+      // :20 bar
+      { id: 'bHH20', label: 'HH20', desc: ':20 bar high vs prev high (+new high/-no)', default: false, gradient: 'rg', group: 'bp20' },
+      { id: 'bHL20', label: 'HL20', desc: ':20 bar high vs prev low', default: false, gradient: 'orange', group: 'bp20' },
+      { id: 'bLH20', label: 'LH20', desc: ':20 bar low vs prev high', default: false, gradient: 'orange', group: 'bp20' },
+      { id: 'bLL20', label: 'LL20', desc: ':20 bar low vs prev low (+higher/-new low)', default: false, gradient: 'rg', group: 'bp20' },
+      { id: 'bCH20', label: 'CH20', desc: ':20 bar prev high - close', default: false, gradient: 'orange', group: 'bp20' },
+      { id: 'bCL20', label: 'CL20', desc: ':20 bar close - prev low', default: false, gradient: 'orange', group: 'bp20' },
+      // :25 bar
+      { id: 'bHH25', label: 'HH25', desc: ':25 bar high vs prev high (+new high/-no)', default: false, gradient: 'rg', group: 'bp25' },
+      { id: 'bHL25', label: 'HL25', desc: ':25 bar high vs prev low', default: false, gradient: 'orange', group: 'bp25' },
+      { id: 'bLH25', label: 'LH25', desc: ':25 bar low vs prev high', default: false, gradient: 'orange', group: 'bp25' },
+      { id: 'bLL25', label: 'LL25', desc: ':25 bar low vs prev low (+higher/-new low)', default: false, gradient: 'rg', group: 'bp25' },
+      { id: 'bCH25', label: 'CH25', desc: ':25 bar prev high - close', default: false, gradient: 'orange', group: 'bp25' },
+      { id: 'bCL25', label: 'CL25', desc: ':25 bar close - prev low', default: false, gradient: 'orange', group: 'bp25' },
+      // :30 bar
+      { id: 'bHH30', label: 'HH30', desc: ':30 bar high vs prev high (+new high/-no)', default: false, gradient: 'rg', group: 'bp30' },
+      { id: 'bHL30', label: 'HL30', desc: ':30 bar high vs prev low', default: false, gradient: 'orange', group: 'bp30' },
+      { id: 'bLH30', label: 'LH30', desc: ':30 bar low vs prev high', default: false, gradient: 'orange', group: 'bp30' },
+      { id: 'bLL30', label: 'LL30', desc: ':30 bar low vs prev low (+higher/-new low)', default: false, gradient: 'rg', group: 'bp30' },
+      { id: 'bCH30', label: 'CH30', desc: ':30 bar prev high - close', default: false, gradient: 'orange', group: 'bp30' },
+      { id: 'bCL30', label: 'CL30', desc: ':30 bar close - prev low', default: false, gradient: 'orange', group: 'bp30' },
+      // :35 bar
+      { id: 'bHH35', label: 'HH35', desc: ':35 bar high vs prev high (+new high/-no)', default: false, gradient: 'rg', group: 'bp35' },
+      { id: 'bHL35', label: 'HL35', desc: ':35 bar high vs prev low', default: false, gradient: 'orange', group: 'bp35' },
+      { id: 'bLH35', label: 'LH35', desc: ':35 bar low vs prev high', default: false, gradient: 'orange', group: 'bp35' },
+      { id: 'bLL35', label: 'LL35', desc: ':35 bar low vs prev low (+higher/-new low)', default: false, gradient: 'rg', group: 'bp35' },
+      { id: 'bCH35', label: 'CH35', desc: ':35 bar prev high - close', default: false, gradient: 'orange', group: 'bp35' },
+      { id: 'bCL35', label: 'CL35', desc: ':35 bar close - prev low', default: false, gradient: 'orange', group: 'bp35' },
+      // :40 bar
+      { id: 'bHH40', label: 'HH40', desc: ':40 bar high vs prev high (+new high/-no)', default: false, gradient: 'rg', group: 'bp40' },
+      { id: 'bHL40', label: 'HL40', desc: ':40 bar high vs prev low', default: false, gradient: 'orange', group: 'bp40' },
+      { id: 'bLH40', label: 'LH40', desc: ':40 bar low vs prev high', default: false, gradient: 'orange', group: 'bp40' },
+      { id: 'bLL40', label: 'LL40', desc: ':40 bar low vs prev low (+higher/-new low)', default: false, gradient: 'rg', group: 'bp40' },
+      { id: 'bCH40', label: 'CH40', desc: ':40 bar prev high - close', default: false, gradient: 'orange', group: 'bp40' },
+      { id: 'bCL40', label: 'CL40', desc: ':40 bar close - prev low', default: false, gradient: 'orange', group: 'bp40' },
+      // :45 bar
+      { id: 'bHH45', label: 'HH45', desc: ':45 bar high vs prev high (+new high/-no)', default: false, gradient: 'rg', group: 'bp45' },
+      { id: 'bHL45', label: 'HL45', desc: ':45 bar high vs prev low', default: false, gradient: 'orange', group: 'bp45' },
+      { id: 'bLH45', label: 'LH45', desc: ':45 bar low vs prev high', default: false, gradient: 'orange', group: 'bp45' },
+      { id: 'bLL45', label: 'LL45', desc: ':45 bar low vs prev low (+higher/-new low)', default: false, gradient: 'rg', group: 'bp45' },
+      { id: 'bCH45', label: 'CH45', desc: ':45 bar prev high - close', default: false, gradient: 'orange', group: 'bp45' },
+      { id: 'bCL45', label: 'CL45', desc: ':45 bar close - prev low', default: false, gradient: 'orange', group: 'bp45' },
+      // :50 bar
+      { id: 'bHH50', label: 'HH50', desc: ':50 bar high vs prev high (+new high/-no)', default: false, gradient: 'rg', group: 'bp50' },
+      { id: 'bHL50', label: 'HL50', desc: ':50 bar high vs prev low', default: false, gradient: 'orange', group: 'bp50' },
+      { id: 'bLH50', label: 'LH50', desc: ':50 bar low vs prev high', default: false, gradient: 'orange', group: 'bp50' },
+      { id: 'bLL50', label: 'LL50', desc: ':50 bar low vs prev low (+higher/-new low)', default: false, gradient: 'rg', group: 'bp50' },
+      { id: 'bCH50', label: 'CH50', desc: ':50 bar prev high - close', default: false, gradient: 'orange', group: 'bp50' },
+      { id: 'bCL50', label: 'CL50', desc: ':50 bar close - prev low', default: false, gradient: 'orange', group: 'bp50' },
+      // :55 bar
+      { id: 'bHH55', label: 'HH55', desc: ':55 bar high vs prev high (+new high/-no)', default: false, gradient: 'rg', group: 'bp55' },
+      { id: 'bHL55', label: 'HL55', desc: ':55 bar high vs prev low', default: false, gradient: 'orange', group: 'bp55' },
+      { id: 'bLH55', label: 'LH55', desc: ':55 bar low vs prev high', default: false, gradient: 'orange', group: 'bp55' },
+      { id: 'bLL55', label: 'LL55', desc: ':55 bar low vs prev low (+higher/-new low)', default: false, gradient: 'rg', group: 'bp55' },
+      { id: 'bCH55', label: 'CH55', desc: ':55 bar prev high - close', default: false, gradient: 'orange', group: 'bp55' },
+      { id: 'bCL55', label: 'CL55', desc: ':55 bar close - prev low', default: false, gradient: 'orange', group: 'bp55' },
     ];
 
     const DAY_TOTAL_COLS = [
@@ -3683,12 +3769,13 @@
     const fiveMinSections = {
       cr: { label: 'Close-to-Rest-of-Hour', prefix: 'cr', minutes: ['00','05','10','15','20','25','30','35','40','45','50'] },
       or: { label: 'Open-to-Bar Range', prefix: 'or', minutes: ['00','05','10','15','20','25','30','35','40','45','50','55'] },
-      lv: { label: 'Bar Level Metrics', prefix: 'lv', minutes: ['00','05','10','15','20','25','30','35','40','45','50','55'] }
+      lv: { label: 'Bar Level Metrics', prefix: 'lv', minutes: ['00','05','10','15','20','25','30','35','40','45','50','55'] },
+      bp: { label: 'Bar vs Previous Bar', prefix: 'bp', minutes: ['00','05','10','15','20','25','30','35','40','45','50','55'] }
     };
 
     // Separate columns into regular and 5-min interval groups
     const regularCols = [];
-    const sectionCols = { cr: {}, or: {}, lv: {} };
+    const sectionCols = { cr: {}, or: {}, lv: {}, bp: {} };
 
     ALL_COLUMNS.forEach(col => {
       const group = col.group || '';
@@ -4670,6 +4757,57 @@
             }
           });
 
+          // Calculate bar vs previous bar metrics (comparing current bar to previous bar's high/low)
+          const bpMetrics = {};
+          const bpMinutes = [0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55];
+
+          // Get previous hour's :55 bar for the :00 comparison
+          let prevHour55Bar = null;
+          if (hour > 0) {
+            const prevHourData = day.hrs[hour - 1];
+            if (prevHourData) {
+              const prevHourKey = `${etDate}_${hour - 1}`;
+              const prevHourBars = barsByET[prevHourKey] || [];
+              prevHour55Bar = prevHourBars.find(b => b.etMin === 55);
+            }
+          }
+
+          bpMinutes.forEach((min, idx) => {
+            const minStr = min.toString().padStart(2, '0');
+            const bar = hourBars.find(b => b.etMin === min);
+
+            // Get previous bar - for :00, use previous hour's :55; for others, use prev 5-min bar
+            let prevBar = null;
+            if (min === 0) {
+              prevBar = prevHour55Bar;
+            } else {
+              const prevMin = min - 5;
+              prevBar = hourBars.find(b => b.etMin === prevMin);
+            }
+
+            if (bar && prevBar) {
+              // High vs Previous High: positive = new high (green), negative = no new high (red)
+              bpMetrics['bHH' + minStr] = Math.round(bar.high - prevBar.high);
+              // High vs Previous Low: distance from prev low to current high (always positive typically)
+              bpMetrics['bHL' + minStr] = Math.round(bar.high - prevBar.low);
+              // Low vs Previous High: distance from current low to prev high (typically negative)
+              bpMetrics['bLH' + minStr] = Math.round(prevBar.high - bar.low);
+              // Low vs Previous Low: positive = higher low (green), negative = new low (red)
+              bpMetrics['bLL' + minStr] = Math.round(bar.low - prevBar.low);
+              // Close vs Previous High: prev_high - close (positive when close below prev high)
+              bpMetrics['bCH' + minStr] = Math.round(prevBar.high - bar.close);
+              // Close vs Previous Low: close - prev_low (positive when close above prev low)
+              bpMetrics['bCL' + minStr] = Math.round(bar.close - prevBar.low);
+            } else {
+              bpMetrics['bHH' + minStr] = null;
+              bpMetrics['bHL' + minStr] = null;
+              bpMetrics['bLH' + minStr] = null;
+              bpMetrics['bLL' + minStr] = null;
+              bpMetrics['bCH' + minStr] = null;
+              bpMetrics['bCL' + minStr] = null;
+            }
+          });
+
           // Calculate hourly volatility (sum of individual bar ranges)
           let hVolRaw = 0;
           hourBars.forEach(bar => {
@@ -4805,6 +4943,8 @@
             ...orMetrics,
             // Bar-level metrics (levels crossed during each 5-min bar)
             ...lvMetrics,
+            // Bar vs previous bar metrics
+            ...bpMetrics,
             // Volatility metrics
             hVol,
             hVolRaw,
@@ -6196,6 +6336,8 @@ function populateDatePicker() {
         cr00: [], cr05: [], cr10: [], cr15: [], cr20: [], cr25: [], cr30: [], cr35: [], cr40: [], cr45: [], cr50: [],
         // Open-to-bar range metric groups (one per minute)
         or00: [], or05: [], or10: [], or15: [], or20: [], or25: [], or30: [], or35: [], or40: [], or45: [], or50: [], or55: [],
+        // Bar vs previous bar metric groups (one per minute)
+        bp00: [], bp05: [], bp10: [], bp15: [], bp20: [], bp25: [], bp30: [], bp35: [], bp40: [], bp45: [], bp50: [], bp55: [],
         // Volatility groups
         hvol: [], cvol: [],
         // Friday 5PM reference
@@ -6303,6 +6445,15 @@ function populateDatePicker() {
           });
         });
 
+        // Bar vs previous bar metrics (one group per minute)
+        const bpMins = ['00', '05', '10', '15', '20', '25', '30', '35', '40', '45', '50', '55'];
+        bpMins.forEach(min => {
+          const grp = 'bp' + min;
+          ['bHH' + min, 'bHL' + min, 'bLH' + min, 'bLL' + min, 'bCH' + min, 'bCL' + min].forEach(key => {
+            if (m[key] != null) s[grp].push(m[key]);
+          });
+        });
+
         // Volatility metrics
         if (m.hVol != null) s.hvol.push(m.hVol);
         if (m.hVolRaw != null) s.hvol.push(m.hVolRaw);
@@ -6337,6 +6488,8 @@ function populateDatePicker() {
           cr00: [], cr05: [], cr10: [], cr15: [], cr20: [], cr25: [], cr30: [], cr35: [], cr40: [], cr45: [], cr50: [],
           // Open-to-bar range metric groups (one per minute)
           or00: [], or05: [], or10: [], or15: [], or20: [], or25: [], or30: [], or35: [], or40: [], or45: [], or50: [], or55: [],
+          // Bar vs previous bar metric groups (one per minute)
+          bp00: [], bp05: [], bp10: [], bp15: [], bp20: [], bp25: [], bp30: [], bp35: [], bp40: [], bp45: [], bp50: [], bp55: [],
           // Volatility groups
           hvol: [], cvol: [],
           // Friday 5PM reference
@@ -6453,6 +6606,15 @@ function populateDatePicker() {
           orMins.forEach(min => {
             const grp = 'or' + min;
             ['orUR' + min, 'orLR' + min, 'orRng' + min, 'orMxR' + min].forEach(key => {
+              if (m[key] != null) s[h][grp].push(m[key]);
+            });
+          });
+
+          // Bar vs previous bar metrics (one group per minute)
+          const bpMins = ['00', '05', '10', '15', '20', '25', '30', '35', '40', '45', '50', '55'];
+          bpMins.forEach(min => {
+            const grp = 'bp' + min;
+            ['bHH' + min, 'bHL' + min, 'bLH' + min, 'bLL' + min, 'bCH' + min, 'bCL' + min].forEach(key => {
               if (m[key] != null) s[h][grp].push(m[key]);
             });
           });
