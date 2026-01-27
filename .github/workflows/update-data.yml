@@ -79,13 +79,18 @@ jobs:
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
           git add data/
-
-          # Calculate hours since last commit
+      
           TIME_DIFF=${{ steps.check_time.outputs.time_diff }}
           HOURS=$((TIME_DIFF / 3600))
+      
+          if git diff --cached --quiet; then
+            echo "No staged changes to commit"
+            exit 0
+          fi
+      
+          git commit -m "📊 Auto-update Bitcoin data $(date -u '+%Y-%m-%d %H:%M UTC') (${HOURS}h since last commit)"
+          git push origin HEAD:main
 
-          git commit -m "📊 Auto-update Bitcoin data $(date -u +'%Y-%m-%d %H:%M UTC') [${HOURS}h since last commit]"
-          git push
 
       - name: Summary
         if: always()
