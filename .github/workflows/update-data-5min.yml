@@ -43,11 +43,11 @@ jobs:
         run: echo "minute=$(date -u +%M)" >> $GITHUB_OUTPUT
 
       - name: Commit and push if changed (hourly or manual)
-        # Only commit on the hour (:00-:05 minutes) or if manually triggered
         if: steps.check_changes.outputs.changes == 'true' && (steps.time.outputs.minute < 6 || github.event_name == 'workflow_dispatch')
         run: |
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
           git add data/
-          git commit -m "📊 Auto-update Bitcoin data $(date -u +'%Y-%m-%d %H:%M UTC')"
-          git push
+          git diff --cached --quiet || git commit -m "📊 Auto-update Bitcoin data $(date -u '+%Y-%m-%d %H:%M UTC')"
+          git push origin HEAD:main
+
