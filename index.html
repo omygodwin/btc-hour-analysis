@@ -1759,6 +1759,7 @@
         <button class="tb-btn" id="btn-query-builder" onclick="toggleQueryBuilder()">🔍 Query Builder</button>
         <button class="tb-btn" id="btn-query-columns" onclick="toggleQueryColumns()">▤ Columns</button>
         <button class="tb-btn active" id="btn-query-detailed" onclick="toggleQueryDetailed()">📊 Detailed View</button>
+        <button class="tb-btn" id="btn-query-next-hour" onclick="toggleQueryNextHour()">+1 Hr</button>
         <div class="tb-group">
           <label>Level:</label>
           <input type="number" id="query-level-size" value="250" min="1" onchange="renderQueryResults()">
@@ -8445,6 +8446,7 @@ function populateDatePicker() {
     let queryResults = [];
     let querySelectedCols = new Set(['rng', 'ur', 'lr', 'oc', 'cdr']);
     let queryShowDetailed = true;
+    let queryShowNextHour = false;
 
     function initQueryTab() {
       if (queryGroups.length === 0) {
@@ -8472,6 +8474,14 @@ function populateDatePicker() {
     function toggleQueryDetailed() {
       queryShowDetailed = !queryShowDetailed;
       document.getElementById('btn-query-detailed').classList.toggle('active', queryShowDetailed);
+      if (queryResults.length > 0) {
+        renderQueryResults();
+      }
+    }
+
+    function toggleQueryNextHour() {
+      queryShowNextHour = !queryShowNextHour;
+      document.getElementById('btn-query-next-hour').classList.toggle('active', queryShowNextHour);
       if (queryResults.length > 0) {
         renderQueryResults();
       }
@@ -8832,12 +8842,31 @@ function populateDatePicker() {
       if (queryShowDetailed) {
         headerHTML += `<th colspan="${MINS.length}" class="group-header section-header">5-Min Bars</th>`;
       }
+
+      // Add next hour's 5-minute interval headers and columns
+      if (queryShowNextHour && queryShowDetailed) {
+        headerHTML += `<th colspan="${MINS.length}" class="group-header section-header" style="background:rgba(100,149,237,0.15);">+1 Hr Bars</th>`;
+      }
+      if (queryShowNextHour) {
+        selectedCols.forEach(colId => {
+          const col = ALL_COLUMNS.find(c => c.id === colId);
+          if (col) {
+            headerHTML += `<th rowspan="2" style="background:rgba(100,149,237,0.15);">+1 ${col.label}</th>`;
+          }
+        });
+      }
       headerHTML += '</tr><tr>';
 
       // Second row only has 5-minute headers
       if (queryShowDetailed) {
         MINS.forEach((m, i) => {
           headerHTML += `<th class="${i === 0 ? 'group-border section-header' : 'section-header'}">:${m}</th>`;
+        });
+      }
+      // Second row next hour 5-minute headers
+      if (queryShowNextHour && queryShowDetailed) {
+        MINS.forEach((m, i) => {
+          headerHTML += `<th class="${i === 0 ? 'group-border section-header' : 'section-header'}" style="background:rgba(100,149,237,0.15);">:${m}</th>`;
         });
       }
       headerHTML += '</tr>';
@@ -8851,6 +8880,21 @@ function populateDatePicker() {
 
       const minStats = { ur: [], lr: [], oc: [] };
       const afterHLStats = { hh: [], hl: [] };
+
+      // Helper to get next hour info (date and hour number)
+      const getNextHourInfo = (date, hour) => {
+        if (hour < 23) {
+          return { date, hour: hour + 1 };
+        } else {
+          // Hour 23 -> hour 0 of next day
+          const dateIdx = allETDates.indexOf(date);
+          const nextDateIdx = dateIdx - 1; // allETDates is sorted descending
+          if (nextDateIdx >= 0) {
+            return { date: allETDates[nextDateIdx], hour: 0 };
+          }
+          return null;
+        }
+      };
 
       queryResults.forEach(result => {
         selectedCols.forEach(colId => {
@@ -8875,6 +8919,39 @@ function populateDatePicker() {
                 if (bar.hlAfterClose != null) afterHLStats.hl.push(bar.hlAfterClose);
               }
             });
+          }
+        }
+
+        // Collect stats for next hour if enabled
+        if (queryShowNextHour) {
+          const nextHourInfo = getNextHourInfo(result.date, result.hour);
+          if (nextHourInfo) {
+            const nextDay = etDays[nextHourInfo.date];
+            const nextHourData = nextDay?.hrs[nextHourInfo.hour];
+            if (nextHourData?.m) {
+              selectedCols.forEach(colId => {
+                const val = nextHourData.m[colId];
+                if (val != null) {
+                  stats[colId].push(val);
+                }
+              });
+            }
+            if (queryShowDetailed) {
+              const nextBars = barsByET[nextHourInfo.date];
+              if (nextBars) {
+                nextBars.filter(b => b.etHour === nextHourInfo.hour).forEach(bar => {
+                  minStats.ur.push(Math.round(bar.high - bar.open));
+                  minStats.lr.push(Math.round(bar.open - bar.low));
+                  minStats.oc.push(Math.round(bar.close - bar.open));
+
+                  const m = String(bar.etMin).padStart(2, '0');
+                  if (m !== '55') {
+                    if (bar.hhAfterClose != null) afterHLStats.hh.push(bar.hhAfterClose);
+                    if (bar.hlAfterClose != null) afterHLStats.hl.push(bar.hlAfterClose);
+                  }
+                });
+              }
+            }
           }
         }
       });
@@ -8998,6 +9075,112 @@ function populateDatePicker() {
               </td>`;
             } else {
               bodyHTML += `<td class="min-cell${borderCls}" style="color:var(--text-muted)">—</td>`;
+            }
+          });
+        }
+
+        // Add next hour's 5-minute interval cells and columns if enabled
+        if (queryShowNextHour) {
+          const nextHourInfo = getNextHourInfo(result.date, result.hour);
+          let nextHourData = null;
+          let nextHourBars = {};
+          let nextHm = null;
+
+          if (nextHourInfo) {
+            const nextDay = etDays[nextHourInfo.date];
+            nextHourData = nextDay?.hrs[nextHourInfo.hour];
+            nextHm = nextHourData?.m;
+            const nextBars = barsByET[nextHourInfo.date];
+            if (nextBars) {
+              nextBars.filter(b => b.etHour === nextHourInfo.hour).forEach(b => nextHourBars[String(b.etMin).padStart(2, '0')] = b);
+            }
+          }
+
+          // Render next hour's 5-minute interval cells
+          if (queryShowDetailed) {
+            // Calculate running O-C for next hour
+            let nextRunningOC = 0;
+            const nextMinOCs = {};
+            if (nextHourData) {
+              MINS.forEach(m => {
+                const bar = nextHourBars[m];
+                if (bar && nextHourData) {
+                  nextRunningOC = Math.round(bar.close - nextHourData.o);
+                  nextMinOCs[m] = { oc: nextRunningOC, lvl: Math.floor(bar.close / lvl) - Math.floor(nextHourData.o / lvl) };
+                }
+              });
+            }
+
+            MINS.forEach((m, mi) => {
+              const bar = nextHourBars[m];
+              const borderCls = mi === 0 ? ' group-border' : '';
+              if (bar && nextHourData) {
+                const ur = Math.round(bar.high - bar.open);
+                const lr = Math.round(bar.open - bar.low);
+                const oc = Math.round(bar.close - bar.open);
+                const lvlUp = Math.max(0, Math.floor(bar.high / lvl) - Math.floor(bar.open / lvl));
+                const lvlDn = Math.max(0, Math.floor(bar.open / lvl) - Math.floor(bar.low / lvl));
+                const lvlCl = Math.floor(bar.close / lvl) - Math.floor(bar.open / lvl);
+                const hrOC = nextMinOCs[m] || { oc: 0, lvl: 0 };
+
+                const hrOCGradient = getRGGradient(hrOC.oc, colStats.oc?.min || 0, colStats.oc?.max || 100);
+
+                // After High/Low row with gradient coloring
+                let afterHLRow = '';
+                if (m === '55') {
+                  afterHLRow = '<div class="after-metrics-grid"><div class="after-high">—</div><div class="after-low">—</div></div>';
+                } else {
+                  const hhGradient = bar.hhAfterClose != null ? getOrangeGradient(bar.hhAfterClose, afterHLRange.min, afterHLRange.max) : 'transparent';
+                  const hlGradient = bar.hlAfterClose != null ? getOrangeGradient(bar.hlAfterClose, afterHLRange.min, afterHLRange.max) : 'transparent';
+                  afterHLRow = `<div class="after-metrics-grid"><div class="after-high" style="background:${hhGradient}">+${bar.hhAfterClose ?? 0}</div><div class="after-low" style="background:${hlGradient}">${bar.hlAfterClose >= 0 ? '+' : ''}${bar.hlAfterClose ?? 0}</div></div>`;
+                }
+
+                bodyHTML += `<td class="min-cell${borderCls}" style="background:rgba(100,149,237,0.05);">
+                  <div class="min-grid" style="grid-template-rows:1fr 1fr 1fr 1fr auto;">
+                    <div class="min-grid-top left" style="background:${getOrangeGradient(ur, mStats.urlr.min, mStats.urlr.max)}">${ur}<span class="min-lvl">(${lvlUp})</span></div>
+                    <div class="min-grid-top" style="background:${getOrangeGradient(lr, mStats.urlr.min, mStats.urlr.max)}">${lr}<span class="min-lvl">(${lvlDn})</span></div>
+                    <div class="min-grid-bottom ${oc >= 0 ? 'up' : 'down'}" style="background:${getRGGradient(oc, mStats.oc.min, mStats.oc.max)}">${oc >= 0 ? '+' : ''}${oc}<span class="min-lvl">(${lvlCl >= 0 ? '+' : ''}${lvlCl})</span></div>
+                    <div class="min-grid-row4" style="grid-column:1/3;background:${hrOCGradient};">
+                      <span class="hr-oc ${hrOC.oc >= 0 ? 'up' : 'down'}">${hrOC.oc >= 0 ? '+' : ''}${hrOC.oc}<span class="min-lvl">(${hrOC.lvl >= 0 ? '+' : ''}${hrOC.lvl})</span></span>
+                    </div>
+                    ${afterHLRow}
+                  </div>
+                </td>`;
+              } else {
+                bodyHTML += `<td class="min-cell${borderCls}" style="color:var(--text-muted);background:rgba(100,149,237,0.05);">—</td>`;
+              }
+            });
+          }
+
+          // Render next hour's column values
+          selectedCols.forEach(colId => {
+            const val = nextHm ? nextHm[colId] : null;
+            const col = ALL_COLUMNS.find(c => c.id === colId);
+
+            if (val == null) {
+              bodyHTML += '<td style="color:var(--text-muted);background:rgba(100,149,237,0.05);">—</td>';
+            } else {
+              let displayVal = val;
+              let bg = 'rgba(100,149,237,0.05)';
+              let cellClass = '';
+              const cStats = colStats[colId];
+
+              // Apply gradient and formatting based on column properties
+              if (col.gradient === 'orange' && cStats) {
+                bg = getOrangeGradient(val, cStats.min, cStats.max);
+              } else if (col.gradient === 'orange-inv' && cStats) {
+                bg = getOrangeGradientInverted(val, cStats.min, cStats.max);
+              } else if (col.gradient === 'rg' && cStats) {
+                bg = getRGGradient(val, cStats.min, cStats.max);
+                cellClass = val >= 0 ? 'up' : 'down';
+              } else if (col.gradient === 'purple' && cStats) {
+                bg = getPurpleGradient(val, cStats.min, cStats.max);
+              }
+
+              // Format display value
+              displayVal = fmt(val, colId);
+
+              bodyHTML += `<td class="${cellClass}" style="background:${bg}">${displayVal}</td>`;
             }
           });
         }
