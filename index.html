@@ -4842,11 +4842,10 @@
 
           // Get previous hour's :55 bar for the :00 comparison
           let prevHour55Bar = null;
-          if (hour > 0) {
-            const prevHourData = day.hrs[hour - 1];
+          if (hrNum > 0) {
+            const prevHourData = day.hrs[hrNum - 1];
             if (prevHourData) {
-              const prevHourKey = `${etDate}_${hour - 1}`;
-              const prevHourBars = barsByET[prevHourKey] || [];
+              const prevHourBars = dayBars.filter(b => b.etHour === hrNum - 1);
               prevHour55Bar = prevHourBars.find(b => b.etMin === 55);
             }
           }
