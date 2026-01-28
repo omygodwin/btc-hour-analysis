@@ -1341,7 +1341,19 @@
             <option value="==">＝</option>
             <option value="!=">≠</option>
           </select>
-          <input type="number" id="filter-value" placeholder="Value">
+          <select id="filter-compare-mode" onchange="toggleFilterCompareMode()">
+            <option value="value">Value</option>
+            <option value="hour">Hour</option>
+          </select>
+          <span id="filter-value-container">
+            <input type="number" id="filter-value" placeholder="Value">
+          </span>
+          <span id="filter-compare-container" style="display:none;">
+            <select id="filter-compare-hour">
+              <option value="day">Day Total</option>
+            </select>
+            <select id="filter-compare-column"></select>
+          </span>
           <button onclick="addColumnFilter()">+ Add Filter</button>
           <button onclick="clearAllFilters()" style="background:rgba(248,113,113,0.2);border-color:rgba(248,113,113,0.4);color:var(--accent-red)">Clear All</button>
         </div>
@@ -2099,8 +2111,25 @@
                   </select>
                 </div>
                 <div class="mobile-settings-item">
+                  <span class="mobile-settings-label">Compare to:</span>
+                  <select id="mobile-filter-compare-mode" class="mobile-settings-input" style="flex:1;margin-left:8px;" onchange="toggleMobileFilterCompareMode()">
+                    <option value="value">Value</option>
+                    <option value="hour">Hour</option>
+                  </select>
+                </div>
+                <div class="mobile-settings-item" id="mobile-filter-value-container">
                   <span class="mobile-settings-label">Value:</span>
                   <input type="number" id="mobile-filter-value" placeholder="Value" class="mobile-settings-input" style="flex:1;margin-left:8px;">
+                </div>
+                <div class="mobile-settings-item" id="mobile-filter-compare-hour-container" style="display:none;">
+                  <span class="mobile-settings-label">Compare Hour:</span>
+                  <select id="mobile-filter-compare-hour" class="mobile-settings-input" style="flex:1;margin-left:8px;">
+                    <option value="day">Day Total</option>
+                  </select>
+                </div>
+                <div class="mobile-settings-item" id="mobile-filter-compare-col-container" style="display:none;">
+                  <span class="mobile-settings-label">Compare Col:</span>
+                  <select id="mobile-filter-compare-column" class="mobile-settings-input" style="flex:1;margin-left:8px;"></select>
                 </div>
                 <button class="mobile-action-btn-large" onclick="addMobileColumnFilter()" style="width:100%;">+ Add Filter</button>
               </div>
@@ -3346,10 +3375,7 @@
 
       // Populate the mobile filter inputs
       document.getElementById('mobile-filter-hour').value = filter.hour;
-      document.getElementById('mobile-filter-column').value = filter.col;
       document.getElementById('mobile-filter-op').value = filter.op;
-      const filterValue = document.getElementById('mobile-filter-value');
-      filterValue.value = filter.val;
 
       // Also update desktop inputs for consistency
       document.getElementById('filter-hour').value = filter.hour;
@@ -3367,9 +3393,29 @@
       }
       document.getElementById('mobile-filter-column').value = filter.col;
 
-      // Focus the value input
-      filterValue.focus();
-      filterValue.select();
+      // Handle compare mode
+      const compareMode = filter.compareMode || 'value';
+      document.getElementById('mobile-filter-compare-mode').value = compareMode;
+
+      if (compareMode === 'hour') {
+        // Show hour comparison UI
+        document.getElementById('mobile-filter-value-container').style.display = 'none';
+        document.getElementById('mobile-filter-compare-hour-container').style.display = 'flex';
+        document.getElementById('mobile-filter-compare-col-container').style.display = 'flex';
+        updateMobileCompareHourSelect();
+        document.getElementById('mobile-filter-compare-hour').value = filter.compareHour || 'day';
+        updateMobileCompareColumnSelect();
+        document.getElementById('mobile-filter-compare-column').value = filter.compareCol || filter.col;
+      } else {
+        // Show value UI
+        document.getElementById('mobile-filter-value-container').style.display = 'flex';
+        document.getElementById('mobile-filter-compare-hour-container').style.display = 'none';
+        document.getElementById('mobile-filter-compare-col-container').style.display = 'none';
+        const filterValue = document.getElementById('mobile-filter-value');
+        filterValue.value = filter.val;
+        filterValue.focus();
+        filterValue.select();
+      }
 
       // Remove the old filter
       removeFilter(idx);
@@ -3395,6 +3441,23 @@
           const colDef = filter.hour === 'day' ? DAY_TOTAL_COLS.find(c => c.id === filter.col) : ALL_COLUMNS.find(c => c.id === filter.col);
           const logic = filter.logic || 'AND';
 
+          // Determine what to show on the right side of the operator
+          let compareDisplay;
+          if (filter.compareMode === 'hour') {
+            let compareHourLabel;
+            if (filter.compareHour === 'day') {
+              compareHourLabel = 'Day';
+            } else {
+              compareHourLabel = formatHourHeader(parseInt(filter.compareHour));
+            }
+            const compareColDef = filter.compareHour === 'day'
+              ? DAY_TOTAL_COLS.find(c => c.id === filter.compareCol)
+              : ALL_COLUMNS.find(c => c.id === filter.compareCol);
+            compareDisplay = `<u>${compareHourLabel} ${compareColDef?.label || filter.compareCol}</u>`;
+          } else {
+            compareDisplay = `<u>${filter.val}</u>`;
+          }
+
           const tag = document.createElement('div');
           tag.style.cssText = 'display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:rgba(74,222,128,0.15);border:1px solid rgba(74,222,128,0.3);border-radius:6px;margin-bottom:8px;';
 
@@ -3412,7 +3475,7 @@
 
           const text = document.createElement('span');
           text.style.cssText = 'font-size:0.7rem;color:var(--accent-green);flex:1;cursor:pointer;';
-          text.innerHTML = `${hourLabel} ${colDef?.label || filter.col} ${filter.op} <u>${filter.val}</u>`;
+          text.innerHTML = `${hourLabel} ${colDef?.label || filter.col} ${filter.op} ${compareDisplay}`;
           text.title = 'Tap to edit';
           text.onclick = () => editMobileFilter(idx);
 
@@ -3437,10 +3500,10 @@
       const hour = document.getElementById('mobile-filter-hour').value;
       const column = document.getElementById('mobile-filter-column').value;
       const op = document.getElementById('mobile-filter-op').value;
-      const value = parseFloat(document.getElementById('mobile-filter-value').value);
+      const compareMode = document.getElementById('mobile-filter-compare-mode').value;
 
-      if (!column || isNaN(value)) {
-        alert('Please select a column and enter a valid value');
+      if (!column) {
+        alert('Please select a column');
         return;
       }
 
@@ -3448,7 +3511,23 @@
       document.getElementById('filter-hour').value = hour;
       document.getElementById('filter-column').value = column;
       document.getElementById('filter-op').value = op;
-      document.getElementById('filter-value').value = value;
+      document.getElementById('filter-compare-mode').value = compareMode;
+
+      if (compareMode === 'hour') {
+        const compareHour = document.getElementById('mobile-filter-compare-hour').value;
+        const compareCol = document.getElementById('mobile-filter-compare-column').value;
+        document.getElementById('filter-compare-hour').value = compareHour;
+        document.getElementById('filter-compare-column').value = compareCol;
+        toggleFilterCompareMode(); // Update desktop UI visibility
+      } else {
+        const value = parseFloat(document.getElementById('mobile-filter-value').value);
+        if (isNaN(value)) {
+          alert('Please enter a valid value');
+          return;
+        }
+        document.getElementById('filter-value').value = value;
+        toggleFilterCompareMode(); // Update desktop UI visibility
+      }
 
       addColumnFilter();
       updateMobileActiveFilters();
@@ -5677,16 +5756,140 @@
       document.getElementById('filter-hour').value = val;
       updateFilterColumnSelect();
     });
-    
+
+    // Toggle compare mode between value and hour comparison
+    function toggleFilterCompareMode() {
+      const mode = document.getElementById('filter-compare-mode').value;
+      const valueContainer = document.getElementById('filter-value-container');
+      const compareContainer = document.getElementById('filter-compare-container');
+
+      if (mode === 'hour') {
+        valueContainer.style.display = 'none';
+        compareContainer.style.display = 'inline';
+        // Update compare hour dropdown with same options as filter-hour
+        updateCompareHourSelect();
+        // Set compare column to match current column
+        updateCompareColumnSelect();
+      } else {
+        valueContainer.style.display = 'inline';
+        compareContainer.style.display = 'none';
+      }
+    }
+
+    function toggleMobileFilterCompareMode() {
+      const mode = document.getElementById('mobile-filter-compare-mode').value;
+      const valueContainer = document.getElementById('mobile-filter-value-container');
+      const compareHourContainer = document.getElementById('mobile-filter-compare-hour-container');
+      const compareColContainer = document.getElementById('mobile-filter-compare-col-container');
+
+      if (mode === 'hour') {
+        valueContainer.style.display = 'none';
+        compareHourContainer.style.display = 'flex';
+        compareColContainer.style.display = 'flex';
+        // Update compare hour dropdown
+        updateMobileCompareHourSelect();
+        // Set compare column to match current column
+        updateMobileCompareColumnSelect();
+      } else {
+        valueContainer.style.display = 'flex';
+        compareHourContainer.style.display = 'none';
+        compareColContainer.style.display = 'none';
+      }
+    }
+
+    function updateCompareHourSelect() {
+      const compareHourSel = document.getElementById('filter-compare-hour');
+      if (!compareHourSel) return;
+
+      const hourOptions = '<option value="day">Day Total</option>' +
+        Array.from({ length: 24 }, (_, h) => {
+          const ampm = h >= 12 ? 'PM' : 'AM';
+          const disp = h === 0 ? 12 : h > 12 ? h - 12 : h;
+          return `<option value="${h}">${disp}${ampm}</option>`;
+        }).join('');
+
+      compareHourSel.innerHTML = hourOptions;
+    }
+
+    function updateMobileCompareHourSelect() {
+      const compareHourSel = document.getElementById('mobile-filter-compare-hour');
+      if (!compareHourSel) return;
+
+      const hourOptions = '<option value="day">Day Total</option>' +
+        Array.from({ length: 24 }, (_, h) => {
+          const ampm = h >= 12 ? 'PM' : 'AM';
+          const disp = h === 0 ? 12 : h > 12 ? h - 12 : h;
+          return `<option value="${h}">${disp}${ampm}</option>`;
+        }).join('');
+
+      compareHourSel.innerHTML = hourOptions;
+    }
+
+    function updateCompareColumnSelect() {
+      const compareColSel = document.getElementById('filter-compare-column');
+      const compareHourVal = document.getElementById('filter-compare-hour')?.value || 'day';
+      const currentCol = document.getElementById('filter-column')?.value;
+      if (!compareColSel) return;
+
+      const options = compareHourVal === 'day'
+        ? DAY_TOTAL_COLS.map(c => `<option value="${c.id}">${c.label}</option>`).join('')
+        : ALL_COLUMNS.map(c => `<option value="${c.id}">${c.label}</option>`).join('');
+
+      compareColSel.innerHTML = options;
+      // Default to same column if it exists in the list
+      if (currentCol && compareColSel.querySelector(`option[value="${currentCol}"]`)) {
+        compareColSel.value = currentCol;
+      }
+    }
+
+    function updateMobileCompareColumnSelect() {
+      const compareColSel = document.getElementById('mobile-filter-compare-column');
+      const compareHourVal = document.getElementById('mobile-filter-compare-hour')?.value || 'day';
+      const currentCol = document.getElementById('mobile-filter-column')?.value;
+      if (!compareColSel) return;
+
+      const options = compareHourVal === 'day'
+        ? DAY_TOTAL_COLS.map(c => `<option value="${c.id}">${c.label}</option>`).join('')
+        : ALL_COLUMNS.map(c => `<option value="${c.id}">${c.label}</option>`).join('');
+
+      compareColSel.innerHTML = options;
+      // Default to same column if it exists in the list
+      if (currentCol && compareColSel.querySelector(`option[value="${currentCol}"]`)) {
+        compareColSel.value = currentCol;
+      }
+    }
+
+    // Event listeners for compare hour changes to update column dropdown
+    document.getElementById('filter-compare-hour')?.addEventListener('change', updateCompareColumnSelect);
+    document.getElementById('mobile-filter-compare-hour')?.addEventListener('change', updateMobileCompareColumnSelect);
+    // Update compare column when main column changes (to default to same metric)
+    document.getElementById('filter-column')?.addEventListener('change', () => {
+      if (document.getElementById('filter-compare-mode')?.value === 'hour') {
+        updateCompareColumnSelect();
+      }
+    });
+    document.getElementById('mobile-filter-column')?.addEventListener('change', () => {
+      if (document.getElementById('mobile-filter-compare-mode')?.value === 'hour') {
+        updateMobileCompareColumnSelect();
+      }
+    });
+
     function addColumnFilter() {
       const hour = document.getElementById('filter-hour').value;
       const col = document.getElementById('filter-column').value;
       const op = document.getElementById('filter-op').value;
-      const val = parseFloat(document.getElementById('filter-value').value);
+      const compareMode = document.getElementById('filter-compare-mode').value;
 
-      if (isNaN(val)) { alert('Please enter a valid number'); return; }
+      if (compareMode === 'hour') {
+        const compareHour = document.getElementById('filter-compare-hour').value;
+        const compareCol = document.getElementById('filter-compare-column').value;
+        columnFilters.push({ hour, col, op, compareMode: 'hour', compareHour, compareCol, logic: 'AND' });
+      } else {
+        const val = parseFloat(document.getElementById('filter-value').value);
+        if (isNaN(val)) { alert('Please enter a valid number'); return; }
+        columnFilters.push({ hour, col, op, val, compareMode: 'value', logic: 'AND' });
+      }
 
-      columnFilters.push({ hour, col, op, val, logic: 'AND' });
       document.getElementById('filter-value').value = '';
       updateFilterUI();
       renderTable();
@@ -5722,10 +5925,7 @@
 
       // Populate the filter inputs
       document.getElementById('filter-hour').value = filter.hour;
-      document.getElementById('filter-column').value = filter.col;
       document.getElementById('filter-op').value = filter.op;
-      const filterValue = document.getElementById('filter-value');
-      filterValue.value = filter.val;
 
       // Update column select in case we're switching between day/hour
       const hourVal = filter.hour;
@@ -5740,9 +5940,27 @@
       }
       document.getElementById('filter-column').value = filter.col;
 
-      // Focus and select the value input
-      filterValue.focus();
-      filterValue.select();
+      // Handle compare mode
+      const compareMode = filter.compareMode || 'value';
+      document.getElementById('filter-compare-mode').value = compareMode;
+
+      if (compareMode === 'hour') {
+        // Show hour comparison UI
+        document.getElementById('filter-value-container').style.display = 'none';
+        document.getElementById('filter-compare-container').style.display = 'inline';
+        updateCompareHourSelect();
+        document.getElementById('filter-compare-hour').value = filter.compareHour || 'day';
+        updateCompareColumnSelect();
+        document.getElementById('filter-compare-column').value = filter.compareCol || filter.col;
+      } else {
+        // Show value UI
+        document.getElementById('filter-value-container').style.display = 'inline';
+        document.getElementById('filter-compare-container').style.display = 'none';
+        const filterValue = document.getElementById('filter-value');
+        filterValue.value = filter.val;
+        filterValue.focus();
+        filterValue.select();
+      }
 
       // Remove the old filter
       removeFilter(idx);
@@ -5761,13 +5979,32 @@
         }
         const colDef = f.hour === 'day' ? DAY_TOTAL_COLS.find(c => c.id === f.col) : ALL_COLUMNS.find(c => c.id === f.col);
         const logic = f.logic || 'AND';
+
+        // Determine what to show on the right side of the operator
+        let compareDisplay;
+        if (f.compareMode === 'hour') {
+          // Show comparison hour and column
+          let compareHourLabel;
+          if (f.compareHour === 'day') {
+            compareHourLabel = 'Day';
+          } else {
+            compareHourLabel = formatHourHeader(parseInt(f.compareHour));
+          }
+          const compareColDef = f.compareHour === 'day'
+            ? DAY_TOTAL_COLS.find(c => c.id === f.compareCol)
+            : ALL_COLUMNS.find(c => c.id === f.compareCol);
+          compareDisplay = `<u>${compareHourLabel} ${compareColDef?.label || f.compareCol}</u>`;
+        } else {
+          compareDisplay = `<u>${f.val}</u>`;
+        }
+
         return `<div class="filter-tag">
           <select onchange="updateFilterLogic(${i}, this.value)" style="padding:1px 3px;background:rgba(0,0,0,0.3);border:1px solid rgba(74,222,128,0.3);border-radius:2px;color:var(--accent-green);font-size:0.5rem;margin-right:4px;">
             <option value="AND" ${logic === 'AND' ? 'selected' : ''}>AND</option>
             <option value="OR" ${logic === 'OR' ? 'selected' : ''}>OR</option>
           </select>
           <span onclick="editFilter(${i})" style="cursor:pointer;" title="Click to edit">
-            ${hourLabel} ${colDef?.label || f.col} ${f.op} <u>${f.val}</u>
+            ${hourLabel} ${colDef?.label || f.col} ${f.op} ${compareDisplay}
           </span>
           <span class="remove-filter" onclick="removeFilter(${i})">×</span>
         </div>`;
@@ -5787,22 +6024,42 @@
         // Clear previous matched hours
         day._matchedHours = {};
 
+        // Helper to get comparison value (either static or from another hour)
+        const getCompareValue = (f) => {
+          if (f.compareMode === 'hour') {
+            // Get value from comparison hour and column
+            if (f.compareHour === 'day') {
+              return day[f.compareCol];
+            } else {
+              const ch = parseInt(f.compareHour);
+              return day.hrs[ch]?.m?.[f.compareCol];
+            }
+          }
+          return f.val;
+        };
+
+        // Helper to perform comparison
+        const compare = (val, op, compareVal) => {
+          if (val == null || compareVal == null) return false;
+          switch (op) {
+            case '>=': return val >= compareVal;
+            case '<=': return val <= compareVal;
+            case '>': return val > compareVal;
+            case '<': return val < compareVal;
+            case '==': return val === compareVal;
+            case '!=': return val !== compareVal;
+            default: return true;
+          }
+        };
+
         // Helper function to evaluate a filter
         const evaluateFilter = (f) => {
+          const compareVal = getCompareValue(f);
+
           if (f.hour === 'day') {
             // Day total filter
             const val = day[f.col];
-            if (val == null) return false;
-
-            switch (f.op) {
-              case '>=': return val >= f.val;
-              case '<=': return val <= f.val;
-              case '>': return val > f.val;
-              case '<': return val < f.val;
-              case '==': return val === f.val;
-              case '!=': return val !== f.val;
-              default: return true;
-            }
+            return compare(val, f.op, compareVal);
           } else if (f.hour === 'any') {
             // Any hour filter - check if ANY hour meets the criteria and track matches
             const hours = Object.keys(day.hrs);
@@ -5812,17 +6069,7 @@
               const val = day.hrs[h]?.m?.[f.col];
               if (val == null) return;
 
-              let matches = false;
-              switch (f.op) {
-                case '>=': matches = val >= f.val; break;
-                case '<=': matches = val <= f.val; break;
-                case '>': matches = val > f.val; break;
-                case '<': matches = val < f.val; break;
-                case '==': matches = val === f.val; break;
-                case '!=': matches = val !== f.val; break;
-              }
-
-              if (matches) {
+              if (compare(val, f.op, compareVal)) {
                 matchedHours.push(parseInt(h));
               }
             });
@@ -5840,17 +6087,7 @@
             // Specific hour filter
             const h = parseInt(f.hour);
             const val = day.hrs[h]?.m?.[f.col];
-            if (val == null) return false;
-
-            switch (f.op) {
-              case '>=': return val >= f.val;
-              case '<=': return val <= f.val;
-              case '>': return val > f.val;
-              case '<': return val < f.val;
-              case '==': return val === f.val;
-              case '!=': return val !== f.val;
-              default: return true;
-            }
+            return compare(val, f.op, compareVal);
           }
         };
 
