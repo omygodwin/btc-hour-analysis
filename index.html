@@ -2339,6 +2339,10 @@
       { id: 'mxr', label: 'MxR', desc: 'Max Range', default: true, gradient: 'orange', group: 'mxr' },
       { id: 'mxrPct', label: 'MxR%', desc: 'Max Range Percentile (0-100%)', default: true, gradient: 'orange', group: 'mxr' },
       { id: 'mxrRk', label: 'MxR#', desc: 'Max Rng Rank', default: false, gradient: 'orange-inv', group: 'rank' },
+      { id: 'mnr', label: 'MnR', desc: 'Min Range (min of UR/LR)', default: false, gradient: 'orange', group: 'mnr' },
+      { id: 'mnrPct', label: 'MnR%', desc: 'Min Range Percentile (0-100%)', default: false, gradient: 'orange', group: 'mnr' },
+      { id: 'mnrRk', label: 'MnR#', desc: 'Min Rng Rank', default: false, gradient: 'orange-inv', group: 'rank' },
+      { id: 'mxrPctRng', label: 'MxR/R%', desc: 'Max Range as % of Total Range', default: false, gradient: 'orange', group: 'mxrpct' },
       { id: 'up', label: '#Up', desc: 'Lvls Up', default: false, gradient: null },
       { id: 'dn', label: '#Dn', desc: 'Lvls Down', default: false, gradient: null },
       { id: 'totl', label: 'TotL', desc: 'Total Levels', default: false, gradient: 'orange', group: 'mxl' },
@@ -5046,6 +5050,8 @@
           }
 
           hd.m.mxr = Math.max(hd.m.ur, hd.m.lr);
+          hd.m.mnr = Math.min(hd.m.ur, hd.m.lr);
+          hd.m.mxrPctRng = hd.m.rng > 0 ? Math.round((hd.m.mxr / hd.m.rng) * 1000) / 10 : null;
           hd.m.mxl = Math.max(hd.m.up, hd.m.dn);
         
           prevCdrU = cdrU;
@@ -5461,11 +5467,15 @@
       // For each day, the lowest mxr = 0%, highest mxr = 100%
       Object.values(etDays).forEach(day => {
         const dayMxrValues = [];
+        const dayMnrValues = [];
         const dayRngValues = [];
         getSortedHourKeys(day).forEach(h => {
           const m = day.hrs[h].m;
           if (m && m.mxr != null) {
             dayMxrValues.push(m.mxr);
+          }
+          if (m && m.mnr != null) {
+            dayMnrValues.push(m.mnr);
           }
           if (m && m.rng != null) {
             dayRngValues.push(m.rng);
@@ -5488,6 +5498,24 @@
               } else {
                 // If all values are the same in this day, set to 50%
                 m.mxrPct = 50;
+              }
+            }
+          });
+        }
+
+        // Calculate min range percentile (mnr)
+        if (dayMnrValues.length > 0) {
+          const dayMnrMin = Math.min(...dayMnrValues);
+          const dayMnrMax = Math.max(...dayMnrValues);
+          const dayMnrRange = dayMnrMax - dayMnrMin;
+
+          getSortedHourKeys(day).forEach(h => {
+            const m = day.hrs[h].m;
+            if (m && m.mnr != null) {
+              if (dayMnrRange > 0) {
+                m.mnrPct = Math.round(((m.mnr - dayMnrMin) / dayMnrRange) * 100 * 10) / 10;
+              } else {
+                m.mnrPct = 50;
               }
             }
           });
@@ -6110,14 +6138,16 @@
       });
     }
 
-    // Calculate dynamic mxrPct and rngPct based on visible hours only
+    // Calculate dynamic mxrPct, mnrPct and rngPct based on visible hours only
     function calcDynamicRangePct(day, visibleHours) {
-      // Collect mxr and rng values only from visible hours
+      // Collect mxr, mnr and rng values only from visible hours
       const dayMxrValues = [];
+      const dayMnrValues = [];
       const dayRngValues = [];
       visibleHours.forEach(h => {
         const m = day.hrs[h]?.m;
         if (m && m.mxr != null) dayMxrValues.push(m.mxr);
+        if (m && m.mnr != null) dayMnrValues.push(m.mnr);
         if (m && m.rng != null) dayRngValues.push(m.rng);
       });
 
@@ -6133,6 +6163,23 @@
               m.mxrPct = Math.round(((m.mxr - dayMxrMin) / dayMxrRange) * 100 * 10) / 10;
             } else {
               m.mxrPct = 50;
+            }
+          }
+        });
+      }
+
+      // Calculate mnrPct
+      if (dayMnrValues.length > 0) {
+        const dayMnrMin = Math.min(...dayMnrValues);
+        const dayMnrMax = Math.max(...dayMnrValues);
+        const dayMnrRange = dayMnrMax - dayMnrMin;
+        visibleHours.forEach(h => {
+          const m = day.hrs[h]?.m;
+          if (m && m.mnr != null) {
+            if (dayMnrRange > 0) {
+              m.mnrPct = Math.round(((m.mnr - dayMnrMin) / dayMnrRange) * 100 * 10) / 10;
+            } else {
+              m.mnrPct = 50;
             }
           }
         });
@@ -6567,7 +6614,7 @@ function populateDatePicker() {
     
     function calcRowStats(day, hours) {
       const s = {
-        rng: [], urlr: [], mxr: [], mxl: [], rank: [], cl: [], oc: [], cdr: [], cdrRG: [], mxcd: [], rsi: [], sig: [], vol: [], bx: [], cons: [], consrev: [], obosrev: [], ah4pm: [], bars: [], interval: [], afterbar: [], maxrngbar: [], strength: [], m15rng: [],
+        rng: [], urlr: [], mxr: [], mnr: [], mxrpct: [], mxl: [], rank: [], cl: [], oc: [], cdr: [], cdrRG: [], mxcd: [], rsi: [], sig: [], vol: [], bx: [], cons: [], consrev: [], obosrev: [], ah4pm: [], bars: [], interval: [], afterbar: [], maxrngbar: [], strength: [], m15rng: [],
         // Close-to-rest-of-hour metric groups (one per minute)
         cr00: [], cr05: [], cr10: [], cr15: [], cr20: [], cr25: [], cr30: [], cr35: [], cr40: [], cr45: [], cr50: [],
         // Open-to-bar range metric groups (one per minute)
@@ -6587,10 +6634,12 @@ function populateDatePicker() {
         if (m.ur != null) s.urlr.push(m.ur);
         if (m.lr != null) s.urlr.push(m.lr);
         if (m.mxr != null) s.mxr.push(m.mxr);
-        // mxrPct is always 0-100, don't mix with mxr stats
+        if (m.mnr != null) s.mnr.push(m.mnr);
+        if (m.mxrPctRng != null) s.mxrpct.push(m.mxrPctRng);
+        // mxrPct/mnrPct is always 0-100, don't mix with mxr/mnr stats
         if (m.mxl != null) s.mxl.push(m.mxl);
 
-        ['mxrRk','mxlRk','ocRk','rngRk'].forEach(r => {
+        ['mxrRk','mnrRk','mxlRk','ocRk','rngRk'].forEach(r => {
           if (m[r] != null) s.rank.push(m[r]);
         });
 
@@ -6715,7 +6764,7 @@ function populateDatePicker() {
       const realHours = [...hourSet].map(Number).sort((a,b) => a-b);
       realHours.forEach(h => {
         s[h] = {
-          rng: [], urlr: [], mxr: [], mxl: [], rank: [], cl: [], oc: [],
+          rng: [], urlr: [], mxr: [], mnr: [], mxrpct: [], mxl: [], rank: [], cl: [], oc: [],
           cdrRG: [], cdr: [], mxcd: [], rsi: [], sig: [], vol: [],
           wcdr: [], wcdrRG: [], wmxcd: [],
           p5cdr: [], p5cdrRG: [], p5mxcd: [],
@@ -6740,10 +6789,12 @@ function populateDatePicker() {
           if (m.ur != null) s[h].urlr.push(m.ur);
           if (m.lr != null) s[h].urlr.push(m.lr);
           if (m.mxr != null) s[h].mxr.push(m.mxr);
-          // mxrPct is always 0-100, don't mix with mxr stats
+          if (m.mnr != null) s[h].mnr.push(m.mnr);
+          if (m.mxrPctRng != null) s[h].mxrpct.push(m.mxrPctRng);
+          // mxrPct/mnrPct is always 0-100, don't mix with mxr/mnr stats
           if (m.mxl != null) s[h].mxl.push(m.mxl);
 
-          ['mxrRk','mxlRk','ocRk','rngRk'].forEach(r => {
+          ['mxrRk','mnrRk','mxlRk','ocRk','rngRk'].forEach(r => {
             if (m[r] != null) s[h].rank.push(m[r]);
           });
 
