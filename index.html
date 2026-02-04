@@ -1321,6 +1321,7 @@
         <div class="tb-spacer"></div>
         <button class="tb-btn preset mobile-hide" onclick="resetAll()">Reset</button>
         <button class="tb-btn preset mobile-hide" onclick="setRTH()">US RTH</button>
+        <button class="tb-btn mobile-hide" onclick="exportVisibleData()" title="Download visible data as CSV">📥 Export</button>
         <button class="tb-btn new-file mobile-hide" onclick="loadNewFile()">📁 New</button>
       </div>
 
@@ -2909,11 +2910,16 @@
 
     if (isMobile) {
       document.documentElement.classList.add('is-mobile');
-      console.log('Mobile device detected');
+      console.log('Mobile device detected - defaulting to no data filter to prevent crashes');
+      // On mobile, default to no days selected to prevent loading too much data
+      selectedDays = new Set();
+      pm5SelectedDays = new Set();
       // Initialize day view as collapsed on mobile
       setTimeout(() => {
         const toolbarEl = document.getElementById('day-toolbar-main');
         if (toolbarEl) toolbarEl.classList.add('collapsed');
+        // Update mobile filter UI to show no days selected
+        document.querySelectorAll('[data-day]').forEach(b => b.classList.remove('active'));
       }, 100);
     }
 
@@ -6450,6 +6456,10 @@ function populateDatePicker() {
         let va, vb;
         if (sortColumn === 'date') {
           va = a.date; vb = b.date;
+        } else if (sortColumn === 'dow') {
+          va = a.dow; vb = b.dow;
+        } else if (sortColumn === 'occ') {
+          va = a.occ; vb = b.occ;
         } else if (DAY_TOTAL_COLS.some(c => c.id === sortColumn)) {
           va = a[sortColumn]; vb = b[sortColumn];
         } else if (sortHour !== null) {
@@ -7220,9 +7230,9 @@ function populateDatePicker() {
       
       // Build header
       let hd = '<tr class="hour-row">';
-      hd += `<th class="sticky-col sticky-header" style="left:0;min-width:65px" rowspan="2" onclick="sortBy('date',null)">Date${sortColumn==='date'?(sortDirection==='asc'?'↑':'↓'):''}</th>`;
-      hd += `<th class="sticky-col sticky-header" style="left:65px;min-width:28px" rowspan="2">Day</th>`;
-      hd += `<th class="sticky-col sticky-header" style="left:93px;min-width:20px" rowspan="2">#</th>`;
+      hd += `<th class="sticky-col sticky-header" style="left:0;min-width:65px;cursor:pointer" rowspan="2" onclick="sortBy('date',null)">Date${sortColumn==='date'?(sortDirection==='asc'?'↑':'↓'):''}</th>`;
+      hd += `<th class="sticky-col sticky-header" style="left:65px;min-width:28px;cursor:pointer" rowspan="2" onclick="sortBy('dow',null)">Day${sortColumn==='dow'?(sortDirection==='asc'?'↑':'↓'):''}</th>`;
+      hd += `<th class="sticky-col sticky-header" style="left:93px;min-width:20px;cursor:pointer" rowspan="2" onclick="sortBy('occ',null)">#${sortColumn==='occ'?(sortDirection==='asc'?'↑':'↓'):''}</th>`;
       
       if (showDayCols && dtCols.length > 0) {
         hd += `<th class="sticky-col sticky-header day-totals-header" style="left:113px" colspan="${dtCols.length}">Day Totals (ET)</th>`;
@@ -10780,6 +10790,74 @@ function populateDatePicker() {
       document.querySelectorAll('[data-day]').forEach(b => b.classList.toggle('active', selectedDays.has(+b.dataset.day)));
       setHours(9, 16);
       useDateFilter = false; selectedDates.clear(); updateDatePickerUI();
+    }
+
+    // Export visible data as CSV
+    function exportVisibleData() {
+      const data = getFilteredData();
+      if (!data || data.length === 0) {
+        alert('No data to export. Please select some filters first.');
+        return;
+      }
+
+      const hours = getVisibleHours();
+      const cols = getActiveCols();
+      const dtCols = showDayCols ? getActiveDTCols() : [];
+
+      // Build CSV header
+      let csvHeader = ['Date', 'Day', 'Occ'];
+
+      // Add day total columns
+      dtCols.forEach(c => csvHeader.push(c.label));
+
+      // Add hourly columns
+      hours.forEach(h => {
+        cols.forEach(c => csvHeader.push(`${formatHourHeader(h)}_${c.label}`));
+      });
+
+      // Build CSV rows
+      const csvRows = [csvHeader.join(',')];
+
+      data.forEach(day => {
+        const row = [
+          day.date,
+          DAYS_SHORT[day.dow],
+          day.occ
+        ];
+
+        // Add day total values
+        dtCols.forEach(c => {
+          let val = day[c.id];
+          if (c.id === 'dHiHr' || c.id === 'dLoHr' || c.id === 'dRthHiHr' || c.id === 'dRthLoHr') {
+            val = val != null ? formatHourHeader(val) : '';
+          }
+          row.push(val != null ? val : '');
+        });
+
+        // Add hourly values
+        hours.forEach(h => {
+          const m = day.hrs[h]?.m;
+          cols.forEach(c => {
+            let val = m?.[c.id];
+            row.push(val != null ? val : '');
+          });
+        });
+
+        csvRows.push(row.join(','));
+      });
+
+      // Create and download file
+      const csvContent = csvRows.join('\n');
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.setAttribute('href', url);
+      link.setAttribute('download', `btc_hourly_export_${new Date().toISOString().slice(0,10)}.csv`);
+      link.style.display = 'none';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
     }
   </script>
 
