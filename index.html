@@ -2375,6 +2375,8 @@
       { id: 'oc25', label: 'OC25', desc: ':00-:25 O-C', default: true, gradient: 'rg', group: 'oc' },
       { id: 'oc55', label: 'OC55', desc: ':30-:55 O-C', default: true, gradient: 'rg', group: 'oc' },
       { id: 'ocRk', label: 'OC#', desc: 'O-C Rank', default: false, gradient: 'orange-inv', group: 'rank' },
+      { id: 'ocPctDir', label: 'OC/D%', desc: 'O-C as % of max move in close direction (OC/UR if +, OC/LR if -)', default: false, gradient: 'rg', group: 'ocpct' },
+      { id: 'ocPctBias', label: 'OC/B%', desc: 'O-C as % of directional bias (OC / |UR-LR|)', default: false, gradient: 'rg', group: 'ocpct' },
       { id: 'cdrU', label: 'CDU', desc: 'Cum Day Up', default: false, gradient: 'orange-col', group: 'cdr' },
       { id: 'cdrD', label: 'CDD', desc: 'Cum Day Dn', default: false, gradient: 'orange-col', group: 'cdr' },
       { id: 'mxcd', label: 'MxCD', desc: 'Max Cum D', default: true, gradient: 'orange-col', group: 'mxcd' },
@@ -5074,6 +5076,20 @@
           hd.m.mxr = Math.max(hd.m.ur, hd.m.lr);
           hd.m.mnr = Math.min(hd.m.ur, hd.m.lr);
           hd.m.mxrPctRng = hd.m.rng > 0 ? Math.round((hd.m.mxr / hd.m.rng) * 1000) / 10 : null;
+
+          // OC as % of directional max: OC/UR if positive, OC/LR if negative
+          if (hd.m.oc >= 0 && hd.m.ur > 0) {
+            hd.m.ocPctDir = Math.round((hd.m.oc / hd.m.ur) * 1000) / 10;
+          } else if (hd.m.oc < 0 && hd.m.lr > 0) {
+            hd.m.ocPctDir = Math.round((hd.m.oc / hd.m.lr) * 1000) / 10;
+          } else {
+            hd.m.ocPctDir = null;
+          }
+
+          // OC as % of directional bias: OC / |UR - LR|
+          const urLrDiff = Math.abs(hd.m.ur - hd.m.lr);
+          hd.m.ocPctBias = urLrDiff > 0 ? Math.round((hd.m.oc / urLrDiff) * 1000) / 10 : null;
+
           hd.m.mxl = Math.max(hd.m.up, hd.m.dn);
         
           prevCdrU = cdrU;
@@ -6705,7 +6721,7 @@ function populateDatePicker() {
     
     function calcRowStats(day, hours) {
       const s = {
-        rng: [], urlr: [], mxr: [], mnr: [], mxrpct: [], pctmax: [], mxl: [], rank: [], cl: [], oc: [], cdr: [], cdrRG: [], mxcd: [], rsi: [], sig: [], vol: [], bx: [], cons: [], consrev: [], obosrev: [], ah4pm: [], bars: [], interval: [], afterbar: [], maxrngbar: [], strength: [], m15rng: [],
+        rng: [], urlr: [], mxr: [], mnr: [], mxrpct: [], pctmax: [], mxl: [], rank: [], cl: [], oc: [], ocpct: [], cdr: [], cdrRG: [], mxcd: [], rsi: [], sig: [], vol: [], bx: [], cons: [], consrev: [], obosrev: [], ah4pm: [], bars: [], interval: [], afterbar: [], maxrngbar: [], strength: [], m15rng: [],
         // Close-to-rest-of-hour metric groups (one per minute)
         cr00: [], cr05: [], cr10: [], cr15: [], cr20: [], cr25: [], cr30: [], cr35: [], cr40: [], cr45: [], cr50: [],
         // Open-to-bar range metric groups (one per minute)
@@ -6740,6 +6756,8 @@ function populateDatePicker() {
 
         if (m.cl != null) s.cl.push(m.cl);
         if (m.oc != null) s.oc.push(m.oc);
+        if (m.ocPctDir != null) s.ocpct.push(m.ocPctDir);
+        if (m.ocPctBias != null) s.ocpct.push(m.ocPctBias);
 
         if (m.cdrUActual != null) s.cdr.push(m.cdrUActual);
         if (m.cdrDActual != null) s.cdr.push(m.cdrDActual);
@@ -6859,7 +6877,7 @@ function populateDatePicker() {
       const realHours = [...hourSet].map(Number).sort((a,b) => a-b);
       realHours.forEach(h => {
         s[h] = {
-          rng: [], urlr: [], mxr: [], mnr: [], mxrpct: [], pctmax: [], mxl: [], rank: [], cl: [], oc: [],
+          rng: [], urlr: [], mxr: [], mnr: [], mxrpct: [], pctmax: [], mxl: [], rank: [], cl: [], oc: [], ocpct: [],
           cdrRG: [], cdr: [], mxcd: [], rsi: [], sig: [], vol: [],
           wcdr: [], wcdrRG: [], wmxcd: [],
           p5cdr: [], p5cdrRG: [], p5mxcd: [],
@@ -6899,6 +6917,8 @@ function populateDatePicker() {
 
           if (m.cl != null) s[h].cl.push(m.cl);
           if (m.oc != null) s[h].oc.push(m.oc);
+          if (m.ocPctDir != null) s[h].ocpct.push(m.ocPctDir);
+          if (m.ocPctBias != null) s[h].ocpct.push(m.ocPctBias);
 
           if (m.cdr != null) s[h].cdrRG.push(m.cdr);
           if (m.cdrUActual != null) s[h].cdr.push(m.cdrUActual);
