@@ -2343,16 +2343,21 @@
       // ===== RANGE METRICS (grouped together) =====
       { id: 'rng', label: 'Rng', desc: 'Range', default: false, gradient: 'orange', group: 'rng' },
       { id: 'rngPct', label: 'Rng%', desc: 'Hourly Range Percentile (0-100%)', default: false, gradient: 'orange', group: 'rng' },
+      { id: 'rngPctMax', label: 'Rng%Mx', desc: 'Range as % of day max Rng', default: false, gradient: 'orange', group: 'pctmax' },
       { id: 'rngRk', label: 'Rng#', desc: 'Range Rank', default: false, gradient: 'orange-inv', group: 'rank' },
       { id: 'ur', label: 'UR', desc: 'Upper Rng', default: false, gradient: 'orange', group: 'urlr' },
+      { id: 'urPctMax', label: 'UR%Mx', desc: 'Upper Range as % of day max UR', default: false, gradient: 'orange', group: 'pctmax' },
       { id: 'urRk', label: 'UR#', desc: 'Upper Rng Rank', default: false, gradient: 'orange-inv', group: 'rank' },
       { id: 'lr', label: 'LR', desc: 'Lower Rng', default: false, gradient: 'orange', group: 'urlr' },
+      { id: 'lrPctMax', label: 'LR%Mx', desc: 'Lower Range as % of day max LR', default: false, gradient: 'orange', group: 'pctmax' },
       { id: 'lrRk', label: 'LR#', desc: 'Lower Rng Rank', default: false, gradient: 'orange-inv', group: 'rank' },
       { id: 'mxr', label: 'MxR', desc: 'Max Range', default: true, gradient: 'orange', group: 'mxr' },
       { id: 'mxrPct', label: 'MxR%', desc: 'Max Range Percentile (0-100%)', default: true, gradient: 'orange', group: 'mxr' },
+      { id: 'mxrPctMax', label: 'MxR%Mx', desc: 'Max Range as % of day max MxR', default: false, gradient: 'orange', group: 'pctmax' },
       { id: 'mxrRk', label: 'MxR#', desc: 'Max Rng Rank', default: false, gradient: 'orange-inv', group: 'rank' },
       { id: 'mnr', label: 'MnR', desc: 'Min Range (min of UR/LR)', default: false, gradient: 'orange', group: 'mnr' },
       { id: 'mnrPct', label: 'MnR%', desc: 'Min Range Percentile (0-100%)', default: false, gradient: 'orange', group: 'mnr' },
+      { id: 'mnrPctMax', label: 'MnR%Mx', desc: 'Min Range as % of day max MnR', default: false, gradient: 'orange', group: 'pctmax' },
       { id: 'mnrRk', label: 'MnR#', desc: 'Min Rng Rank', default: false, gradient: 'orange-inv', group: 'rank' },
       { id: 'mxrPctRng', label: 'MxR/R%', desc: 'Max Range as % of Total Range', default: false, gradient: 'orange', group: 'mxrpct' },
       { id: 'up', label: '#Up', desc: 'Lvls Up', default: false, gradient: null },
@@ -5486,6 +5491,8 @@
         const dayMxrValues = [];
         const dayMnrValues = [];
         const dayRngValues = [];
+        const dayUrValues = [];
+        const dayLrValues = [];
         getSortedHourKeys(day).forEach(h => {
           const m = day.hrs[h].m;
           if (m && m.mxr != null) {
@@ -5497,6 +5504,12 @@
           if (m && m.rng != null) {
             dayRngValues.push(m.rng);
           }
+          if (m && m.ur != null) {
+            dayUrValues.push(m.ur);
+          }
+          if (m && m.lr != null) {
+            dayLrValues.push(m.lr);
+          }
         });
 
         // Find min and max for this day (mxr)
@@ -5505,7 +5518,7 @@
           const dayMxrMax = Math.max(...dayMxrValues);
           const dayMxrRange = dayMxrMax - dayMxrMin;
 
-          // Calculate percentile for each hour in this day
+          // Calculate percentile and % of max for each hour in this day
           getSortedHourKeys(day).forEach(h => {
             const m = day.hrs[h].m;
             if (m && m.mxr != null) {
@@ -5516,6 +5529,8 @@
                 // If all values are the same in this day, set to 50%
                 m.mxrPct = 50;
               }
+              // % of day max: value / max * 100
+              m.mxrPctMax = dayMxrMax > 0 ? Math.round((m.mxr / dayMxrMax) * 1000) / 10 : null;
             }
           });
         }
@@ -5534,6 +5549,8 @@
               } else {
                 m.mnrPct = 50;
               }
+              // % of day max
+              m.mnrPctMax = dayMnrMax > 0 ? Math.round((m.mnr / dayMnrMax) * 1000) / 10 : null;
             }
           });
         }
@@ -5552,6 +5569,30 @@
               } else {
                 m.rngPct = 50;
               }
+              // % of day max
+              m.rngPctMax = dayRngMax > 0 ? Math.round((m.rng / dayRngMax) * 1000) / 10 : null;
+            }
+          });
+        }
+
+        // Calculate UR % of max
+        if (dayUrValues.length > 0) {
+          const dayUrMax = Math.max(...dayUrValues);
+          getSortedHourKeys(day).forEach(h => {
+            const m = day.hrs[h].m;
+            if (m && m.ur != null) {
+              m.urPctMax = dayUrMax > 0 ? Math.round((m.ur / dayUrMax) * 1000) / 10 : null;
+            }
+          });
+        }
+
+        // Calculate LR % of max
+        if (dayLrValues.length > 0) {
+          const dayLrMax = Math.max(...dayLrValues);
+          getSortedHourKeys(day).forEach(h => {
+            const m = day.hrs[h].m;
+            if (m && m.lr != null) {
+              m.lrPctMax = dayLrMax > 0 ? Math.round((m.lr / dayLrMax) * 1000) / 10 : null;
             }
           });
         }
@@ -6155,20 +6196,24 @@
       });
     }
 
-    // Calculate dynamic mxrPct, mnrPct and rngPct based on visible hours only
+    // Calculate dynamic mxrPct, mnrPct, rngPct and %Max metrics based on visible hours only
     function calcDynamicRangePct(day, visibleHours) {
-      // Collect mxr, mnr and rng values only from visible hours
+      // Collect values only from visible hours
       const dayMxrValues = [];
       const dayMnrValues = [];
       const dayRngValues = [];
+      const dayUrValues = [];
+      const dayLrValues = [];
       visibleHours.forEach(h => {
         const m = day.hrs[h]?.m;
         if (m && m.mxr != null) dayMxrValues.push(m.mxr);
         if (m && m.mnr != null) dayMnrValues.push(m.mnr);
         if (m && m.rng != null) dayRngValues.push(m.rng);
+        if (m && m.ur != null) dayUrValues.push(m.ur);
+        if (m && m.lr != null) dayLrValues.push(m.lr);
       });
 
-      // Calculate mxrPct
+      // Calculate mxrPct and mxrPctMax
       if (dayMxrValues.length > 0) {
         const dayMxrMin = Math.min(...dayMxrValues);
         const dayMxrMax = Math.max(...dayMxrValues);
@@ -6181,11 +6226,12 @@
             } else {
               m.mxrPct = 50;
             }
+            m.mxrPctMax = dayMxrMax > 0 ? Math.round((m.mxr / dayMxrMax) * 1000) / 10 : null;
           }
         });
       }
 
-      // Calculate mnrPct
+      // Calculate mnrPct and mnrPctMax
       if (dayMnrValues.length > 0) {
         const dayMnrMin = Math.min(...dayMnrValues);
         const dayMnrMax = Math.max(...dayMnrValues);
@@ -6198,11 +6244,12 @@
             } else {
               m.mnrPct = 50;
             }
+            m.mnrPctMax = dayMnrMax > 0 ? Math.round((m.mnr / dayMnrMax) * 1000) / 10 : null;
           }
         });
       }
 
-      // Calculate rngPct
+      // Calculate rngPct and rngPctMax
       if (dayRngValues.length > 0) {
         const dayRngMin = Math.min(...dayRngValues);
         const dayRngMax = Math.max(...dayRngValues);
@@ -6215,6 +6262,29 @@
             } else {
               m.rngPct = 50;
             }
+            m.rngPctMax = dayRngMax > 0 ? Math.round((m.rng / dayRngMax) * 1000) / 10 : null;
+          }
+        });
+      }
+
+      // Calculate urPctMax
+      if (dayUrValues.length > 0) {
+        const dayUrMax = Math.max(...dayUrValues);
+        visibleHours.forEach(h => {
+          const m = day.hrs[h]?.m;
+          if (m && m.ur != null) {
+            m.urPctMax = dayUrMax > 0 ? Math.round((m.ur / dayUrMax) * 1000) / 10 : null;
+          }
+        });
+      }
+
+      // Calculate lrPctMax
+      if (dayLrValues.length > 0) {
+        const dayLrMax = Math.max(...dayLrValues);
+        visibleHours.forEach(h => {
+          const m = day.hrs[h]?.m;
+          if (m && m.lr != null) {
+            m.lrPctMax = dayLrMax > 0 ? Math.round((m.lr / dayLrMax) * 1000) / 10 : null;
           }
         });
       }
@@ -6635,7 +6705,7 @@ function populateDatePicker() {
     
     function calcRowStats(day, hours) {
       const s = {
-        rng: [], urlr: [], mxr: [], mnr: [], mxrpct: [], mxl: [], rank: [], cl: [], oc: [], cdr: [], cdrRG: [], mxcd: [], rsi: [], sig: [], vol: [], bx: [], cons: [], consrev: [], obosrev: [], ah4pm: [], bars: [], interval: [], afterbar: [], maxrngbar: [], strength: [], m15rng: [],
+        rng: [], urlr: [], mxr: [], mnr: [], mxrpct: [], pctmax: [], mxl: [], rank: [], cl: [], oc: [], cdr: [], cdrRG: [], mxcd: [], rsi: [], sig: [], vol: [], bx: [], cons: [], consrev: [], obosrev: [], ah4pm: [], bars: [], interval: [], afterbar: [], maxrngbar: [], strength: [], m15rng: [],
         // Close-to-rest-of-hour metric groups (one per minute)
         cr00: [], cr05: [], cr10: [], cr15: [], cr20: [], cr25: [], cr30: [], cr35: [], cr40: [], cr45: [], cr50: [],
         // Open-to-bar range metric groups (one per minute)
@@ -6657,6 +6727,10 @@ function populateDatePicker() {
         if (m.mxr != null) s.mxr.push(m.mxr);
         if (m.mnr != null) s.mnr.push(m.mnr);
         if (m.mxrPctRng != null) s.mxrpct.push(m.mxrPctRng);
+        // % of max metrics (0-100 scale)
+        ['mxrPctMax', 'mnrPctMax', 'rngPctMax', 'urPctMax', 'lrPctMax'].forEach(key => {
+          if (m[key] != null) s.pctmax.push(m[key]);
+        });
         // mxrPct/mnrPct is always 0-100, don't mix with mxr/mnr stats
         if (m.mxl != null) s.mxl.push(m.mxl);
 
@@ -6785,7 +6859,7 @@ function populateDatePicker() {
       const realHours = [...hourSet].map(Number).sort((a,b) => a-b);
       realHours.forEach(h => {
         s[h] = {
-          rng: [], urlr: [], mxr: [], mnr: [], mxrpct: [], mxl: [], rank: [], cl: [], oc: [],
+          rng: [], urlr: [], mxr: [], mnr: [], mxrpct: [], pctmax: [], mxl: [], rank: [], cl: [], oc: [],
           cdrRG: [], cdr: [], mxcd: [], rsi: [], sig: [], vol: [],
           wcdr: [], wcdrRG: [], wmxcd: [],
           p5cdr: [], p5cdrRG: [], p5mxcd: [],
@@ -6812,6 +6886,10 @@ function populateDatePicker() {
           if (m.mxr != null) s[h].mxr.push(m.mxr);
           if (m.mnr != null) s[h].mnr.push(m.mnr);
           if (m.mxrPctRng != null) s[h].mxrpct.push(m.mxrPctRng);
+          // % of max metrics (0-100 scale)
+          ['mxrPctMax', 'mnrPctMax', 'rngPctMax', 'urPctMax', 'lrPctMax'].forEach(key => {
+            if (m[key] != null) s[h].pctmax.push(m[key]);
+          });
           // mxrPct/mnrPct is always 0-100, don't mix with mxr/mnr stats
           if (m.mxl != null) s[h].mxl.push(m.mxl);
 
