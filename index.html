@@ -5303,25 +5303,54 @@
 
         // Calculate Friday 5PM reference metric (close minus most recent Friday 5PM open)
         // Friday = dayOfWeek 5
-        const daysToFriday = (dayOfWeek + 2) % 7; // Days since last Friday (0 if today is Friday)
-        const fridayDate = new Date(dateObj);
-        fridayDate.setUTCDate(fridayDate.getUTCDate() - daysToFriday);
-        const fridayStr = fridayDate.toISOString().split('T')[0];
-        const fridayDay = etDays[fridayStr];
-        const fri5pmOpen = fridayDay?.hrs?.[17]?.o; // Friday 5PM open
+        // Key fix: On Friday before 5pm, we should still reference LAST Friday's 5pm
+        // since the current Friday's 5pm hasn't occurred yet
+        const isFriday = dayOfWeek === 5;
 
-        if (fri5pmOpen != null) {
-          day.dFri5pmOpen = fri5pmOpen;
-          day.dVsFri5pm = day.dC ? Math.round(day.dC - fri5pmOpen) : null;
+        // For non-Friday days, find the most recent Friday
+        // For Friday, we need both current and previous Friday references
+        const daysToCurrentFriday = (dayOfWeek + 2) % 7; // Days since last Friday (0 if today is Friday)
+        const currentFridayDate = new Date(dateObj);
+        currentFridayDate.setUTCDate(currentFridayDate.getUTCDate() - daysToCurrentFriday);
+        const currentFridayStr = currentFridayDate.toISOString().split('T')[0];
+        const currentFridayDay = etDays[currentFridayStr];
+        const currentFri5pmOpen = currentFridayDay?.hrs?.[17]?.o;
 
-          // Calculate hourly Friday 5PM reference
-          getSortedHourKeys(day).forEach(h => {
-            const hd = day.hrs[h];
-            if (hd?.m) {
-              hd.m.vsFri5pm = Math.round(hd.c - fri5pmOpen);
-            }
-          });
+        // Previous Friday (7 days before current Friday)
+        const prevFridayDate = new Date(currentFridayDate);
+        prevFridayDate.setUTCDate(prevFridayDate.getUTCDate() - 7);
+        const prevFridayStr = prevFridayDate.toISOString().split('T')[0];
+        const prevFridayDay = etDays[prevFridayStr];
+        const prevFri5pmOpen = prevFridayDay?.hrs?.[17]?.o;
+
+        // For daily metric: use current Friday's 5pm (day close is at end of day, after 5pm)
+        // For non-Friday days, use the most recent Friday's 5pm
+        const dailyFri5pmOpen = isFriday ? currentFri5pmOpen : currentFri5pmOpen;
+
+        if (dailyFri5pmOpen != null) {
+          day.dFri5pmOpen = dailyFri5pmOpen;
+          day.dVsFri5pm = day.dC ? Math.round(day.dC - dailyFri5pmOpen) : null;
         }
+
+        // Calculate hourly Friday 5PM reference
+        // On Friday: hours 0-16 use previous Friday's 5pm, hours 17+ use current Friday's 5pm
+        // On other days: all hours use the most recent Friday's 5pm
+        getSortedHourKeys(day).forEach(h => {
+          const hd = day.hrs[h];
+          if (hd?.m) {
+            let fri5pmRef;
+            if (isFriday && h < 17) {
+              // Friday before 5pm: use previous week's Friday 5pm
+              fri5pmRef = prevFri5pmOpen;
+            } else {
+              // Friday 5pm+ or any other day: use current/most recent Friday 5pm
+              fri5pmRef = currentFri5pmOpen;
+            }
+            if (fri5pmRef != null) {
+              hd.m.vsFri5pm = Math.round(hd.c - fri5pmRef);
+            }
+          }
+        });
 
         // Calculate 5PM hourly cumulative metrics for hours after 5PM session starts
         // For hours 17-23 of current day: use current day's hour 17 open (reset at 5PM)
