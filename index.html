@@ -1955,6 +1955,15 @@
             </div>
 
             <div class="mobile-filter-section">
+              <h3>Year-Month <span style="font-weight:normal;font-size:0.65rem;color:var(--text-muted);">(overrides Year+Month)</span></h3>
+              <div class="mobile-filter-btns" style="margin-bottom:8px;">
+                <button class="mobile-filter-btn quick" onclick="clearYearMonthFilter(); updateMobileFilterUI();">Clear</button>
+                <button class="mobile-filter-btn quick" onclick="selectAllYearMonths(); updateMobileFilterUI();">All</button>
+              </div>
+              <div class="mobile-filter-btns" id="mobile-year-month-filters" style="max-height:120px;overflow-y:auto;"></div>
+            </div>
+
+            <div class="mobile-filter-section">
               <h3>Hours (Eastern Time)</h3>
               <div class="mobile-filter-btns" style="margin-bottom:8px;">
                 <button class="mobile-filter-btn quick" onclick="selectAllHours()">All</button>
@@ -1973,10 +1982,22 @@
 
             <div class="mobile-filter-section">
               <h3>Specific Dates</h3>
+              <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+                <label style="display:flex;align-items:center;gap:4px;font-size:0.7rem;color:var(--text-secondary);cursor:pointer;">
+                  <input type="checkbox" id="mobile-lock-dates-checkbox" onchange="toggleLockSpecificDates(); syncLockCheckboxes();" style="margin:0;">
+                  <span>Lock dates (bulk filters won't clear)</span>
+                </label>
+              </div>
               <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px;">
-                <button class="mobile-filter-btn quick" onclick="selectAllDates(); updateMobileFilterUI();">All Dates</button>
-                <button class="mobile-filter-btn none-btn" onclick="selectNoDates(); updateMobileFilterUI();">Clear Dates</button>
-                <button class="mobile-filter-btn quick" onclick="syncDatesFromFilters(); updateMobileFilterUI();">Sync from Filters</button>
+                <button class="mobile-filter-btn quick" onclick="selectAllDates(); updateMobileFilterUI();">All</button>
+                <button class="mobile-filter-btn none-btn" onclick="selectNoDates(); updateMobileFilterUI();">Clear</button>
+                <button class="mobile-filter-btn quick" onclick="syncDatesFromFilters(); updateMobileFilterUI();">Sync</button>
+                <button class="mobile-filter-btn quick" onclick="addDatesFromFilters(); updateMobileFilterUI();" title="Add matching dates">+ Add</button>
+                <button class="mobile-filter-btn quick" onclick="removeDatesNotInFilters(); updateMobileFilterUI();" title="Remove non-matching">- Trim</button>
+              </div>
+              <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px;">
+                <button class="mobile-filter-btn" onclick="hideMarketClosedDates(); updateMobileFilterUI();" title="Hide US market closed dates">🚫 Holidays</button>
+                <button class="mobile-filter-btn" onclick="hideMarketEarlyClose(); updateMobileFilterUI();" title="Also hide early close dates">⏰ Early Close</button>
               </div>
               <div style="font-size:0.7rem;color:var(--text-secondary);margin-bottom:8px;">
                 Selected: <span id="mobile-date-count">0</span> dates
@@ -3101,6 +3122,26 @@
           if (selectedDates.has(date)) dateBtn.classList.add('active');
           mobileDateList.appendChild(dateBtn);
         });
+      }
+
+      // Update year-month filters
+      const mobileYearMonthFilters = document.getElementById('mobile-year-month-filters');
+      if (mobileYearMonthFilters && Object.keys(etDays).length > 0) {
+        const yearMonths = new Set();
+        Object.values(etDays).forEach(d => yearMonths.add(d.date.slice(0,7)));
+        const sorted = Array.from(yearMonths).sort();
+        const monthNames = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+        mobileYearMonthFilters.innerHTML = sorted.map(ym => {
+          const [y, m] = ym.split('-');
+          const label = `${monthNames[parseInt(m)-1]} ${y}`;
+          return `<button class="mobile-filter-btn ${selectedYearMonths.has(ym) ? 'active' : ''}" data-yearmonth="${ym}" onclick="toggleYearMonth('${ym}'); updateMobileFilterUI();">${label}</button>`;
+        }).join('');
+      }
+
+      // Sync lock checkbox
+      const mobileLockCheckbox = document.getElementById('mobile-lock-dates-checkbox');
+      if (mobileLockCheckbox) {
+        mobileLockCheckbox.checked = lockSpecificDates;
       }
 
       // Update hour dropdowns (ensure they're populated with all 24 hours)
@@ -6567,7 +6608,7 @@ function populateDatePicker() {
       });
       useDateFilter = true;
       lockSpecificDates = true;
-      document.getElementById('lock-dates-checkbox').checked = true;
+      syncLockCheckboxes();
       updateDatePickerUI();
       renderTable();
     }
@@ -6578,8 +6619,19 @@ function populateDatePicker() {
     function updateDateCount() { document.getElementById('date-count').textContent = selectedDates.size; }
 
     // ==================== LOCK SPECIFIC DATES ====================
+    function syncLockCheckboxes() {
+      const desktopCheckbox = document.getElementById('lock-dates-checkbox');
+      const mobileCheckbox = document.getElementById('mobile-lock-dates-checkbox');
+      if (desktopCheckbox) desktopCheckbox.checked = lockSpecificDates;
+      if (mobileCheckbox) mobileCheckbox.checked = lockSpecificDates;
+    }
+
     function toggleLockSpecificDates() {
-      lockSpecificDates = document.getElementById('lock-dates-checkbox').checked;
+      // Check which checkbox triggered this (desktop or mobile)
+      const desktopCheckbox = document.getElementById('lock-dates-checkbox');
+      const mobileCheckbox = document.getElementById('mobile-lock-dates-checkbox');
+      // Use whichever checkbox is checked (they should be in sync)
+      lockSpecificDates = (desktopCheckbox?.checked || mobileCheckbox?.checked) || false;
       // If locking with dates selected, ensure useDateFilter is on
       if (lockSpecificDates && selectedDates.size > 0) {
         useDateFilter = true;
@@ -6833,7 +6885,7 @@ function populateDatePicker() {
       holidays.forEach(h => selectedDates.delete(h));
       useDateFilter = selectedDates.size > 0;
       lockSpecificDates = true;
-      document.getElementById('lock-dates-checkbox').checked = true;
+      syncLockCheckboxes();
       updateDatePickerUI();
       renderTable();
     }
@@ -6858,7 +6910,7 @@ function populateDatePicker() {
       earlyClose.forEach(h => selectedDates.delete(h));
       useDateFilter = selectedDates.size > 0;
       lockSpecificDates = true;
-      document.getElementById('lock-dates-checkbox').checked = true;
+      syncLockCheckboxes();
       updateDatePickerUI();
       renderTable();
     }
