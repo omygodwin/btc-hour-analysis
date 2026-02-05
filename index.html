@@ -2496,11 +2496,6 @@
       { id: 'wCdrD', label: 'WCD', desc: 'Weekly Cum Dn', default: false, gradient: 'orange-col', group: 'wcdr' },
       { id: 'wMxcd', label: 'WMxC', desc: 'Weekly Max Cum', default: false, gradient: 'orange-col', group: 'wmxcd' },
       { id: 'wCdr', label: 'WCR', desc: 'Weekly Cum Rng', default: false, gradient: 'rg-col', group: 'wcdrRG' },
-      // 5PM hourly cumulative columns
-      { id: 'p5CdrU', label: '5CU', desc: '5PM Cum Up', default: false, gradient: 'orange-col', group: 'p5cdr' },
-      { id: 'p5CdrD', label: '5CD', desc: '5PM Cum Dn', default: false, gradient: 'orange-col', group: 'p5cdr' },
-      { id: 'p5Mxcd', label: '5MxC', desc: '5PM Max Cum', default: false, gradient: 'orange-col', group: 'p5mxcd' },
-      { id: 'p5Cdr', label: '5CR', desc: '5PM Cum Rng', default: false, gradient: 'rg-col', group: 'p5cdrRG' },
       // Bar count metrics
       { id: 'cumGreenBars', label: 'CumG', desc: 'Cumulative green bars', default: false, gradient: 'orange', group: 'bars' },
       { id: 'cumRedBars', label: 'CumR', desc: 'Cumulative red bars', default: false, gradient: 'orange', group: 'bars' },
@@ -2606,8 +2601,21 @@
       // ===== VOLATILITY METRICS =====
       { id: 'hVol', label: 'hVol', desc: 'Hourly volatility (sum of bar ranges / hour range)', default: false, gradient: 'orange-col', group: 'hvol' },
       { id: 'hVolRaw', label: 'hVolR', desc: 'Hourly volatility raw (sum of bar ranges)', default: false, gradient: 'orange-col', group: 'hvol' },
-      { id: 'cumVol5pm', label: 'cVol', desc: 'Cumulative volatility since 5PM (per hour avg)', default: false, gradient: 'orange-col', group: 'cvol' },
-      { id: 'cumVolRaw5pm', label: 'cVolR', desc: 'Cumulative volatility raw since 5PM', default: false, gradient: 'orange-col', group: 'cvol' },
+
+      // ===== CUMULATIVE SINCE 5PM METRICS =====
+      // Range cumulative
+      { id: 'p5CdrU', label: '5CU', desc: '5PM Cum Up (running high - 5PM open)', default: false, gradient: 'orange-col', group: 'cum5pm' },
+      { id: 'p5CdrD', label: '5CD', desc: '5PM Cum Dn (5PM open - running low)', default: false, gradient: 'orange-col', group: 'cum5pm' },
+      { id: 'p5Mxcd', label: '5MxC', desc: '5PM Max Cum (max of up/dn)', default: false, gradient: 'orange-col', group: 'cum5pm' },
+      { id: 'p5Cdr', label: '5CR', desc: '5PM Cum Rng (close - 5PM open)', default: false, gradient: 'rg-col', group: 'cum5pmRG' },
+      // Volatility cumulative
+      { id: 'cumVol5pm', label: 'cVol', desc: 'Cumulative volatility since 5PM (per hour avg)', default: false, gradient: 'orange-col', group: 'cum5pm' },
+      { id: 'cumVolRaw5pm', label: 'cVolR', desc: 'Cumulative sum of bar ranges since 5PM', default: false, gradient: 'orange-col', group: 'cum5pm' },
+      // New cumulative metrics
+      { id: 'cumRng5pm', label: 'cRng', desc: 'Cumulative hourly range (H-L) since 5PM', default: false, gradient: 'orange-col', group: 'cum5pm' },
+      { id: 'cumOC5pm', label: 'cOC', desc: 'Cumulative hourly O-C since 5PM', default: false, gradient: 'rg-col', group: 'cum5pmRG' },
+      { id: 'cumUR5pm', label: 'cUR', desc: 'Cumulative upper range (H-O) since 5PM', default: false, gradient: 'orange-col', group: 'cum5pm' },
+      { id: 'cumLR5pm', label: 'cLR', desc: 'Cumulative lower range (O-L) since 5PM', default: false, gradient: 'orange-col', group: 'cum5pm' },
 
       // ===== FRIDAY 5PM REFERENCE METRIC =====
       { id: 'vsFri5pm', label: 'vFri5', desc: 'Close minus most recent Friday 5PM open', default: false, gradient: 'rg-col', group: 'fri5pm' },
@@ -5874,6 +5882,8 @@
           let hoursElapsed5pm = 0;
           // Cumulative strength accumulators (reset at 5PM)
           let cumBuyNum = 0, cumSellNum = 0, cumNetNum = 0, cumDenom = 0;
+          // New cumulative accumulators
+          let cumRng5pm = 0, cumOC5pm = 0, cumUR5pm = 0, cumLR5pm = 0;
 
           for (let h = 17; h <= 23; h++) {
             if (day.hrs[h] && day.hrs[h].m) {
@@ -5899,12 +5909,25 @@
               hd.m.cumVolRaw5pm = cumVolRaw5pm;
               hd.m.cumVol5pm = hoursElapsed5pm > 0 ? Math.round(cumVolRaw5pm / hoursElapsed5pm) : null;
 
-              // Cumulative strength since 5PM
+              // New cumulative metrics since 5PM
               const hrRng = hd.h - hd.l;
+              const hrOC = hd.c - hd.o;
+              const hrUR = hd.h - hd.o;
+              const hrLR = hd.o - hd.l;
+              cumRng5pm += hrRng;
+              cumOC5pm += hrOC;
+              cumUR5pm += hrUR;
+              cumLR5pm += hrLR;
+              hd.m.cumRng5pm = Math.round(cumRng5pm);
+              hd.m.cumOC5pm = Math.round(cumOC5pm);
+              hd.m.cumUR5pm = Math.round(cumUR5pm);
+              hd.m.cumLR5pm = Math.round(cumLR5pm);
+
+              // Cumulative strength since 5PM
               if (hrRng > 0) {
                 cumBuyNum += (hd.c - hd.l);
                 cumSellNum += (hd.h - hd.c);
-                cumNetNum += (hd.c - hd.o);
+                cumNetNum += hrOC;
                 cumDenom += hrRng;
               }
               hd.m.cumBuyStr = cumDenom > 0 ? Math.round((cumBuyNum / cumDenom) * 100) : null;
@@ -5937,6 +5960,8 @@
           let hoursElapsed5pm = 0;
           // Cumulative strength accumulators (continuation from previous day's 5PM)
           let cumBuyNum = 0, cumSellNum = 0, cumNetNum = 0, cumDenom = 0;
+          // New cumulative accumulators (continuation)
+          let cumRng5pm = 0, cumOC5pm = 0, cumUR5pm = 0, cumLR5pm = 0;
 
           // First accumulate from 5PM-11PM of previous day
           if (prevDay) {
@@ -5947,8 +5972,13 @@
                 p5RunL = Math.min(p5RunL, prevHd.l);
                 cumVolRaw5pm += prevHd.m?.hVolRaw || 0;
                 hoursElapsed5pm++;
-                // Accumulate strength from previous day
+                // Accumulate new metrics from previous day
                 const prevHrRng = prevHd.h - prevHd.l;
+                cumRng5pm += prevHrRng;
+                cumOC5pm += (prevHd.c - prevHd.o);
+                cumUR5pm += (prevHd.h - prevHd.o);
+                cumLR5pm += (prevHd.o - prevHd.l);
+                // Accumulate strength from previous day
                 if (prevHrRng > 0) {
                   cumBuyNum += (prevHd.c - prevHd.l);
                   cumSellNum += (prevHd.h - prevHd.c);
@@ -5984,12 +6014,25 @@
               hd.m.cumVolRaw5pm = cumVolRaw5pm;
               hd.m.cumVol5pm = hoursElapsed5pm > 0 ? Math.round(cumVolRaw5pm / hoursElapsed5pm) : null;
 
-              // Cumulative strength since 5PM (continuation)
+              // New cumulative metrics since 5PM (continuation)
               const hrRng = hd.h - hd.l;
+              const hrOC = hd.c - hd.o;
+              const hrUR = hd.h - hd.o;
+              const hrLR = hd.o - hd.l;
+              cumRng5pm += hrRng;
+              cumOC5pm += hrOC;
+              cumUR5pm += hrUR;
+              cumLR5pm += hrLR;
+              hd.m.cumRng5pm = Math.round(cumRng5pm);
+              hd.m.cumOC5pm = Math.round(cumOC5pm);
+              hd.m.cumUR5pm = Math.round(cumUR5pm);
+              hd.m.cumLR5pm = Math.round(cumLR5pm);
+
+              // Cumulative strength since 5PM (continuation)
               if (hrRng > 0) {
                 cumBuyNum += (hd.c - hd.l);
                 cumSellNum += (hd.h - hd.c);
-                cumNetNum += (hd.c - hd.o);
+                cumNetNum += hrOC;
                 cumDenom += hrRng;
               }
               hd.m.cumBuyStr = cumDenom > 0 ? Math.round((cumBuyNum / cumDenom) * 100) : null;
@@ -7604,6 +7647,8 @@ function populateDatePicker() {
         br00: [], br05: [], br10: [], br15: [], br20: [], br25: [], br30: [], br35: [], br40: [], br45: [], br50: [], br55: [],
         // Volatility groups
         hvol: [], cvol: [],
+        // Cumulative 5PM metrics
+        cum5pm: [], cum5pmRG: [],
         // Friday 5PM reference
         fri5pm: []
       };
@@ -7741,6 +7786,12 @@ function populateDatePicker() {
         if (m.cumVol5pm != null) s.cvol.push(m.cumVol5pm);
         if (m.cumVolRaw5pm != null) s.cvol.push(m.cumVolRaw5pm);
 
+        // Cumulative 5PM metrics
+        if (m.cumRng5pm != null) s.cum5pm.push(m.cumRng5pm);
+        if (m.cumUR5pm != null) s.cum5pm.push(m.cumUR5pm);
+        if (m.cumLR5pm != null) s.cum5pm.push(m.cumLR5pm);
+        if (m.cumOC5pm != null) s.cum5pmRG.push(m.cumOC5pm);
+
         // Friday 5PM reference metric
         if (m.vsFri5pm != null) s.fri5pm.push(m.vsFri5pm);
       });
@@ -7775,6 +7826,8 @@ function populateDatePicker() {
           br00: [], br05: [], br10: [], br15: [], br20: [], br25: [], br30: [], br35: [], br40: [], br45: [], br50: [], br55: [],
           // Volatility groups
           hvol: [], cvol: [],
+          // Cumulative 5PM metrics
+          cum5pm: [], cum5pmRG: [],
           // Friday 5PM reference
           fri5pm: []
         };
@@ -7924,6 +7977,12 @@ function populateDatePicker() {
           if (m.hVolRaw != null) s[h].hvol.push(m.hVolRaw);
           if (m.cumVol5pm != null) s[h].cvol.push(m.cumVol5pm);
           if (m.cumVolRaw5pm != null) s[h].cvol.push(m.cumVolRaw5pm);
+
+          // Cumulative 5PM metrics
+          if (m.cumRng5pm != null) s[h].cum5pm.push(m.cumRng5pm);
+          if (m.cumUR5pm != null) s[h].cum5pm.push(m.cumUR5pm);
+          if (m.cumLR5pm != null) s[h].cum5pm.push(m.cumLR5pm);
+          if (m.cumOC5pm != null) s[h].cum5pmRG.push(m.cumOC5pm);
 
           // Friday 5PM reference metric
           if (m.vsFri5pm != null) s[h].fri5pm.push(m.vsFri5pm);
