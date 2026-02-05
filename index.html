@@ -8483,26 +8483,26 @@ function populateDatePicker() {
         if (v == null) return '';
         const stats = pctRowStats[pctLevel]?.[colId];
         if (!stats || stats.min === stats.max) return '';
-        const ratio = (v - stats.min) / (stats.max - stats.min);
 
-        // Use column gradient type if available
+        // Use the column's actual gradient type and the theme-aware gradient functions
         const grad = colDef?.gradient || 'orange';
+        let bgColor;
+
         if (grad === 'rg' || grad === 'rg-col') {
-          // Red-green gradient: negative = red, positive = green
-          if (v < 0) {
-            const negRatio = stats.min !== 0 ? Math.abs(v / stats.min) : 0;
-            const r = Math.min(255, 150 + Math.round(negRatio * 100));
-            return `background:rgba(${r},50,50,0.3);`;
-          } else {
-            const posRatio = stats.max !== 0 ? (v / stats.max) : 0;
-            const g = Math.min(255, 150 + Math.round(posRatio * 100));
-            return `background:rgba(50,${g},50,0.3);`;
-          }
+          // Use actual RG gradient function
+          bgColor = getRGGradient(v, stats.min, stats.max);
+        } else if (grad === 'purple' || grad === 'purple-col') {
+          // Use actual purple gradient function
+          bgColor = getPurpleGradient(v, stats.min, stats.max);
+        } else if (grad === 'orange-inv') {
+          // Use inverted orange gradient
+          bgColor = getOrangeGradientInverted(v, stats.min, stats.max);
         } else {
-          // Orange gradient: higher = more orange
-          const alpha = 0.1 + ratio * 0.4;
-          return `background:rgba(247,147,26,${alpha.toFixed(2)});`;
+          // Default to orange gradient (covers 'orange', 'orange-col', etc.)
+          bgColor = getOrangeGradient(v, stats.min, stats.max);
         }
+
+        return bgColor ? `background:${bgColor};` : '';
       }
 
       // Percentile rows (descending: P95, P75, P50, P25, P5)
