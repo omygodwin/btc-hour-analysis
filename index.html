@@ -11402,67 +11402,8 @@ function populateDatePicker() {
     }
   </script>
 
-<!-- Mobile Filters Modal + Floating Button (injected) -->
+<!-- Mobile-specific styling -->
 <style>
-  /* Hide duplicate NEW mobile filters modal */
-  .mobile-filters-modal { display:none !important; }
-
-  /* OLD Mobile Filters Modal - now used globally */
-  #old-mobile-filters-modal { display:none; position:fixed; inset:0; z-index:1400; align-items:flex-end; justify-content:center; pointer-events:none; }
-  .mobile-filters-modal.visible { display:flex; pointer-events:auto; }
-  .mobile-filters-backdrop { position:absolute; inset:0; background:linear-gradient(90deg, rgba(0,0,0,0.45), rgba(0,0,0,0.55)); backdrop-filter: blur(4px); }
-  .mobile-filters-panel {
-    position:relative;
-    width:100%;
-    max-width:960px;
-    background:var(--bg-secondary);
-    border-top-left-radius:14px;
-    border-top-right-radius:14px;
-    padding:12px;
-    box-shadow: 0 -12px 30px rgba(0,0,0,0.6);
-    transform: translateY(0);
-    max-height: 78vh;
-    overflow:auto;
-    border: 1px solid rgba(255,255,255,0.04);
-  }
-  .mobile-filters-header { display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:8px; }
-  .mobile-filters-header h3 { margin:0; color:var(--accent-btc); font-size:1rem; font-family:var(--font-family); }
-  .mobile-filters-close { background:transparent;border:1px solid rgba(255,255,255,0.04);padding:6px 8px;border-radius:8px;color:var(--text-primary);cursor:pointer; }
-  .mobile-filters-content { padding-bottom:12px; }
-  .mobile-filters-actions { display:flex; gap:8px; justify-content:flex-end; padding-top:8px; border-top:1px dashed rgba(255,255,255,0.03); }
-  .mobile-filters-actions button { padding:8px 12px;border-radius:8px;border:none;cursor:pointer;font-weight:600; }
-  .mobile-filters-actions .apply { background:linear-gradient(90deg,var(--accent-btc),#e8820e); color:white; }
-  .mobile-filters-actions .reset { background:transparent;border:1px solid rgba(255,255,255,0.06); color:var(--text-primary); }
-
-  /* Make date-picker dropdown static inside modal */
-  .mobile-filters-modal .date-picker-dropdown { position:static; max-height:260px; margin-top:8px; border-radius:6px; box-shadow:none; }
-
-  /* Modern multi-select visual for cloned filter groups */
-  .mobile-filters-modal .filter-btns { display:flex; flex-wrap:wrap; gap:6px; }
-  .mobile-filters-modal .f-btn { padding:8px 10px; font-size:0.9rem; border-radius:10px; border:1px solid rgba(255,255,255,0.06); background:rgba(255,255,255,0.02); }
-  .mobile-filters-modal .f-btn.none-btn { background:rgba(248,113,113,0.12); border-color:rgba(248,113,113,0.22);}
-  .mobile-filters-modal .f-btn.quick { background:rgba(100,149,237,0.12); border-color:rgba(100,149,237,0.18);}
-
-  /* Floating menu button (visible on all screen sizes) */
-  .mobile-menu-btn {
-    display:flex;
-    position:fixed;
-    bottom:20px;
-    right:18px;
-    z-index:1500;
-    width:56px;
-    height:56px;
-    border-radius:50%;
-    background:var(--accent-btc);
-    color:white;
-    border:none;
-    align-items:center;
-    justify-content:center;
-    font-size:1.25rem;
-    box-shadow: 0 10px 30px rgba(247,147,26,0.35);
-    cursor:pointer;
-  }
-
   /* Mobile tab nav: make it fixed to bottom and full-width for a modern look */
   @media (max-width: 768px) {
     .tab-nav {
@@ -11490,111 +11431,7 @@ function populateDatePicker() {
   }
 </style>
 
-<!-- Duplicate button removed - using global button instead -->
-
-<!-- Mobile modal container (OLD system - hidden) -->
-<div id="mobile-filters-modal" class="mobile-filters-modal" aria-hidden="true">
-  <div class="mobile-filters-backdrop" onclick="toggleMobileFilters()"></div>
-  <div class="mobile-filters-panel" role="dialog" aria-modal="true" aria-labelledby="mobile-filters-title">
-    <div class="mobile-filters-header">
-      <h3 id="mobile-filters-title">Filters & Columns</h3>
-      <div style="display:flex;gap:6px;">
-        <button class="mobile-filters-close" onclick="toggleMobileFilters()">Close</button>
-      </div>
-    </div>
-    <div id="mobile-filters-content" class="mobile-filters-content"></div>
-    <div class="mobile-filters-actions">
-      <button class="reset" onclick="resetMobileFilters()">Reset</button>
-      <button class="apply" onclick="applyMobileFilters()">Apply</button>
-    </div>
-  </div>
-</div>
-
 <script>
-  // Toggle mobile filters modal, and clone the existing filters (.filters, .col-selector, .col-filter-panel, .dt-col-selector)
-  function toggleMobileFilters() {
-    const modal = document.getElementById('mobile-filters-modal');
-    if (!modal) return;
-    const isVisible = modal.classList.contains('visible');
-    if (isVisible) {
-      modal.classList.remove('visible');
-      modal.setAttribute('aria-hidden','true');
-      // close any open date pickers inside modal
-      modal.querySelectorAll('.date-picker-dropdown.visible').forEach(d=>d.classList.remove('visible'));
-      return;
-    }
-    // populate content by cloning existing panels
-    const content = document.getElementById('mobile-filters-content');
-    content.innerHTML = '';
-    const selectors = ['#filters-panel', '#col-selector', '#col-filter-panel', '#dt-col-selector'];
-    selectors.forEach(sel=>{
-      const el = document.querySelector(sel);
-      if (el) {
-        const clone = el.cloneNode(true);
-        clone.style.display = 'block';
-        // Ensure dropdowns are visible inside modal
-        clone.querySelectorAll('.date-picker-dropdown').forEach(dd=>{ dd.classList.add('visible'); dd.style.position='static'; });
-        // Tidy up widths for cloned selects
-        clone.querySelectorAll('select').forEach(s=>s.style.width='100%');
-        content.appendChild(clone);
-        // Add sync listeners: clicking cloned buttons will toggle original immediately
-        clone.querySelectorAll('button[data-month], button[data-day], button[data-occ]').forEach(cb=>{
-          cb.addEventListener('click', function(ev){
-            const m = this.getAttribute('data-month');
-            const d = this.getAttribute('data-day');
-            const o = this.getAttribute('data-occ');
-            try{
-              if(m){ const orig=document.querySelector('#month-filters button[data-month=+m+]'); if(orig) orig.classList.toggle('active'); }
-              if(d){ const orig=document.querySelector('#filters-panel button[data-day=+d+]'); if(orig) orig.classList.toggle('active'); }
-              if(o){ const orig=document.querySelector('#filters-panel button[data-occ=+o+]'); if(orig) orig.classList.toggle('active'); }
-            }catch(e){console.warn('sync cloned click',e)}
-          })
-        });
-      }
-    });
-    modal.classList.add('visible');
-    modal.setAttribute('aria-hidden','false');
-  }
-
-  function applyMobileFilters(){
-    // Basic approach: when the user clicks Apply we try to copy selected states from the cloned DOM back to the original panels.
-    // We'll implement a gentle sync for month/day buttons and date selection as a best-effort — complex logic can be extended later.
-    const modal = document.getElementById('mobile-filters-modal');
-    if(!modal) return;
-    // Example: sync month buttons
-    try {
-      const clonedMonths = modal.querySelector('#month-filters');
-      const origMonths = document.querySelector('#month-filters');
-      if(clonedMonths && origMonths){
-        const clonedBtns = clonedMonths.querySelectorAll('button[data-month]');
-        clonedBtns.forEach(cb=>{
-          const m = cb.getAttribute('data-month');
-          const orig = origMonths.querySelector(`button[data-month="${m}"]`);
-          if(orig){
-            if(cb.classList.contains('active')) orig.classList.add('active'); else orig.classList.remove('active');
-          }
-        });
-      }
-      // Additional syncing hooks can be added here for dates, days, etc.
-    } catch(e){
-      console.warn('applyMobileFilters: sync partial', e);
-    }
-    toggleMobileFilters();
-    // Re-render main table if a render function exists
-    if(typeof renderTable === 'function') renderTable();
-    if(typeof renderCalendar === 'function') renderCalendar();
-    if(typeof renderDayView === 'function') renderDayView();
-  }
-
-  function resetMobileFilters(){
-    // Call existing resetAll or similar if exists
-    if(typeof resetAll === 'function') resetAll();
-    else {
-      // fallback: remove 'active' class from cloned filter buttons
-      document.querySelectorAll('#mobile-filters-content .f-btn').forEach(b=>b.classList.remove('active'));
-    }
-  }
-
   // Improved info tooltip behavior: click toggles popup on mobile; clicking outside closes any open popups
   document.addEventListener('click', function(e){
     // Check for info-btn clicks (works on both mobile and desktop)
@@ -11871,15 +11708,13 @@ function populateDatePicker() {
   // Accessibility: close modal on Escape
   document.addEventListener('keydown', function(e){
     if(e.key === 'Escape'){
-      const modal = document.getElementById('mobile-filters-modal');
-      if(modal && modal.classList.contains('visible')) toggleMobileFilters();
+      // Close mobile filter modal if open
+      const modal = document.getElementById('mobile-filter-modal');
+      if(modal && modal.classList.contains('visible')) closeMobileFilterModal();
       // also close info popups
       document.querySelectorAll('.info-popup.visible').forEach(p=>p.classList.remove('visible'));
     }
   });
-
-  // Ensure floating mobile button opens modal
-  document.getElementById('mobile-menu-btn')?.addEventListener('click', toggleMobileFilters);
 
   // Make live status indicator clickable to trigger manual refresh
   document.getElementById('live-status')?.addEventListener('click', function() {
@@ -12120,99 +11955,6 @@ function updateDateChips(root=document){
       container.appendChild(chip);
     });
   });
-}
-
-/* =========================
-   MOBILE MODAL SECTION WRAPPER
-   ========================= */
-function wrapMobileSections(){
-  const modal = document.getElementById('mobile-filters-content');
-  if(!modal) return;
-  const sections = [
-    {id:'filters-panel', label:'Filters'},
-    {id:'col-selector', label:'Columns'},
-    {id:'dt-col-selector', label:'Day Totals'},
-    {id:'col-filter-panel', label:'Column Filters'}
-  ];
-  modal.innerHTML = '';
-  sections.forEach(s => {
-    const orig = document.getElementById(s.id);
-    if(!orig) return;
-    const wrapper = document.createElement('div');
-    wrapper.className = 'mobile-section open';
-    wrapper.innerHTML = `
-      <div class="mobile-section-header">
-        <span>${s.label}</span>
-        <span>▾</span>
-      </div>
-      <div class="mobile-section-content"></div>
-    `;
-    wrapper.querySelector('.mobile-section-header').onclick = () =>
-      wrapper.classList.toggle('open');
-    const content = wrapper.querySelector('.mobile-section-content');
-    const clone = orig.cloneNode(true);
-    clone.style.display = 'block';
-    content.appendChild(clone);
-        // Add sync listeners: clicking cloned buttons will toggle original immediately
-        clone.querySelectorAll('button[data-month], button[data-day], button[data-occ]').forEach(cb=>{
-          cb.addEventListener('click', function(ev){
-            const m = this.getAttribute('data-month');
-            const d = this.getAttribute('data-day');
-            const o = this.getAttribute('data-occ');
-            try{
-              if(m){ const orig=document.querySelector('#month-filters button[data-month=+m+]'); if(orig) orig.classList.toggle('active'); }
-              if(d){ const orig=document.querySelector('#filters-panel button[data-day=+d+]'); if(orig) orig.classList.toggle('active'); }
-              if(o){ const orig=document.querySelector('#filters-panel button[data-occ=+o+]'); if(orig) orig.classList.toggle('active'); }
-            }catch(e){console.warn('sync cloned click',e)}
-          })
-        });
-
-    // Inject date chips under date picker
-    if (s.id === 'filters-panel') {
-      const dc = document.createElement('div');
-      dc.className = 'date-chips';
-      content.appendChild(dc);
-    }
-    modal.appendChild(wrapper);
-  });
-  syncUIFromState(modal);
-  updateDateChips(modal);
-}
-
-/* =========================
-   MOBILE HOUR SLIDER
-   ========================= */
-function injectHourSlider(root=document){
-  const hf = root.querySelector('#hour-from');
-  const ht = root.querySelector('#hour-to');
-  if(!hf || !ht) return;
-  const parent = hf.parentElement;
-  if(parent.querySelector('.hour-range')) return;
-
-  const wrap = document.createElement('div');
-  wrap.className = 'hour-range';
-  wrap.innerHTML = `
-    <div class="hour-range-label">
-      <span>From: <b id="hr-from">${FilterState.hours.from ?? 0}</b></span>
-      <span>To: <b id="hr-to">${FilterState.hours.to ?? 23}</b></span>
-    </div>
-    <input type="range" min="0" max="23" value="${FilterState.hours.from ?? 0}" id="hr-range-from">
-    <input type="range" min="0" max="23" value="${FilterState.hours.to ?? 23}" id="hr-range-to">
-  `;
-  parent.appendChild(wrap);
-
-  wrap.querySelector('#hr-range-from').oninput = e => {
-    FilterState.hours.from = e.target.value;
-    wrap.querySelector('#hr-from').textContent = e.target.value;
-    pushStateToURL();
-    if (typeof renderTable === 'function') renderTable();
-  };
-  wrap.querySelector('#hr-range-to').oninput = e => {
-    FilterState.hours.to = e.target.value;
-    wrap.querySelector('#hr-to').textContent = e.target.value;
-    pushStateToURL();
-    if (typeof renderTable === 'function') renderTable();
-  };
 }
 
 /* =========================
