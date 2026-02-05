@@ -1429,7 +1429,16 @@
             <button class="f-btn quick" onclick="setQ4()">Q4</button>
           </div>
         </div>
-        
+
+        <div class="filter-group">
+          <h3>Year-Month <span style="font-weight:normal;font-size:0.45rem;color:var(--text-muted);text-transform:none;">(replaces Year+Month when active)</span></h3>
+          <div class="filter-btns" style="margin-bottom:4px;">
+            <button class="f-btn none-btn" onclick="clearYearMonthFilter()">Clear</button>
+            <button class="f-btn quick" onclick="syncYearMonthFromFilters()" title="Select year-months matching current Year × Month filters">Sync</button>
+          </div>
+          <div class="filter-btns" id="year-month-filters" style="max-height:100px;overflow-y:auto;"></div>
+        </div>
+
         <div class="filter-group">
           <h3>Days</h3>
           <div class="filter-btns">
@@ -1474,15 +1483,6 @@
           <!-- Keep hidden dropdowns for compatibility -->
           <select id="hour-from" style="display:none;"></select>
           <select id="hour-to" style="display:none;"></select>
-        </div>
-        
-        <div class="filter-group">
-          <h3>Year-Month <span style="font-weight:normal;font-size:0.45rem;color:var(--text-muted);text-transform:none;">(overrides Year+Month)</span></h3>
-          <div class="filter-btns" style="margin-bottom:4px;">
-            <button class="f-btn quick" onclick="clearYearMonthFilter()">Clear</button>
-            <button class="f-btn quick" onclick="selectAllYearMonths()">All</button>
-          </div>
-          <div class="filter-btns" id="year-month-filters" style="max-height:100px;overflow-y:auto;"></div>
         </div>
 
         <div class="filter-group">
@@ -1939,6 +1939,15 @@
             </div>
 
             <div class="mobile-filter-section">
+              <h3>Year-Month <span style="font-weight:normal;font-size:0.65rem;color:var(--text-muted);">(replaces Year+Month when active)</span></h3>
+              <div class="mobile-filter-btns" style="margin-bottom:8px;">
+                <button class="mobile-filter-btn none-btn" onclick="clearYearMonthFilter(); updateMobileFilterUI();">Clear</button>
+                <button class="mobile-filter-btn quick" onclick="syncYearMonthFromFilters(); updateMobileFilterUI();" title="Select year-months matching current Year × Month">Sync</button>
+              </div>
+              <div class="mobile-filter-btns" id="mobile-year-month-filters" style="max-height:120px;overflow-y:auto;"></div>
+            </div>
+
+            <div class="mobile-filter-section">
               <h3>Days of Week</h3>
               <div class="mobile-filter-btns">
                 <button class="mobile-filter-btn quick" onclick="setWeekdays(); updateMobileFilterUI();">Weekdays</button>
@@ -1952,15 +1961,6 @@
             <div class="mobile-filter-section">
               <h3>Day # in Month</h3>
               <div class="mobile-filter-btns" id="mobile-occ-filters"></div>
-            </div>
-
-            <div class="mobile-filter-section">
-              <h3>Year-Month <span style="font-weight:normal;font-size:0.65rem;color:var(--text-muted);">(overrides Year+Month)</span></h3>
-              <div class="mobile-filter-btns" style="margin-bottom:8px;">
-                <button class="mobile-filter-btn quick" onclick="clearYearMonthFilter(); updateMobileFilterUI();">Clear</button>
-                <button class="mobile-filter-btn quick" onclick="selectAllYearMonths(); updateMobileFilterUI();">All</button>
-              </div>
-              <div class="mobile-filter-btns" id="mobile-year-month-filters" style="max-height:120px;overflow-y:auto;"></div>
             </div>
 
             <div class="mobile-filter-section">
@@ -6729,12 +6729,26 @@ function populateDatePicker() {
       updateMobileFilterUI();
     }
 
-    function selectAllYearMonths() {
+    function syncYearMonthFromFilters() {
+      // Populate year-months based on current Year × Month selections
+      selectedYearMonths.clear();
       const yearMonths = new Set();
       Object.values(etDays).forEach(d => yearMonths.add(d.date.slice(0,7)));
-      selectedYearMonths = yearMonths;
-      useYearMonthFilter = true;
-      document.querySelectorAll('[data-yearmonth]').forEach(b => b.classList.add('active'));
+
+      yearMonths.forEach(ym => {
+        const [y, m] = ym.split('-');
+        // Only include if year is selected AND month is selected
+        if (selectedYears.has(y) && selectedMonths.has(parseInt(m))) {
+          selectedYearMonths.add(ym);
+        }
+      });
+
+      useYearMonthFilter = selectedYearMonths.size > 0;
+
+      // Update UI
+      document.querySelectorAll('[data-yearmonth]').forEach(b => {
+        b.classList.toggle('active', selectedYearMonths.has(b.dataset.yearmonth));
+      });
 
       if (!lockSpecificDates) {
         useDateFilter = false;
@@ -6954,14 +6968,16 @@ function populateDatePicker() {
       let data = Object.values(etDays).filter(d => {
         // If specific dates filter is active, use only those
         if (useDateFilter && selectedDates.size > 0) return selectedDates.has(d.date);
-        // Standard filters
+        // Standard filters - Year is always master
         const matchesYear = selectedYears.has(d.date.slice(0,4));
         const matchesMonth = selectedMonths.has(d.month);
         const matchesDay = selectedDays.has(d.dow);
         const matchesOcc = selectedOccs.has(d.occ);
-        // Year-month filter (if active, overrides year+month with specific year-month combos)
-        const matchesYearMonth = !useYearMonthFilter || selectedYearMonths.has(d.date.slice(0,7));
+        // Year must always match (master filter)
+        if (!matchesYear) return false;
+        // Year-month filter: if active, replaces Month filter but Days/Occ still apply
         if (useYearMonthFilter) {
+          const matchesYearMonth = selectedYearMonths.has(d.date.slice(0,7));
           return matchesYearMonth && matchesDay && matchesOcc;
         }
         return matchesYear && matchesMonth && matchesDay && matchesOcc;
