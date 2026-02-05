@@ -7939,8 +7939,8 @@ function populateDatePicker() {
       const container = document.getElementById('percentiles-table-wrap');
       if (!container) return;
 
-      // Descending order: P90 on top, P10 on bottom
-      const percentiles = [90, 75, 50, 25, 10];
+      // Descending order: P95 on top, P5 on bottom
+      const percentiles = [95, 75, 50, 25, 5];
 
       // Helper to calculate percentile
       function calcPct(arr, p) {
@@ -8047,25 +8047,81 @@ function populateDatePicker() {
       });
       html += '</tr></thead><tbody>';
 
-      // Percentile rows (descending: P90, P75, P50, P25, P10)
+      // Pre-calculate all percentile values for gradient computation
+      const pctValsByCol = {}; // { colId: { p95: val, p75: val, ... } }
+      const dayPctVals = {};
+      const hourPctVals = {};
+
+      // Day total percentiles
+      if (showDayCols && dtCols.length > 0) {
+        dtCols.forEach(c => {
+          dayPctVals[c.id] = {};
+          percentiles.forEach(p => {
+            dayPctVals[c.id][p] = calcPct(dayColVals[c.id], p);
+          });
+        });
+      }
+
+      // Hourly percentiles
+      realHours.forEach(h => {
+        hourPctVals[h] = {};
+        cols.forEach(col => {
+          hourPctVals[h][col.id] = {};
+          percentiles.forEach(p => {
+            hourPctVals[h][col.id][p] = calcPct(hourColVals[h][col.id], p);
+          });
+        });
+      });
+
+      // Helper to get gradient color for a value within the percentile range
+      function getPctGradientStyle(colId, colDef, pctVals, v) {
+        if (v == null) return '';
+        const vals = percentiles.map(p => pctVals[p]).filter(x => x != null);
+        if (vals.length < 2) return '';
+        const min = Math.min(...vals);
+        const max = Math.max(...vals);
+        if (max === min) return '';
+        const ratio = (v - min) / (max - min);
+
+        // Use column gradient type if available
+        const grad = colDef?.gradient || 'orange';
+        if (grad === 'rg' || grad === 'rg-col') {
+          // Red-green gradient: negative = red, positive = green
+          if (v < 0) {
+            const r = Math.min(255, 150 + Math.round(Math.abs(v / min) * 100));
+            return `background:rgba(${r},50,50,0.3);`;
+          } else {
+            const g = Math.min(255, 150 + Math.round((v / max) * 100));
+            return `background:rgba(50,${g},50,0.3);`;
+          }
+        } else {
+          // Orange gradient: higher = more orange
+          const alpha = 0.1 + ratio * 0.4;
+          return `background:rgba(247,147,26,${alpha.toFixed(2)});`;
+        }
+      }
+
+      // Percentile rows (descending: P95, P75, P50, P25, P5)
       percentiles.forEach(p => {
         html += `<tr><td class="pct-label" style="min-width:113px;width:113px;text-align:right;padding-right:8px;">P${p}</td>`;
 
         // Day total percentiles
         if (showDayCols && dtCols.length > 0) {
           dtCols.forEach((c, i) => {
-            const v = calcPct(dayColVals[c.id], p);
+            const v = dayPctVals[c.id][p];
             const w = getDTColWidth(c.id);
             const isLast = i === dtCols.length - 1;
-            html += `<td style="min-width:${w}px;${isLast ? 'border-right:2px solid rgba(100,149,237,0.3);' : ''}">${fmtPct(v)}</td>`;
+            const gradStyle = getPctGradientStyle(c.id, c, dayPctVals[c.id], v);
+            html += `<td style="min-width:${w}px;${gradStyle}${isLast ? 'border-right:2px solid rgba(100,149,237,0.3);' : ''}">${fmtPct(v)}</td>`;
           });
         }
 
         // Hourly percentiles - no fixed width, let them auto-size
         realHours.forEach(h => {
           cols.forEach((col, ci) => {
-            const v = calcPct(hourColVals[h][col.id], p);
-            html += `<td style="padding:2px 4px;${ci === 0 ? 'border-left:2px solid rgba(247,147,26,0.3);' : ''}">${fmtPct(v)}</td>`;
+            const v = hourPctVals[h][col.id][p];
+            const gradStyle = getPctGradientStyle(col.id, col, hourPctVals[h][col.id], v);
+            html += `<td style="padding:2px 4px;${gradStyle}${ci === 0 ? 'border-left:2px solid rgba(247,147,26,0.3);' : ''}">${fmtPct(v)}</td>`;
           });
         });
         html += '</tr>';
