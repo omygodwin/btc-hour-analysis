@@ -2590,6 +2590,80 @@
       // ===== FRIDAY 5PM REFERENCE METRIC =====
       { id: 'vsFri5pm', label: 'vFri5', desc: 'Close minus most recent Friday 5PM open', default: false, gradient: 'rg-col', group: 'fri5pm' },
 
+      // ===== 5-MINUTE BAR RANGE METRICS (individual bar metrics for each 5-min interval) =====
+      // :00 bar
+      { id: 'brRng00', label: 'bR00', desc: ':00 bar range (H-L)', default: false, gradient: 'orange', group: 'br00' },
+      { id: 'brUR00', label: 'bU00', desc: ':00 bar upper range (H-O)', default: false, gradient: 'orange', group: 'br00' },
+      { id: 'brLR00', label: 'bL00', desc: ':00 bar lower range (O-L)', default: false, gradient: 'orange', group: 'br00' },
+      { id: 'brMxR00', label: 'bMx00', desc: ':00 bar max range (max UR/LR)', default: false, gradient: 'orange', group: 'br00' },
+      { id: 'brOC00', label: 'bOC00', desc: ':00 bar O-C (C-O)', default: false, gradient: 'rg', group: 'br00' },
+      // :05 bar
+      { id: 'brRng05', label: 'bR05', desc: ':05 bar range (H-L)', default: false, gradient: 'orange', group: 'br05' },
+      { id: 'brUR05', label: 'bU05', desc: ':05 bar upper range (H-O)', default: false, gradient: 'orange', group: 'br05' },
+      { id: 'brLR05', label: 'bL05', desc: ':05 bar lower range (O-L)', default: false, gradient: 'orange', group: 'br05' },
+      { id: 'brMxR05', label: 'bMx05', desc: ':05 bar max range (max UR/LR)', default: false, gradient: 'orange', group: 'br05' },
+      { id: 'brOC05', label: 'bOC05', desc: ':05 bar O-C (C-O)', default: false, gradient: 'rg', group: 'br05' },
+      // :10 bar
+      { id: 'brRng10', label: 'bR10', desc: ':10 bar range (H-L)', default: false, gradient: 'orange', group: 'br10' },
+      { id: 'brUR10', label: 'bU10', desc: ':10 bar upper range (H-O)', default: false, gradient: 'orange', group: 'br10' },
+      { id: 'brLR10', label: 'bL10', desc: ':10 bar lower range (O-L)', default: false, gradient: 'orange', group: 'br10' },
+      { id: 'brMxR10', label: 'bMx10', desc: ':10 bar max range (max UR/LR)', default: false, gradient: 'orange', group: 'br10' },
+      { id: 'brOC10', label: 'bOC10', desc: ':10 bar O-C (C-O)', default: false, gradient: 'rg', group: 'br10' },
+      // :15 bar
+      { id: 'brRng15', label: 'bR15', desc: ':15 bar range (H-L)', default: false, gradient: 'orange', group: 'br15' },
+      { id: 'brUR15', label: 'bU15', desc: ':15 bar upper range (H-O)', default: false, gradient: 'orange', group: 'br15' },
+      { id: 'brLR15', label: 'bL15', desc: ':15 bar lower range (O-L)', default: false, gradient: 'orange', group: 'br15' },
+      { id: 'brMxR15', label: 'bMx15', desc: ':15 bar max range (max UR/LR)', default: false, gradient: 'orange', group: 'br15' },
+      { id: 'brOC15', label: 'bOC15', desc: ':15 bar O-C (C-O)', default: false, gradient: 'rg', group: 'br15' },
+      // :20 bar
+      { id: 'brRng20', label: 'bR20', desc: ':20 bar range (H-L)', default: false, gradient: 'orange', group: 'br20' },
+      { id: 'brUR20', label: 'bU20', desc: ':20 bar upper range (H-O)', default: false, gradient: 'orange', group: 'br20' },
+      { id: 'brLR20', label: 'bL20', desc: ':20 bar lower range (O-L)', default: false, gradient: 'orange', group: 'br20' },
+      { id: 'brMxR20', label: 'bMx20', desc: ':20 bar max range (max UR/LR)', default: false, gradient: 'orange', group: 'br20' },
+      { id: 'brOC20', label: 'bOC20', desc: ':20 bar O-C (C-O)', default: false, gradient: 'rg', group: 'br20' },
+      // :25 bar
+      { id: 'brRng25', label: 'bR25', desc: ':25 bar range (H-L)', default: false, gradient: 'orange', group: 'br25' },
+      { id: 'brUR25', label: 'bU25', desc: ':25 bar upper range (H-O)', default: false, gradient: 'orange', group: 'br25' },
+      { id: 'brLR25', label: 'bL25', desc: ':25 bar lower range (O-L)', default: false, gradient: 'orange', group: 'br25' },
+      { id: 'brMxR25', label: 'bMx25', desc: ':25 bar max range (max UR/LR)', default: false, gradient: 'orange', group: 'br25' },
+      { id: 'brOC25', label: 'bOC25', desc: ':25 bar O-C (C-O)', default: false, gradient: 'rg', group: 'br25' },
+      // :30 bar
+      { id: 'brRng30', label: 'bR30', desc: ':30 bar range (H-L)', default: false, gradient: 'orange', group: 'br30' },
+      { id: 'brUR30', label: 'bU30', desc: ':30 bar upper range (H-O)', default: false, gradient: 'orange', group: 'br30' },
+      { id: 'brLR30', label: 'bL30', desc: ':30 bar lower range (O-L)', default: false, gradient: 'orange', group: 'br30' },
+      { id: 'brMxR30', label: 'bMx30', desc: ':30 bar max range (max UR/LR)', default: false, gradient: 'orange', group: 'br30' },
+      { id: 'brOC30', label: 'bOC30', desc: ':30 bar O-C (C-O)', default: false, gradient: 'rg', group: 'br30' },
+      // :35 bar
+      { id: 'brRng35', label: 'bR35', desc: ':35 bar range (H-L)', default: false, gradient: 'orange', group: 'br35' },
+      { id: 'brUR35', label: 'bU35', desc: ':35 bar upper range (H-O)', default: false, gradient: 'orange', group: 'br35' },
+      { id: 'brLR35', label: 'bL35', desc: ':35 bar lower range (O-L)', default: false, gradient: 'orange', group: 'br35' },
+      { id: 'brMxR35', label: 'bMx35', desc: ':35 bar max range (max UR/LR)', default: false, gradient: 'orange', group: 'br35' },
+      { id: 'brOC35', label: 'bOC35', desc: ':35 bar O-C (C-O)', default: false, gradient: 'rg', group: 'br35' },
+      // :40 bar
+      { id: 'brRng40', label: 'bR40', desc: ':40 bar range (H-L)', default: false, gradient: 'orange', group: 'br40' },
+      { id: 'brUR40', label: 'bU40', desc: ':40 bar upper range (H-O)', default: false, gradient: 'orange', group: 'br40' },
+      { id: 'brLR40', label: 'bL40', desc: ':40 bar lower range (O-L)', default: false, gradient: 'orange', group: 'br40' },
+      { id: 'brMxR40', label: 'bMx40', desc: ':40 bar max range (max UR/LR)', default: false, gradient: 'orange', group: 'br40' },
+      { id: 'brOC40', label: 'bOC40', desc: ':40 bar O-C (C-O)', default: false, gradient: 'rg', group: 'br40' },
+      // :45 bar
+      { id: 'brRng45', label: 'bR45', desc: ':45 bar range (H-L)', default: false, gradient: 'orange', group: 'br45' },
+      { id: 'brUR45', label: 'bU45', desc: ':45 bar upper range (H-O)', default: false, gradient: 'orange', group: 'br45' },
+      { id: 'brLR45', label: 'bL45', desc: ':45 bar lower range (O-L)', default: false, gradient: 'orange', group: 'br45' },
+      { id: 'brMxR45', label: 'bMx45', desc: ':45 bar max range (max UR/LR)', default: false, gradient: 'orange', group: 'br45' },
+      { id: 'brOC45', label: 'bOC45', desc: ':45 bar O-C (C-O)', default: false, gradient: 'rg', group: 'br45' },
+      // :50 bar
+      { id: 'brRng50', label: 'bR50', desc: ':50 bar range (H-L)', default: false, gradient: 'orange', group: 'br50' },
+      { id: 'brUR50', label: 'bU50', desc: ':50 bar upper range (H-O)', default: false, gradient: 'orange', group: 'br50' },
+      { id: 'brLR50', label: 'bL50', desc: ':50 bar lower range (O-L)', default: false, gradient: 'orange', group: 'br50' },
+      { id: 'brMxR50', label: 'bMx50', desc: ':50 bar max range (max UR/LR)', default: false, gradient: 'orange', group: 'br50' },
+      { id: 'brOC50', label: 'bOC50', desc: ':50 bar O-C (C-O)', default: false, gradient: 'rg', group: 'br50' },
+      // :55 bar
+      { id: 'brRng55', label: 'bR55', desc: ':55 bar range (H-L)', default: false, gradient: 'orange', group: 'br55' },
+      { id: 'brUR55', label: 'bU55', desc: ':55 bar upper range (H-O)', default: false, gradient: 'orange', group: 'br55' },
+      { id: 'brLR55', label: 'bL55', desc: ':55 bar lower range (O-L)', default: false, gradient: 'orange', group: 'br55' },
+      { id: 'brMxR55', label: 'bMx55', desc: ':55 bar max range (max UR/LR)', default: false, gradient: 'orange', group: 'br55' },
+      { id: 'brOC55', label: 'bOC55', desc: ':55 bar O-C (C-O)', default: false, gradient: 'rg', group: 'br55' },
+
       // ===== OPEN-TO-BAR RANGE METRICS (from hour open to running H/L through each minute) =====
       // :00 bar
       { id: 'orUR00', label: 'oUR00', desc: ':00 running high - hour open', default: false, gradient: 'orange', group: 'or00' },
@@ -3229,10 +3303,11 @@
       const orCols = ALL_COLUMNS.filter(c => c.id.startsWith('or') && matchesSearch(c));
       const lvCols = ALL_COLUMNS.filter(c => c.id.startsWith('lv') && matchesSearch(c));
       const bpCols = ALL_COLUMNS.filter(c => c.group && c.group.startsWith('bp') && matchesSearch(c));
-      const otherCols = ALL_COLUMNS.filter(c => !c.id.startsWith('cr') && !c.id.startsWith('or') && !c.id.startsWith('lv') && !(c.group && c.group.startsWith('bp')) && matchesSearch(c));
+      const brCols = ALL_COLUMNS.filter(c => c.group && c.group.startsWith('br') && matchesSearch(c));
+      const otherCols = ALL_COLUMNS.filter(c => !c.id.startsWith('cr') && !c.id.startsWith('or') && !c.id.startsWith('lv') && !(c.group && c.group.startsWith('bp')) && !(c.group && c.group.startsWith('br')) && matchesSearch(c));
 
       // Show "no results" if searching and nothing found
-      const totalMatches = otherCols.length + crCols.length + orCols.length + lvCols.length + bpCols.length;
+      const totalMatches = otherCols.length + crCols.length + orCols.length + lvCols.length + bpCols.length + brCols.length;
       if (searchText && totalMatches === 0) {
         const noResults = document.createElement('div');
         noResults.style.cssText = 'padding:12px;text-align:center;color:var(--text-muted);font-size:0.7rem;';
@@ -3594,6 +3669,87 @@
         });
 
         container.appendChild(bpSection);
+      }
+
+      // Add BR (Individual 5-Min Bar Range) columns section header (collapsed by default)
+      if (brCols.length > 0) {
+        const brHeader = document.createElement('div');
+        brHeader.style.cssText = 'margin-top:16px;padding:8px 4px;background:rgba(34,197,94,0.1);border-radius:4px;font-weight:600;color:#22c55e;font-size:0.75rem;cursor:pointer;display:flex;align-items:center;justify-content:space-between;';
+
+        const brHeaderLeft = document.createElement('div');
+        brHeaderLeft.style.cssText = 'display:flex;align-items:center;gap:8px;';
+        const brArrowRotate = searchText ? 'rotate(0deg)' : 'rotate(-90deg)';
+        brHeaderLeft.innerHTML = `<span id="br-section-arrow" style="transition:transform 0.2s;transform:${brArrowRotate};">▼</span> 5-Min Bar Range (${brCols.length})`;
+
+        const brBtns = document.createElement('div');
+        brBtns.style.cssText = 'display:flex;gap:4px;';
+        brBtns.innerHTML = `<button style="font-size:0.55rem;padding:2px 6px;background:var(--bg-secondary);border:1px solid var(--border-medium);border-radius:3px;color:var(--text-primary);cursor:pointer;" onclick="event.stopPropagation();showAllMobileSectionCols('br');">All</button><button style="font-size:0.55rem;padding:2px 6px;background:var(--bg-secondary);border:1px solid var(--border-medium);border-radius:3px;color:var(--text-primary);cursor:pointer;" onclick="event.stopPropagation();hideAllMobileSectionCols('br');">None</button>`;
+
+        brHeader.appendChild(brHeaderLeft);
+        brHeader.appendChild(brBtns);
+        brHeader.onclick = (e) => {
+          if (e.target.tagName === 'BUTTON') return;
+          const section = document.getElementById('br-cols-section');
+          const arrow = document.getElementById('br-section-arrow');
+          if (section.style.display === 'none') {
+            section.style.display = 'block';
+            arrow.style.transform = 'rotate(0deg)';
+          } else {
+            section.style.display = 'none';
+            arrow.style.transform = 'rotate(-90deg)';
+          }
+        };
+        container.appendChild(brHeader);
+
+        const brSection = document.createElement('div');
+        brSection.id = 'br-cols-section';
+        const brDisplay = searchText ? 'block' : 'none';
+        brSection.style.cssText = `padding-left:8px;border-left:2px solid rgba(34,197,94,0.3);margin-left:4px;display:${brDisplay};`;
+
+        // Group BR columns by minute
+        const brMinutes = ['00', '05', '10', '15', '20', '25', '30', '35', '40', '45', '50', '55'];
+        brMinutes.forEach(min => {
+          const minCols = brCols.filter(c => c.group === 'br' + min);
+          if (minCols.length > 0) {
+            const minHeader = document.createElement('div');
+            minHeader.style.cssText = 'margin-top:8px;padding:4px;font-size:0.65rem;color:#22c55e;font-weight:500;';
+            minHeader.textContent = `:${min} Bar`;
+            brSection.appendChild(minHeader);
+
+            minCols.forEach(col => {
+              const item = document.createElement('div');
+              item.className = 'mobile-settings-item';
+              item.style.padding = '6px 8px';
+              item.style.cursor = 'pointer';
+              item.onclick = () => {
+                toggleColumn(col.id);
+                updateMobileColumnGrid();
+              };
+
+              const checkbox = document.createElement('input');
+              checkbox.type = 'checkbox';
+              checkbox.checked = visibleColumns.has(col.id);
+              checkbox.style.accentColor = '#22c55e';
+              checkbox.onclick = (e) => e.stopPropagation();
+              checkbox.onchange = () => {
+                toggleColumn(col.id);
+              };
+
+              const label = document.createElement('span');
+              label.className = 'mobile-settings-label';
+              label.textContent = `${col.label} (${col.desc})`;
+              label.style.flex = '1';
+              label.style.marginLeft = '8px';
+              label.style.fontSize = '0.65rem';
+
+              item.appendChild(checkbox);
+              item.appendChild(label);
+              brSection.appendChild(item);
+            });
+          }
+        });
+
+        container.appendChild(brSection);
       }
     }
 
@@ -4138,6 +4294,7 @@
 
     // Define 5-minute interval section groups (these will be collapsible)
     const fiveMinSections = {
+      br: { label: '5-Min Bar Range', prefix: 'br', minutes: ['00','05','10','15','20','25','30','35','40','45','50','55'] },
       cr: { label: 'Close-to-Rest-of-Hour', prefix: 'cr', minutes: ['00','05','10','15','20','25','30','35','40','45','50'] },
       or: { label: 'Open-to-Bar Range', prefix: 'or', minutes: ['00','05','10','15','20','25','30','35','40','45','50','55'] },
       lv: { label: 'Bar Level Metrics', prefix: 'lv', minutes: ['00','05','10','15','20','25','30','35','40','45','50','55'] },
@@ -4865,6 +5022,28 @@
             if (bar45 && bar55) oc4555 = Math.round(bar55.close - bar45.open);
           }
 
+          // Calculate individual 5-minute bar range metrics
+          const barMinutes = [0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55];
+          const barRangeMetrics = {};
+          if (hourBars.length > 0) {
+            barMinutes.forEach(min => {
+              const bar = hourBars.find(b => b.etMin === min);
+              const minStr = min.toString().padStart(2, '0');
+              if (bar) {
+                const rng = Math.round(bar.high - bar.low);
+                const ur = Math.round(bar.high - bar.open);
+                const lr = Math.round(bar.open - bar.low);
+                const mxr = Math.max(ur, lr);
+                const oc = Math.round(bar.close - bar.open);
+                barRangeMetrics[`brRng${minStr}`] = rng;
+                barRangeMetrics[`brUR${minStr}`] = ur;
+                barRangeMetrics[`brLR${minStr}`] = lr;
+                barRangeMetrics[`brMxR${minStr}`] = mxr;
+                barRangeMetrics[`brOC${minStr}`] = oc;
+              }
+            });
+          }
+
           // Calculate 15-minute range metrics for each quarter of the hour
           let m15UpperRng = null, m15LowerRng = null, m15FullRng = null, m15MaxRng = null;
           if (hourBars.length > 0) {
@@ -5315,6 +5494,8 @@
             ...lvMetrics,
             // Bar vs previous bar metrics
             ...bpMetrics,
+            // Individual 5-minute bar range metrics
+            ...barRangeMetrics,
             // Volatility metrics
             hVol,
             hVolRaw,
@@ -11320,13 +11501,14 @@ function populateDatePicker() {
 
     // Mobile section bulk toggle functions
     function showAllMobileSectionCols(secKey) {
-      const prefixes = { cr: 'cr', or: 'or', lv: 'lv', bp: 'bp' };
+      const prefixes = { cr: 'cr', or: 'or', lv: 'lv', bp: 'bp', br: 'br' };
       const prefix = prefixes[secKey];
       if (!prefix) return;
 
       ALL_COLUMNS.forEach(col => {
-        if ((secKey === 'bp' && col.group && col.group.startsWith('bp')) ||
-            (secKey !== 'bp' && col.id.startsWith(prefix))) {
+        const useGroup = secKey === 'bp' || secKey === 'br';
+        if ((useGroup && col.group && col.group.startsWith(prefix)) ||
+            (!useGroup && col.id.startsWith(prefix))) {
           visibleColumns.add(col.id);
         }
       });
@@ -11336,13 +11518,14 @@ function populateDatePicker() {
     }
 
     function hideAllMobileSectionCols(secKey) {
-      const prefixes = { cr: 'cr', or: 'or', lv: 'lv', bp: 'bp' };
+      const prefixes = { cr: 'cr', or: 'or', lv: 'lv', bp: 'bp', br: 'br' };
       const prefix = prefixes[secKey];
       if (!prefix) return;
 
       ALL_COLUMNS.forEach(col => {
-        if ((secKey === 'bp' && col.group && col.group.startsWith('bp')) ||
-            (secKey !== 'bp' && col.id.startsWith(prefix))) {
+        const useGroup = secKey === 'bp' || secKey === 'br';
+        if ((useGroup && col.group && col.group.startsWith(prefix)) ||
+            (!useGroup && col.id.startsWith(prefix))) {
           visibleColumns.delete(col.id);
         }
       });
