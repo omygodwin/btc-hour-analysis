@@ -1041,6 +1041,68 @@
       margin-bottom: 8px;
       font-weight: 500;
     }
+    /* Sticky header area for filter tabs */
+    .mobile-filter-sticky-header {
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      background: var(--bg-tertiary);
+      padding-bottom: 8px;
+      margin: -16px -16px 16px -16px;
+      padding: 16px 16px 12px 16px;
+      border-bottom: 1px solid var(--border-medium);
+    }
+    .mobile-filter-sticky-header .mobile-filter-section {
+      margin-bottom: 12px;
+    }
+    .mobile-filter-sticky-header .mobile-filter-section:last-child {
+      margin-bottom: 0;
+    }
+    /* Collapsible presets section */
+    .mobile-collapsible-section {
+      border: 1px solid var(--border-medium);
+      border-radius: 6px;
+      overflow: hidden;
+      margin-bottom: 12px;
+    }
+    .mobile-collapsible-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 12px;
+      background: rgba(247,147,26,0.1);
+      cursor: pointer;
+      user-select: none;
+    }
+    .mobile-collapsible-header:hover {
+      background: rgba(247,147,26,0.15);
+    }
+    .mobile-collapsible-title {
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--accent-btc);
+      font-weight: 500;
+    }
+    .mobile-collapsible-toggle {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      transition: transform 0.2s;
+    }
+    .mobile-collapsible-section.collapsed .mobile-collapsible-toggle {
+      transform: rotate(-90deg);
+    }
+    .mobile-collapsible-content {
+      padding: 12px;
+      background: rgba(0,0,0,0.15);
+      max-height: 500px;
+      overflow: hidden;
+      transition: max-height 0.3s ease, padding 0.3s ease;
+    }
+    .mobile-collapsible-section.collapsed .mobile-collapsible-content {
+      max-height: 0;
+      padding: 0 12px;
+    }
     .mobile-filter-btns {
       display: flex;
       flex-wrap: wrap;
@@ -2075,133 +2137,150 @@
 
           <!-- Tab 2: Columns -->
           <div id="mobile-tab-columns" class="mobile-tab-panel">
-            <div class="mobile-filter-section">
-              <h3>Column Presets</h3>
-              <div class="mobile-filter-btns">
-                <button class="mobile-filter-btn quick" onclick="setDefaultCols()">Default</button>
-                <button class="mobile-filter-btn quick" onclick="setAllCols()">All</button>
-                <button class="mobile-filter-btn quick" onclick="setNoCols()">None</button>
-                <button class="mobile-filter-btn quick" onclick="setRangeCols()">Range</button>
-                <button class="mobile-filter-btn quick" onclick="setOHLCVCols()">OHLCV</button>
-                <button class="mobile-filter-btn quick" onclick="setRSICols()">RSI</button>
+            <!-- Sticky header area -->
+            <div class="mobile-filter-sticky-header">
+              <div class="mobile-filter-section">
+                <h3>Column Presets</h3>
+                <div class="mobile-filter-btns">
+                  <button class="mobile-filter-btn quick" onclick="setDefaultCols()">Default</button>
+                  <button class="mobile-filter-btn quick" onclick="setAllCols()">All</button>
+                  <button class="mobile-filter-btn quick" onclick="setNoCols()">None</button>
+                  <button class="mobile-filter-btn quick" onclick="setRangeCols()">Range</button>
+                  <button class="mobile-filter-btn quick" onclick="setOHLCVCols()">OHLCV</button>
+                  <button class="mobile-filter-btn quick" onclick="setRSICols()">RSI</button>
+                </div>
+              </div>
+
+              <!-- Collapsible 5-Minute Interval Range Presets -->
+              <div class="mobile-collapsible-section collapsed" id="mobile-5min-presets">
+                <div class="mobile-collapsible-header" onclick="toggleMobileCollapsible('mobile-5min-presets')">
+                  <span class="mobile-collapsible-title">5-Minute Interval Range Presets</span>
+                  <span class="mobile-collapsible-toggle">▼</span>
+                </div>
+                <div class="mobile-collapsible-content">
+                  <div style="font-size:0.65rem;color:var(--text-muted);margin-bottom:8px;">Combined (Open & Close ranges):</div>
+                  <div class="mobile-filter-btns" style="margin-bottom:12px;">
+                    <button class="mobile-filter-btn quick" onclick="setAllIntervalCols()">All 5-min</button>
+                    <button class="mobile-filter-btn none-btn" onclick="setNoIntervalCols()">None</button>
+                    <button class="mobile-filter-btn quick" onclick="setAllIntervalMxRCols()">All MxR</button>
+                  </div>
+
+                  <div style="font-size:0.65rem;color:var(--accent-btc);margin-bottom:4px;font-weight:500;">Close-to-Rest (vs Close):</div>
+                  <div class="mobile-filter-btns" style="margin-bottom:8px;">
+                    <button class="mobile-filter-btn quick" onclick="setCRAllCols()">All CR</button>
+                    <button class="mobile-filter-btn none-btn" onclick="setCRNoneCols()">None</button>
+                    <button class="mobile-filter-btn quick" onclick="setCRMaxCols()">MxR</button>
+                    <button class="mobile-filter-btn quick" onclick="setCR3055Cols()">:30-:55</button>
+                  </div>
+
+                  <div style="font-size:0.65rem;color:var(--accent-blue);margin-bottom:4px;font-weight:500;">Open-to-Bar (vs Open):</div>
+                  <div class="mobile-filter-btns" style="margin-bottom:8px;">
+                    <button class="mobile-filter-btn quick" onclick="setORAllCols()">All OR</button>
+                    <button class="mobile-filter-btn none-btn" onclick="setORNoneCols()">None</button>
+                    <button class="mobile-filter-btn quick" onclick="setORMaxCols()">MxR</button>
+                    <button class="mobile-filter-btn quick" onclick="setOR3055Cols()">:30-:55</button>
+                  </div>
+
+                  <div style="font-size:0.65rem;color:var(--text-muted);margin-bottom:4px;">Individual minutes (CR):</div>
+                  <div class="mobile-filter-btns" style="flex-wrap:wrap;gap:4px;margin-bottom:8px;">
+                    <button class="mobile-filter-btn" onclick="setCRCols('00')">:00</button>
+                    <button class="mobile-filter-btn" onclick="setCRCols('05')">:05</button>
+                    <button class="mobile-filter-btn" onclick="setCRCols('10')">:10</button>
+                    <button class="mobile-filter-btn" onclick="setCRCols('15')">:15</button>
+                    <button class="mobile-filter-btn" onclick="setCRCols('20')">:20</button>
+                    <button class="mobile-filter-btn" onclick="setCRCols('25')">:25</button>
+                    <button class="mobile-filter-btn" onclick="setCRCols('30')">:30</button>
+                    <button class="mobile-filter-btn" onclick="setCRCols('35')">:35</button>
+                    <button class="mobile-filter-btn" onclick="setCRCols('40')">:40</button>
+                    <button class="mobile-filter-btn" onclick="setCRCols('45')">:45</button>
+                    <button class="mobile-filter-btn" onclick="setCRCols('50')">:50</button>
+                  </div>
+                  <div style="font-size:0.65rem;color:var(--text-muted);margin-bottom:4px;">Individual minutes (OR):</div>
+                  <div class="mobile-filter-btns" style="flex-wrap:wrap;gap:4px;">
+                    <button class="mobile-filter-btn" onclick="setORCols('00')">:00</button>
+                    <button class="mobile-filter-btn" onclick="setORCols('05')">:05</button>
+                    <button class="mobile-filter-btn" onclick="setORCols('10')">:10</button>
+                    <button class="mobile-filter-btn" onclick="setORCols('15')">:15</button>
+                    <button class="mobile-filter-btn" onclick="setORCols('20')">:20</button>
+                    <button class="mobile-filter-btn" onclick="setORCols('25')">:25</button>
+                    <button class="mobile-filter-btn" onclick="setORCols('30')">:30</button>
+                    <button class="mobile-filter-btn" onclick="setORCols('35')">:35</button>
+                    <button class="mobile-filter-btn" onclick="setORCols('40')">:40</button>
+                    <button class="mobile-filter-btn" onclick="setORCols('45')">:45</button>
+                    <button class="mobile-filter-btn" onclick="setORCols('50')">:50</button>
+                    <button class="mobile-filter-btn" onclick="setORCols('55')">:55</button>
+                  </div>
+                </div>
+              </div>
+
+              <div class="mobile-filter-section">
+                <h3>Gradient Mode</h3>
+                <select id="mobile-gradient-mode" class="mobile-settings-input" style="width:100%;" onchange="document.getElementById('gradient-mode').value=this.value; renderTable();">
+                  <option value="row">Per Row</option>
+                  <option value="column">Per Column</option>
+                </select>
+              </div>
+
+              <div class="mobile-filter-section">
+                <h3>Bar % Mode</h3>
+                <select id="mobile-bar-pct-mode" class="mobile-settings-input" style="width:100%;" onchange="document.getElementById('bar-pct-mode').value=this.value; renderTable();">
+                  <option value="hour">Per Hour</option>
+                  <option value="day">Per Day</option>
+                </select>
+              </div>
+
+              <div class="mobile-filter-section" style="margin-bottom:0;">
+                <h3>Select Columns (per Hour)</h3>
+                <input type="text" id="mobile-col-search" placeholder="Search columns..."
+                  style="width:100%;padding:8px 12px;border:1px solid var(--border-medium);border-radius:6px;background:var(--bg-secondary);color:var(--text-primary);font-size:0.75rem;"
+                  oninput="filterMobileColumns(this.value)">
               </div>
             </div>
 
-            <div class="mobile-filter-section">
-              <h3>5-Minute Interval Range Presets</h3>
-              <div style="font-size:0.65rem;color:var(--text-muted);margin-bottom:8px;">Combined (Open & Close ranges):</div>
-              <div class="mobile-filter-btns" style="margin-bottom:12px;">
-                <button class="mobile-filter-btn quick" onclick="setAllIntervalCols()">All 5-min</button>
-                <button class="mobile-filter-btn none-btn" onclick="setNoIntervalCols()">None</button>
-                <button class="mobile-filter-btn quick" onclick="setAllIntervalMxRCols()">All MxR</button>
-              </div>
-
-              <div style="font-size:0.65rem;color:var(--accent-btc);margin-bottom:4px;font-weight:500;">Close-to-Rest (vs Close):</div>
-              <div class="mobile-filter-btns" style="margin-bottom:8px;">
-                <button class="mobile-filter-btn quick" onclick="setCRAllCols()">All CR</button>
-                <button class="mobile-filter-btn none-btn" onclick="setCRNoneCols()">None</button>
-                <button class="mobile-filter-btn quick" onclick="setCRMaxCols()">MxR</button>
-                <button class="mobile-filter-btn quick" onclick="setCR3055Cols()">:30-:55</button>
-              </div>
-
-              <div style="font-size:0.65rem;color:var(--accent-blue);margin-bottom:4px;font-weight:500;">Open-to-Bar (vs Open):</div>
-              <div class="mobile-filter-btns" style="margin-bottom:8px;">
-                <button class="mobile-filter-btn quick" onclick="setORAllCols()">All OR</button>
-                <button class="mobile-filter-btn none-btn" onclick="setORNoneCols()">None</button>
-                <button class="mobile-filter-btn quick" onclick="setORMaxCols()">MxR</button>
-                <button class="mobile-filter-btn quick" onclick="setOR3055Cols()">:30-:55</button>
-              </div>
-
-              <div style="font-size:0.65rem;color:var(--text-muted);margin-bottom:4px;">Individual minutes (CR):</div>
-              <div class="mobile-filter-btns" style="flex-wrap:wrap;gap:4px;margin-bottom:8px;">
-                <button class="mobile-filter-btn" onclick="setCRCols('00')">:00</button>
-                <button class="mobile-filter-btn" onclick="setCRCols('05')">:05</button>
-                <button class="mobile-filter-btn" onclick="setCRCols('10')">:10</button>
-                <button class="mobile-filter-btn" onclick="setCRCols('15')">:15</button>
-                <button class="mobile-filter-btn" onclick="setCRCols('20')">:20</button>
-                <button class="mobile-filter-btn" onclick="setCRCols('25')">:25</button>
-                <button class="mobile-filter-btn" onclick="setCRCols('30')">:30</button>
-                <button class="mobile-filter-btn" onclick="setCRCols('35')">:35</button>
-                <button class="mobile-filter-btn" onclick="setCRCols('40')">:40</button>
-                <button class="mobile-filter-btn" onclick="setCRCols('45')">:45</button>
-                <button class="mobile-filter-btn" onclick="setCRCols('50')">:50</button>
-              </div>
-              <div style="font-size:0.65rem;color:var(--text-muted);margin-bottom:4px;">Individual minutes (OR):</div>
-              <div class="mobile-filter-btns" style="flex-wrap:wrap;gap:4px;">
-                <button class="mobile-filter-btn" onclick="setORCols('00')">:00</button>
-                <button class="mobile-filter-btn" onclick="setORCols('05')">:05</button>
-                <button class="mobile-filter-btn" onclick="setORCols('10')">:10</button>
-                <button class="mobile-filter-btn" onclick="setORCols('15')">:15</button>
-                <button class="mobile-filter-btn" onclick="setORCols('20')">:20</button>
-                <button class="mobile-filter-btn" onclick="setORCols('25')">:25</button>
-                <button class="mobile-filter-btn" onclick="setORCols('30')">:30</button>
-                <button class="mobile-filter-btn" onclick="setORCols('35')">:35</button>
-                <button class="mobile-filter-btn" onclick="setORCols('40')">:40</button>
-                <button class="mobile-filter-btn" onclick="setORCols('45')">:45</button>
-                <button class="mobile-filter-btn" onclick="setORCols('50')">:50</button>
-                <button class="mobile-filter-btn" onclick="setORCols('55')">:55</button>
-              </div>
-            </div>
-
-            <div class="mobile-filter-section">
-              <h3>Gradient Mode</h3>
-              <select id="mobile-gradient-mode" class="mobile-settings-input" style="width:100%;" onchange="document.getElementById('gradient-mode').value=this.value; renderTable();">
-                <option value="row">Per Row</option>
-                <option value="column">Per Column</option>
-              </select>
-            </div>
-
-            <div class="mobile-filter-section">
-              <h3>Bar % Mode</h3>
-              <select id="mobile-bar-pct-mode" class="mobile-settings-input" style="width:100%;" onchange="document.getElementById('bar-pct-mode').value=this.value; renderTable();">
-                <option value="hour">Per Hour</option>
-                <option value="day">Per Day</option>
-              </select>
-            </div>
-
-            <div class="mobile-filter-section">
-              <h3>Select Columns (per Hour)</h3>
-              <input type="text" id="mobile-col-search" placeholder="Search columns..."
-                style="width:100%;padding:8px 12px;margin-bottom:12px;border:1px solid var(--border-medium);border-radius:6px;background:var(--bg-secondary);color:var(--text-primary);font-size:0.75rem;"
-                oninput="filterMobileColumns(this.value)">
-              <div id="mobile-col-grid" class="mobile-settings-row"></div>
-            </div>
+            <!-- Scrollable column grid -->
+            <div id="mobile-col-grid" class="mobile-settings-row"></div>
           </div>
 
           <!-- Tab 3: DayTotals -->
           <div id="mobile-tab-daytotals" class="mobile-tab-panel">
-            <div class="mobile-filter-section">
-              <h3>Day Total Presets</h3>
-              <div class="mobile-filter-btns">
-                <button class="mobile-filter-btn quick" onclick="defaultDTCols()">Default</button>
-                <button class="mobile-filter-btn quick" onclick="showAllDTCols()">All</button>
-                <button class="mobile-filter-btn none-btn" onclick="hideAllDTCols()">None</button>
+            <!-- Sticky header area -->
+            <div class="mobile-filter-sticky-header">
+              <div class="mobile-filter-section">
+                <h3>Day Total Presets</h3>
+                <div class="mobile-filter-btns">
+                  <button class="mobile-filter-btn quick" onclick="defaultDTCols()">Default</button>
+                  <button class="mobile-filter-btn quick" onclick="showAllDTCols()">All</button>
+                  <button class="mobile-filter-btn none-btn" onclick="hideAllDTCols()">None</button>
+                </div>
+              </div>
+
+              <div class="mobile-filter-section">
+                <h3>Show in Table</h3>
+                <button id="mobile-btn-show-dt-cols" class="mobile-action-btn-large" onclick="toggleShowDayCols()" style="width:100%;">
+                  <span id="mobile-show-dt-text">Show Day Totals</span>
+                </button>
+              </div>
+
+              <div class="mobile-filter-section">
+                <h3>Established % Threshold</h3>
+                <input id="mobile-est-pct" type="number" value="85" min="1" max="100" class="mobile-settings-input" style="width:100%;" onchange="document.getElementById('est-pct').value=this.value; computeEstablishedHours(); computeRelativeVolume(); renderTable();" />
+              </div>
+
+              <div class="mobile-filter-section">
+                <h3>O-C Close Hour</h3>
+                <select id="mobile-oc-close-hour" class="mobile-settings-input" style="width:100%;" onchange="document.getElementById('oc-close-hour').value=this.value; renderTable();"></select>
+              </div>
+
+              <div class="mobile-filter-section" style="margin-bottom:0;">
+                <h3>Select Day Total Columns</h3>
+                <input type="text" id="mobile-dt-col-search" placeholder="Search day totals..."
+                  style="width:100%;padding:8px 12px;border:1px solid var(--border-medium);border-radius:6px;background:var(--bg-secondary);color:var(--text-primary);font-size:0.75rem;"
+                  oninput="filterMobileDayTotals(this.value)">
               </div>
             </div>
 
-            <div class="mobile-filter-section">
-              <h3>Show in Table</h3>
-              <button id="mobile-btn-show-dt-cols" class="mobile-action-btn-large" onclick="toggleShowDayCols()" style="width:100%;margin-bottom:12px;">
-                <span id="mobile-show-dt-text">Show Day Totals</span>
-              </button>
-            </div>
-
-            <div class="mobile-filter-section">
-              <h3>Established % Threshold</h3>
-              <input id="mobile-est-pct" type="number" value="85" min="1" max="100" class="mobile-settings-input" style="width:100%;" onchange="document.getElementById('est-pct').value=this.value; computeEstablishedHours(); computeRelativeVolume(); renderTable();" />
-            </div>
-
-            <div class="mobile-filter-section">
-              <h3>O-C Close Hour</h3>
-              <select id="mobile-oc-close-hour" class="mobile-settings-input" style="width:100%;" onchange="document.getElementById('oc-close-hour').value=this.value; renderTable();"></select>
-            </div>
-
-            <div class="mobile-filter-section">
-              <h3>Select Day Total Columns</h3>
-              <input type="text" id="mobile-dt-col-search" placeholder="Search day totals..."
-                style="width:100%;padding:8px 12px;margin-bottom:12px;border:1px solid var(--border-medium);border-radius:6px;background:var(--bg-secondary);color:var(--text-primary);font-size:0.75rem;"
-                oninput="filterMobileDayTotals(this.value)">
-              <div id="mobile-dt-col-grid" class="mobile-settings-row"></div>
+            <!-- Scrollable column grid -->
+            <div id="mobile-dt-col-grid" class="mobile-settings-row"></div>
             </div>
           </div>
 
@@ -4652,6 +4731,11 @@
     // Functions to toggle collapsible sections
     function toggleColSection(secKey) {
       const section = document.getElementById(`col-section-${secKey}`);
+      if (section) section.classList.toggle('collapsed');
+    }
+
+    function toggleMobileCollapsible(id) {
+      const section = document.getElementById(id);
       if (section) section.classList.toggle('collapsed');
     }
 
