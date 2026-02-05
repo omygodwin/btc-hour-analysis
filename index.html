@@ -1531,6 +1531,13 @@
             </select>
           </div>
           <div class="option-toggle">
+            <label>Bar %:</label>
+            <select id="bar-pct-mode" onchange="renderTable()" title="Calculate bar range % relative to hour's bars or all day's bars">
+              <option value="hour">Per Hour</option>
+              <option value="day">Per Day</option>
+            </select>
+          </div>
+          <div class="option-toggle">
             <label><input type="checkbox" id="pct-checkbox" onchange="togglePercentiles()"> Percentiles</label>
           </div>
         </div>
@@ -2085,6 +2092,14 @@
             </div>
 
             <div class="mobile-filter-section">
+              <h3>Bar % Mode</h3>
+              <select id="mobile-bar-pct-mode" class="mobile-settings-input" style="width:100%;" onchange="document.getElementById('bar-pct-mode').value=this.value; renderTable();">
+                <option value="hour">Per Hour</option>
+                <option value="day">Per Day</option>
+              </select>
+            </div>
+
+            <div class="mobile-filter-section">
               <h3>Select Columns (per Hour)</h3>
               <input type="text" id="mobile-col-search" placeholder="Search columns..."
                 style="width:100%;padding:8px 12px;margin-bottom:12px;border:1px solid var(--border-medium);border-radius:6px;background:var(--bg-secondary);color:var(--text-primary);font-size:0.75rem;"
@@ -2213,6 +2228,13 @@
                   <select id="mobile-gradient-mode" class="mobile-settings-input" style="flex:1;" onchange="document.getElementById('gradient-mode').value=this.value; renderTable();">
                     <option value="row">Per Row</option>
                     <option value="column">Per Column</option>
+                  </select>
+                </div>
+                <div class="mobile-settings-row">
+                  <span class="mobile-settings-label">Bar % Mode:</span>
+                  <select id="mobile-bar-pct-mode-2" class="mobile-settings-input" style="flex:1;" onchange="document.getElementById('bar-pct-mode').value=this.value; renderTable();">
+                    <option value="hour">Per Hour</option>
+                    <option value="day">Per Day</option>
                   </select>
                 </div>
               </div>
@@ -2596,72 +2618,108 @@
       { id: 'brUR00', label: 'bU00', desc: ':00 bar upper range (H-O)', default: false, gradient: 'orange', group: 'br00' },
       { id: 'brLR00', label: 'bL00', desc: ':00 bar lower range (O-L)', default: false, gradient: 'orange', group: 'br00' },
       { id: 'brMxR00', label: 'bMx00', desc: ':00 bar max range (max UR/LR)', default: false, gradient: 'orange', group: 'br00' },
+      { id: 'brMnR00', label: 'bMn00', desc: ':00 bar min range (min UR/LR)', default: false, gradient: 'orange', group: 'br00' },
+      { id: 'brMxR%00', label: 'bMx%00', desc: ':00 bar max range as % of max', default: false, gradient: 'orange', group: 'brpct00' },
+      { id: 'brMnR%00', label: 'bMn%00', desc: ':00 bar min range as % of max', default: false, gradient: 'orange', group: 'brpct00' },
       { id: 'brOC00', label: 'bOC00', desc: ':00 bar O-C (C-O)', default: false, gradient: 'rg', group: 'br00' },
       // :05 bar
       { id: 'brRng05', label: 'bR05', desc: ':05 bar range (H-L)', default: false, gradient: 'orange', group: 'br05' },
       { id: 'brUR05', label: 'bU05', desc: ':05 bar upper range (H-O)', default: false, gradient: 'orange', group: 'br05' },
       { id: 'brLR05', label: 'bL05', desc: ':05 bar lower range (O-L)', default: false, gradient: 'orange', group: 'br05' },
       { id: 'brMxR05', label: 'bMx05', desc: ':05 bar max range (max UR/LR)', default: false, gradient: 'orange', group: 'br05' },
+      { id: 'brMnR05', label: 'bMn05', desc: ':05 bar min range (min UR/LR)', default: false, gradient: 'orange', group: 'br05' },
+      { id: 'brMxR%05', label: 'bMx%05', desc: ':05 bar max range as % of max', default: false, gradient: 'orange', group: 'brpct05' },
+      { id: 'brMnR%05', label: 'bMn%05', desc: ':05 bar min range as % of max', default: false, gradient: 'orange', group: 'brpct05' },
       { id: 'brOC05', label: 'bOC05', desc: ':05 bar O-C (C-O)', default: false, gradient: 'rg', group: 'br05' },
       // :10 bar
       { id: 'brRng10', label: 'bR10', desc: ':10 bar range (H-L)', default: false, gradient: 'orange', group: 'br10' },
       { id: 'brUR10', label: 'bU10', desc: ':10 bar upper range (H-O)', default: false, gradient: 'orange', group: 'br10' },
       { id: 'brLR10', label: 'bL10', desc: ':10 bar lower range (O-L)', default: false, gradient: 'orange', group: 'br10' },
       { id: 'brMxR10', label: 'bMx10', desc: ':10 bar max range (max UR/LR)', default: false, gradient: 'orange', group: 'br10' },
+      { id: 'brMnR10', label: 'bMn10', desc: ':10 bar min range (min UR/LR)', default: false, gradient: 'orange', group: 'br10' },
+      { id: 'brMxR%10', label: 'bMx%10', desc: ':10 bar max range as % of max', default: false, gradient: 'orange', group: 'brpct10' },
+      { id: 'brMnR%10', label: 'bMn%10', desc: ':10 bar min range as % of max', default: false, gradient: 'orange', group: 'brpct10' },
       { id: 'brOC10', label: 'bOC10', desc: ':10 bar O-C (C-O)', default: false, gradient: 'rg', group: 'br10' },
       // :15 bar
       { id: 'brRng15', label: 'bR15', desc: ':15 bar range (H-L)', default: false, gradient: 'orange', group: 'br15' },
       { id: 'brUR15', label: 'bU15', desc: ':15 bar upper range (H-O)', default: false, gradient: 'orange', group: 'br15' },
       { id: 'brLR15', label: 'bL15', desc: ':15 bar lower range (O-L)', default: false, gradient: 'orange', group: 'br15' },
       { id: 'brMxR15', label: 'bMx15', desc: ':15 bar max range (max UR/LR)', default: false, gradient: 'orange', group: 'br15' },
+      { id: 'brMnR15', label: 'bMn15', desc: ':15 bar min range (min UR/LR)', default: false, gradient: 'orange', group: 'br15' },
+      { id: 'brMxR%15', label: 'bMx%15', desc: ':15 bar max range as % of max', default: false, gradient: 'orange', group: 'brpct15' },
+      { id: 'brMnR%15', label: 'bMn%15', desc: ':15 bar min range as % of max', default: false, gradient: 'orange', group: 'brpct15' },
       { id: 'brOC15', label: 'bOC15', desc: ':15 bar O-C (C-O)', default: false, gradient: 'rg', group: 'br15' },
       // :20 bar
       { id: 'brRng20', label: 'bR20', desc: ':20 bar range (H-L)', default: false, gradient: 'orange', group: 'br20' },
       { id: 'brUR20', label: 'bU20', desc: ':20 bar upper range (H-O)', default: false, gradient: 'orange', group: 'br20' },
       { id: 'brLR20', label: 'bL20', desc: ':20 bar lower range (O-L)', default: false, gradient: 'orange', group: 'br20' },
       { id: 'brMxR20', label: 'bMx20', desc: ':20 bar max range (max UR/LR)', default: false, gradient: 'orange', group: 'br20' },
+      { id: 'brMnR20', label: 'bMn20', desc: ':20 bar min range (min UR/LR)', default: false, gradient: 'orange', group: 'br20' },
+      { id: 'brMxR%20', label: 'bMx%20', desc: ':20 bar max range as % of max', default: false, gradient: 'orange', group: 'brpct20' },
+      { id: 'brMnR%20', label: 'bMn%20', desc: ':20 bar min range as % of max', default: false, gradient: 'orange', group: 'brpct20' },
       { id: 'brOC20', label: 'bOC20', desc: ':20 bar O-C (C-O)', default: false, gradient: 'rg', group: 'br20' },
       // :25 bar
       { id: 'brRng25', label: 'bR25', desc: ':25 bar range (H-L)', default: false, gradient: 'orange', group: 'br25' },
       { id: 'brUR25', label: 'bU25', desc: ':25 bar upper range (H-O)', default: false, gradient: 'orange', group: 'br25' },
       { id: 'brLR25', label: 'bL25', desc: ':25 bar lower range (O-L)', default: false, gradient: 'orange', group: 'br25' },
       { id: 'brMxR25', label: 'bMx25', desc: ':25 bar max range (max UR/LR)', default: false, gradient: 'orange', group: 'br25' },
+      { id: 'brMnR25', label: 'bMn25', desc: ':25 bar min range (min UR/LR)', default: false, gradient: 'orange', group: 'br25' },
+      { id: 'brMxR%25', label: 'bMx%25', desc: ':25 bar max range as % of max', default: false, gradient: 'orange', group: 'brpct25' },
+      { id: 'brMnR%25', label: 'bMn%25', desc: ':25 bar min range as % of max', default: false, gradient: 'orange', group: 'brpct25' },
       { id: 'brOC25', label: 'bOC25', desc: ':25 bar O-C (C-O)', default: false, gradient: 'rg', group: 'br25' },
       // :30 bar
       { id: 'brRng30', label: 'bR30', desc: ':30 bar range (H-L)', default: false, gradient: 'orange', group: 'br30' },
       { id: 'brUR30', label: 'bU30', desc: ':30 bar upper range (H-O)', default: false, gradient: 'orange', group: 'br30' },
       { id: 'brLR30', label: 'bL30', desc: ':30 bar lower range (O-L)', default: false, gradient: 'orange', group: 'br30' },
       { id: 'brMxR30', label: 'bMx30', desc: ':30 bar max range (max UR/LR)', default: false, gradient: 'orange', group: 'br30' },
+      { id: 'brMnR30', label: 'bMn30', desc: ':30 bar min range (min UR/LR)', default: false, gradient: 'orange', group: 'br30' },
+      { id: 'brMxR%30', label: 'bMx%30', desc: ':30 bar max range as % of max', default: false, gradient: 'orange', group: 'brpct30' },
+      { id: 'brMnR%30', label: 'bMn%30', desc: ':30 bar min range as % of max', default: false, gradient: 'orange', group: 'brpct30' },
       { id: 'brOC30', label: 'bOC30', desc: ':30 bar O-C (C-O)', default: false, gradient: 'rg', group: 'br30' },
       // :35 bar
       { id: 'brRng35', label: 'bR35', desc: ':35 bar range (H-L)', default: false, gradient: 'orange', group: 'br35' },
       { id: 'brUR35', label: 'bU35', desc: ':35 bar upper range (H-O)', default: false, gradient: 'orange', group: 'br35' },
       { id: 'brLR35', label: 'bL35', desc: ':35 bar lower range (O-L)', default: false, gradient: 'orange', group: 'br35' },
       { id: 'brMxR35', label: 'bMx35', desc: ':35 bar max range (max UR/LR)', default: false, gradient: 'orange', group: 'br35' },
+      { id: 'brMnR35', label: 'bMn35', desc: ':35 bar min range (min UR/LR)', default: false, gradient: 'orange', group: 'br35' },
+      { id: 'brMxR%35', label: 'bMx%35', desc: ':35 bar max range as % of max', default: false, gradient: 'orange', group: 'brpct35' },
+      { id: 'brMnR%35', label: 'bMn%35', desc: ':35 bar min range as % of max', default: false, gradient: 'orange', group: 'brpct35' },
       { id: 'brOC35', label: 'bOC35', desc: ':35 bar O-C (C-O)', default: false, gradient: 'rg', group: 'br35' },
       // :40 bar
       { id: 'brRng40', label: 'bR40', desc: ':40 bar range (H-L)', default: false, gradient: 'orange', group: 'br40' },
       { id: 'brUR40', label: 'bU40', desc: ':40 bar upper range (H-O)', default: false, gradient: 'orange', group: 'br40' },
       { id: 'brLR40', label: 'bL40', desc: ':40 bar lower range (O-L)', default: false, gradient: 'orange', group: 'br40' },
       { id: 'brMxR40', label: 'bMx40', desc: ':40 bar max range (max UR/LR)', default: false, gradient: 'orange', group: 'br40' },
+      { id: 'brMnR40', label: 'bMn40', desc: ':40 bar min range (min UR/LR)', default: false, gradient: 'orange', group: 'br40' },
+      { id: 'brMxR%40', label: 'bMx%40', desc: ':40 bar max range as % of max', default: false, gradient: 'orange', group: 'brpct40' },
+      { id: 'brMnR%40', label: 'bMn%40', desc: ':40 bar min range as % of max', default: false, gradient: 'orange', group: 'brpct40' },
       { id: 'brOC40', label: 'bOC40', desc: ':40 bar O-C (C-O)', default: false, gradient: 'rg', group: 'br40' },
       // :45 bar
       { id: 'brRng45', label: 'bR45', desc: ':45 bar range (H-L)', default: false, gradient: 'orange', group: 'br45' },
       { id: 'brUR45', label: 'bU45', desc: ':45 bar upper range (H-O)', default: false, gradient: 'orange', group: 'br45' },
       { id: 'brLR45', label: 'bL45', desc: ':45 bar lower range (O-L)', default: false, gradient: 'orange', group: 'br45' },
       { id: 'brMxR45', label: 'bMx45', desc: ':45 bar max range (max UR/LR)', default: false, gradient: 'orange', group: 'br45' },
+      { id: 'brMnR45', label: 'bMn45', desc: ':45 bar min range (min UR/LR)', default: false, gradient: 'orange', group: 'br45' },
+      { id: 'brMxR%45', label: 'bMx%45', desc: ':45 bar max range as % of max', default: false, gradient: 'orange', group: 'brpct45' },
+      { id: 'brMnR%45', label: 'bMn%45', desc: ':45 bar min range as % of max', default: false, gradient: 'orange', group: 'brpct45' },
       { id: 'brOC45', label: 'bOC45', desc: ':45 bar O-C (C-O)', default: false, gradient: 'rg', group: 'br45' },
       // :50 bar
       { id: 'brRng50', label: 'bR50', desc: ':50 bar range (H-L)', default: false, gradient: 'orange', group: 'br50' },
       { id: 'brUR50', label: 'bU50', desc: ':50 bar upper range (H-O)', default: false, gradient: 'orange', group: 'br50' },
       { id: 'brLR50', label: 'bL50', desc: ':50 bar lower range (O-L)', default: false, gradient: 'orange', group: 'br50' },
       { id: 'brMxR50', label: 'bMx50', desc: ':50 bar max range (max UR/LR)', default: false, gradient: 'orange', group: 'br50' },
+      { id: 'brMnR50', label: 'bMn50', desc: ':50 bar min range (min UR/LR)', default: false, gradient: 'orange', group: 'br50' },
+      { id: 'brMxR%50', label: 'bMx%50', desc: ':50 bar max range as % of max', default: false, gradient: 'orange', group: 'brpct50' },
+      { id: 'brMnR%50', label: 'bMn%50', desc: ':50 bar min range as % of max', default: false, gradient: 'orange', group: 'brpct50' },
       { id: 'brOC50', label: 'bOC50', desc: ':50 bar O-C (C-O)', default: false, gradient: 'rg', group: 'br50' },
       // :55 bar
       { id: 'brRng55', label: 'bR55', desc: ':55 bar range (H-L)', default: false, gradient: 'orange', group: 'br55' },
       { id: 'brUR55', label: 'bU55', desc: ':55 bar upper range (H-O)', default: false, gradient: 'orange', group: 'br55' },
       { id: 'brLR55', label: 'bL55', desc: ':55 bar lower range (O-L)', default: false, gradient: 'orange', group: 'br55' },
       { id: 'brMxR55', label: 'bMx55', desc: ':55 bar max range (max UR/LR)', default: false, gradient: 'orange', group: 'br55' },
+      { id: 'brMnR55', label: 'bMn55', desc: ':55 bar min range (min UR/LR)', default: false, gradient: 'orange', group: 'br55' },
+      { id: 'brMxR%55', label: 'bMx%55', desc: ':55 bar max range as % of max', default: false, gradient: 'orange', group: 'brpct55' },
+      { id: 'brMnR%55', label: 'bMn%55', desc: ':55 bar min range as % of max', default: false, gradient: 'orange', group: 'brpct55' },
       { id: 'brOC55', label: 'bOC55', desc: ':55 bar O-C (C-O)', default: false, gradient: 'rg', group: 'br55' },
 
       // ===== OPEN-TO-BAR RANGE METRICS (from hour open to running H/L through each minute) =====
@@ -3995,6 +4053,11 @@
       // Sync gradient mode
       document.getElementById('mobile-gradient-mode').value = document.getElementById('gradient-mode').value;
 
+      // Sync bar % mode
+      const barPctVal = document.getElementById('bar-pct-mode')?.value || 'hour';
+      if (document.getElementById('mobile-bar-pct-mode')) document.getElementById('mobile-bar-pct-mode').value = barPctVal;
+      if (document.getElementById('mobile-bar-pct-mode-2')) document.getElementById('mobile-bar-pct-mode-2').value = barPctVal;
+
       // Sync established %
       document.getElementById('mobile-est-pct').value = document.getElementById('est-pct').value;
 
@@ -5034,11 +5097,13 @@
                 const ur = Math.round(bar.high - bar.open);
                 const lr = Math.round(bar.open - bar.low);
                 const mxr = Math.max(ur, lr);
+                const mnr = Math.min(ur, lr);
                 const oc = Math.round(bar.close - bar.open);
                 barRangeMetrics[`brRng${minStr}`] = rng;
                 barRangeMetrics[`brUR${minStr}`] = ur;
                 barRangeMetrics[`brLR${minStr}`] = lr;
                 barRangeMetrics[`brMxR${minStr}`] = mxr;
+                barRangeMetrics[`brMnR${minStr}`] = mnr;
                 barRangeMetrics[`brOC${minStr}`] = oc;
               }
             });
@@ -7665,7 +7730,7 @@ function populateDatePicker() {
         const brMins = ['00', '05', '10', '15', '20', '25', '30', '35', '40', '45', '50', '55'];
         brMins.forEach(min => {
           const grp = 'br' + min;
-          ['brRng' + min, 'brUR' + min, 'brLR' + min, 'brMxR' + min, 'brOC' + min].forEach(key => {
+          ['brRng' + min, 'brUR' + min, 'brLR' + min, 'brMxR' + min, 'brMnR' + min, 'brOC' + min].forEach(key => {
             if (m[key] != null) s[grp].push(m[key]);
           });
         });
@@ -7849,7 +7914,7 @@ function populateDatePicker() {
           const brMins = ['00', '05', '10', '15', '20', '25', '30', '35', '40', '45', '50', '55'];
           brMins.forEach(min => {
             const grp = 'br' + min;
-            ['brRng' + min, 'brUR' + min, 'brLR' + min, 'brMxR' + min, 'brOC' + min].forEach(key => {
+            ['brRng' + min, 'brUR' + min, 'brLR' + min, 'brMxR' + min, 'brMnR' + min, 'brOC' + min].forEach(key => {
               if (m[key] != null) s[h][grp].push(m[key]);
             });
           });
@@ -8183,6 +8248,7 @@ function populateDatePicker() {
       const cols = getActiveColumns();
       const dtCols = getActiveDTCols();
       const gMode = document.getElementById('gradient-mode').value;
+      const barPctMode = document.getElementById('bar-pct-mode')?.value || 'hour';
       ocCloseHour = parseInt(document.getElementById('oc-close-hour').value) || 16;
       
       // Calculate O-C to hour for each day
@@ -8264,6 +8330,25 @@ function populateDatePicker() {
       let bd = '';
       data.forEach(day => {
         const rowStats = gMode === 'row' ? calcRowStats(day, hours) : null;
+
+        // Calculate day-level bar range maxes for bar % calculation
+        const dayBarMax = { mxr: 0, mnr: 0 };
+        const hourBarMax = {}; // per-hour maxes
+        const barMins = ['00', '05', '10', '15', '20', '25', '30', '35', '40', '45', '50', '55'];
+        realHours.forEach(h => {
+          const m = day.hrs[h]?.m;
+          hourBarMax[h] = { mxr: 0, mnr: 0 };
+          if (m) {
+            barMins.forEach(min => {
+              const mxr = m[`brMxR${min}`];
+              const mnr = m[`brMnR${min}`];
+              if (mxr != null && mxr > hourBarMax[h].mxr) hourBarMax[h].mxr = mxr;
+              if (mnr != null && mnr > hourBarMax[h].mnr) hourBarMax[h].mnr = mnr;
+              if (mxr != null && mxr > dayBarMax.mxr) dayBarMax.mxr = mxr;
+              if (mnr != null && mnr > dayBarMax.mnr) dayBarMax.mnr = mnr;
+            });
+          }
+        });
         
         bd += '<tr>';
         bd += `<td class="sticky-col date-cell" style="left:0;min-width:65px;cursor:pointer;" onclick="loadDateInDayView('${day.date}')" title="Click to view in Day View">${day.date}</td>`;
@@ -8376,12 +8461,21 @@ function populateDatePicker() {
             else if (col.id === 'p5CdrU') v = m?.p5CdrUActual;
             else if (col.id === 'p5CdrD') v = m?.p5CdrDActual;
             else if (col.id === 'p5Mxcd') v = m?.p5MxcdActual;
+            // Dynamic bar % calculation based on mode
+            else if (col.id.startsWith('brMxR%') || col.id.startsWith('brMnR%')) {
+              const minStr = col.id.slice(-2); // e.g., '00', '05', etc.
+              const isMxR = col.id.startsWith('brMxR%');
+              const rawVal = m?.[isMxR ? `brMxR${minStr}` : `brMnR${minStr}`];
+              const maxRef = barPctMode === 'day' ? dayBarMax : hourBarMax[h];
+              const maxVal = isMxR ? maxRef?.mxr : maxRef?.mnr;
+              v = (rawVal != null && maxVal > 0) ? Math.round((rawVal / maxVal) * 100) : null;
+            }
             else v = m?.[col.id];
-            
+
             let bg = '#0d0d12';
 
-            // Special case for mxrPct and rngPct: always use 0-100 range
-            if ((col.id === 'mxrPct' || col.id === 'rngPct') && col.gradient === 'orange') {
+            // Special case for mxrPct, rngPct, and bar % columns: always use 0-100 range
+            if ((col.id === 'mxrPct' || col.id === 'rngPct' || col.id.startsWith('brMxR%') || col.id.startsWith('brMnR%')) && col.gradient === 'orange') {
               bg = getOrangeGradient(v, 0, 100);
             }
             // Fixed-scale RSI metrics: always use 0-100 range (RSI is always 0-100)
