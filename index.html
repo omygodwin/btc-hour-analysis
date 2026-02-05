@@ -2086,6 +2086,9 @@
 
             <div class="mobile-filter-section">
               <h3>Select Columns (per Hour)</h3>
+              <input type="text" id="mobile-col-search" placeholder="Search columns..."
+                style="width:100%;padding:8px 12px;margin-bottom:12px;border:1px solid var(--border-medium);border-radius:6px;background:var(--bg-secondary);color:var(--text-primary);font-size:0.75rem;"
+                oninput="filterMobileColumns(this.value)">
               <div id="mobile-col-grid" class="mobile-settings-row"></div>
             </div>
           </div>
@@ -2120,6 +2123,9 @@
 
             <div class="mobile-filter-section">
               <h3>Select Day Total Columns</h3>
+              <input type="text" id="mobile-dt-col-search" placeholder="Search day totals..."
+                style="width:100%;padding:8px 12px;margin-bottom:12px;border:1px solid var(--border-medium);border-radius:6px;background:var(--bg-secondary);color:var(--text-primary);font-size:0.75rem;"
+                oninput="filterMobileDayTotals(this.value)">
               <div id="mobile-dt-col-grid" class="mobile-settings-row"></div>
             </div>
           </div>
@@ -3183,37 +3189,57 @@
       if (!container) return;
       container.innerHTML = '';
 
-      // Add selected columns section at top
-      const selectedCols = ALL_COLUMNS.filter(c => visibleColumns.has(c.id));
-      if (selectedCols.length > 0) {
-        const selectedSection = document.createElement('div');
-        selectedSection.style.cssText = 'margin-bottom:16px;padding:8px;background:rgba(34,197,94,0.1);border:1px solid rgba(34,197,94,0.3);border-radius:6px;';
+      const searchText = (typeof mobileColSearchText !== 'undefined') ? mobileColSearchText : '';
+      const matchesSearch = (col) => {
+        if (!searchText) return true;
+        return col.label.toLowerCase().includes(searchText) ||
+               col.desc.toLowerCase().includes(searchText) ||
+               col.id.toLowerCase().includes(searchText);
+      };
 
-        const selectedHeader = document.createElement('div');
-        selectedHeader.style.cssText = 'font-weight:600;color:var(--accent-green);font-size:0.7rem;margin-bottom:6px;';
-        selectedHeader.textContent = `Selected Columns (${selectedCols.length})`;
-        selectedSection.appendChild(selectedHeader);
+      // Add selected columns section at top (only if not searching)
+      if (!searchText) {
+        const selectedCols = ALL_COLUMNS.filter(c => visibleColumns.has(c.id));
+        if (selectedCols.length > 0) {
+          const selectedSection = document.createElement('div');
+          selectedSection.style.cssText = 'margin-bottom:16px;padding:8px;background:rgba(34,197,94,0.1);border:1px solid rgba(34,197,94,0.3);border-radius:6px;';
 
-        const selectedGrid = document.createElement('div');
-        selectedGrid.style.cssText = 'display:flex;flex-wrap:wrap;gap:4px;';
-        selectedCols.forEach(col => {
-          const chip = document.createElement('span');
-          chip.style.cssText = 'display:inline-flex;align-items:center;gap:4px;background:var(--bg-secondary);padding:2px 6px;border-radius:4px;font-size:0.6rem;color:var(--text-primary);cursor:pointer;';
-          chip.innerHTML = `${col.label} <span style="color:var(--text-muted);font-size:0.55rem;">×</span>`;
-          chip.title = col.desc;
-          chip.onclick = () => { toggleColumn(col.id); updateMobileColumnGrid(); };
-          selectedGrid.appendChild(chip);
-        });
-        selectedSection.appendChild(selectedGrid);
-        container.appendChild(selectedSection);
+          const selectedHeader = document.createElement('div');
+          selectedHeader.style.cssText = 'font-weight:600;color:var(--accent-green);font-size:0.7rem;margin-bottom:6px;';
+          selectedHeader.textContent = `Selected Columns (${selectedCols.length})`;
+          selectedSection.appendChild(selectedHeader);
+
+          const selectedGrid = document.createElement('div');
+          selectedGrid.style.cssText = 'display:flex;flex-wrap:wrap;gap:4px;';
+          selectedCols.forEach(col => {
+            const chip = document.createElement('span');
+            chip.style.cssText = 'display:inline-flex;align-items:center;gap:4px;background:var(--bg-secondary);padding:2px 6px;border-radius:4px;font-size:0.6rem;color:var(--text-primary);cursor:pointer;';
+            chip.innerHTML = `${col.label} <span style="color:var(--text-muted);font-size:0.55rem;">×</span>`;
+            chip.title = col.desc;
+            chip.onclick = () => { toggleColumn(col.id); updateMobileColumnGrid(); };
+            selectedGrid.appendChild(chip);
+          });
+          selectedSection.appendChild(selectedGrid);
+          container.appendChild(selectedSection);
+        }
       }
 
       // Separate CR, OR, LV, and BP columns from other columns
-      const crCols = ALL_COLUMNS.filter(c => c.id.startsWith('cr'));
-      const orCols = ALL_COLUMNS.filter(c => c.id.startsWith('or'));
-      const lvCols = ALL_COLUMNS.filter(c => c.id.startsWith('lv'));
-      const bpCols = ALL_COLUMNS.filter(c => c.group && c.group.startsWith('bp'));
-      const otherCols = ALL_COLUMNS.filter(c => !c.id.startsWith('cr') && !c.id.startsWith('or') && !c.id.startsWith('lv') && !(c.group && c.group.startsWith('bp')));
+      const crCols = ALL_COLUMNS.filter(c => c.id.startsWith('cr') && matchesSearch(c));
+      const orCols = ALL_COLUMNS.filter(c => c.id.startsWith('or') && matchesSearch(c));
+      const lvCols = ALL_COLUMNS.filter(c => c.id.startsWith('lv') && matchesSearch(c));
+      const bpCols = ALL_COLUMNS.filter(c => c.group && c.group.startsWith('bp') && matchesSearch(c));
+      const otherCols = ALL_COLUMNS.filter(c => !c.id.startsWith('cr') && !c.id.startsWith('or') && !c.id.startsWith('lv') && !(c.group && c.group.startsWith('bp')) && matchesSearch(c));
+
+      // Show "no results" if searching and nothing found
+      const totalMatches = otherCols.length + crCols.length + orCols.length + lvCols.length + bpCols.length;
+      if (searchText && totalMatches === 0) {
+        const noResults = document.createElement('div');
+        noResults.style.cssText = 'padding:12px;text-align:center;color:var(--text-muted);font-size:0.7rem;';
+        noResults.textContent = `No columns match "${searchText}"`;
+        container.appendChild(noResults);
+        return;
+      }
 
       // Render other columns first
       otherCols.forEach(col => {
@@ -3253,7 +3279,8 @@
 
         const crHeaderLeft = document.createElement('div');
         crHeaderLeft.style.cssText = 'display:flex;align-items:center;gap:8px;';
-        crHeaderLeft.innerHTML = `<span id="cr-section-arrow" style="transition:transform 0.2s;transform:rotate(-90deg);">▼</span> Close-to-Rest (${crCols.length})`;
+        const crArrowRotate = searchText ? 'rotate(0deg)' : 'rotate(-90deg)';
+        crHeaderLeft.innerHTML = `<span id="cr-section-arrow" style="transition:transform 0.2s;transform:${crArrowRotate};">▼</span> Close-to-Rest (${crCols.length})`;
 
         const crBtns = document.createElement('div');
         crBtns.style.cssText = 'display:flex;gap:4px;';
@@ -3277,7 +3304,8 @@
 
         const crSection = document.createElement('div');
         crSection.id = 'cr-cols-section';
-        crSection.style.cssText = 'padding-left:8px;border-left:2px solid rgba(247,147,26,0.3);margin-left:4px;display:none;';
+        const crDisplay = searchText ? 'block' : 'none';
+        crSection.style.cssText = `padding-left:8px;border-left:2px solid rgba(247,147,26,0.3);margin-left:4px;display:${crDisplay};`;
 
         // Group CR columns by minute
         const crMinutes = ['00', '05', '10', '15', '20', '25', '30', '35', '40', '45', '50'];
@@ -3332,7 +3360,8 @@
 
         const orHeaderLeft = document.createElement('div');
         orHeaderLeft.style.cssText = 'display:flex;align-items:center;gap:8px;';
-        orHeaderLeft.innerHTML = `<span id="or-section-arrow" style="transition:transform 0.2s;transform:rotate(-90deg);">▼</span> Open-to-Bar (${orCols.length})`;
+        const orArrowRotate = searchText ? 'rotate(0deg)' : 'rotate(-90deg)';
+        orHeaderLeft.innerHTML = `<span id="or-section-arrow" style="transition:transform 0.2s;transform:${orArrowRotate};">▼</span> Open-to-Bar (${orCols.length})`;
 
         const orBtns = document.createElement('div');
         orBtns.style.cssText = 'display:flex;gap:4px;';
@@ -3356,7 +3385,8 @@
 
         const orSection = document.createElement('div');
         orSection.id = 'or-cols-section';
-        orSection.style.cssText = 'padding-left:8px;border-left:2px solid rgba(100,149,237,0.3);margin-left:4px;display:none;';
+        const orDisplay = searchText ? 'block' : 'none';
+        orSection.style.cssText = `padding-left:8px;border-left:2px solid rgba(100,149,237,0.3);margin-left:4px;display:${orDisplay};`;
 
         // Group OR columns by minute
         const orMinutes = ['00', '05', '10', '15', '20', '25', '30', '35', '40', '45', '50', '55'];
@@ -3411,7 +3441,8 @@
 
         const lvHeaderLeft = document.createElement('div');
         lvHeaderLeft.style.cssText = 'display:flex;align-items:center;gap:8px;';
-        lvHeaderLeft.innerHTML = `<span id="lv-section-arrow" style="transition:transform 0.2s;transform:rotate(-90deg);">▼</span> Bar Levels (${lvCols.length})`;
+        const lvArrowRotate = searchText ? 'rotate(0deg)' : 'rotate(-90deg)';
+        lvHeaderLeft.innerHTML = `<span id="lv-section-arrow" style="transition:transform 0.2s;transform:${lvArrowRotate};">▼</span> Bar Levels (${lvCols.length})`;
 
         const lvBtns = document.createElement('div');
         lvBtns.style.cssText = 'display:flex;gap:4px;';
@@ -3435,7 +3466,8 @@
 
         const lvSection = document.createElement('div');
         lvSection.id = 'lv-cols-section';
-        lvSection.style.cssText = 'padding-left:8px;border-left:2px solid rgba(147,112,219,0.3);margin-left:4px;display:none;';
+        const lvDisplay = searchText ? 'block' : 'none';
+        lvSection.style.cssText = `padding-left:8px;border-left:2px solid rgba(147,112,219,0.3);margin-left:4px;display:${lvDisplay};`;
 
         // Group LV columns by minute
         const lvMinutes = ['00', '05', '10', '15', '20', '25', '30', '35', '40', '45', '50', '55'];
@@ -3490,7 +3522,8 @@
 
         const bpHeaderLeft = document.createElement('div');
         bpHeaderLeft.style.cssText = 'display:flex;align-items:center;gap:8px;';
-        bpHeaderLeft.innerHTML = `<span id="bp-section-arrow" style="transition:transform 0.2s;transform:rotate(-90deg);">▼</span> Bar vs Prev H/L (${bpCols.length})`;
+        const bpArrowRotate = searchText ? 'rotate(0deg)' : 'rotate(-90deg)';
+        bpHeaderLeft.innerHTML = `<span id="bp-section-arrow" style="transition:transform 0.2s;transform:${bpArrowRotate};">▼</span> Bar vs Prev H/L (${bpCols.length})`;
 
         const bpBtns = document.createElement('div');
         bpBtns.style.cssText = 'display:flex;gap:4px;';
@@ -3514,7 +3547,8 @@
 
         const bpSection = document.createElement('div');
         bpSection.id = 'bp-cols-section';
-        bpSection.style.cssText = 'padding-left:8px;border-left:2px solid rgba(59,130,246,0.3);margin-left:4px;display:none;';
+        const bpDisplay = searchText ? 'block' : 'none';
+        bpSection.style.cssText = `padding-left:8px;border-left:2px solid rgba(59,130,246,0.3);margin-left:4px;display:${bpDisplay};`;
 
         // Group BP columns by minute
         const bpMinutes = ['00', '05', '10', '15', '20', '25', '30', '35', '40', '45', '50', '55'];
@@ -3568,7 +3602,25 @@
       if (!container) return;
       container.innerHTML = '';
 
-      DAY_TOTAL_COLS.forEach(col => {
+      const searchText = (typeof mobileDTColSearchText !== 'undefined') ? mobileDTColSearchText : '';
+      const matchesSearch = (col) => {
+        if (!searchText) return true;
+        return col.label.toLowerCase().includes(searchText) ||
+               col.desc.toLowerCase().includes(searchText) ||
+               col.id.toLowerCase().includes(searchText);
+      };
+
+      const filteredCols = DAY_TOTAL_COLS.filter(matchesSearch);
+
+      if (filteredCols.length === 0 && searchText) {
+        const noResults = document.createElement('div');
+        noResults.style.cssText = 'padding:12px;text-align:center;color:var(--text-muted);font-size:0.7rem;';
+        noResults.textContent = `No columns match "${searchText}"`;
+        container.appendChild(noResults);
+        return;
+      }
+
+      filteredCols.forEach(col => {
         const item = document.createElement('div');
         item.className = 'mobile-settings-item';
         item.style.padding = '8px';
@@ -11297,6 +11349,27 @@ function populateDatePicker() {
       document.querySelectorAll('#col-grid input').forEach(cb => { const colId = cb.id.replace('col-', ''); cb.checked = visibleColumns.has(colId); });
       renderTable();
       updateMobileColumnGrid();
+    }
+
+    // Column search/filter functions
+    let mobileColSearchText = '';
+    let mobileDTColSearchText = '';
+
+    function filterMobileColumns(searchText) {
+      mobileColSearchText = searchText.toLowerCase().trim();
+      updateMobileColumnGrid();
+    }
+
+    function filterMobileDayTotals(searchText) {
+      mobileDTColSearchText = searchText.toLowerCase().trim();
+      updateMobileDayTotalsGrid();
+    }
+
+    function colMatchesSearch(col, searchText) {
+      if (!searchText) return true;
+      return col.label.toLowerCase().includes(searchText) ||
+             col.desc.toLowerCase().includes(searchText) ||
+             col.id.toLowerCase().includes(searchText);
     }
 
     // Close-to-rest-of-hour metrics preset functions
