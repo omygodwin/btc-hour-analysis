@@ -10,6 +10,7 @@
     * { margin: 0; padding: 0; box-sizing: border-box; }
     
     :root {
+      /* Dark mode colors (default) */
       --bg-primary: #0a0a0f;
       --bg-secondary: #12121a;
       --bg-tertiary: #1a1a24;
@@ -29,6 +30,40 @@
       --accent-orange: #fb923c;
       --font-size: 10px;
       --font-family: 'JetBrains Mono', monospace;
+      /* Gradient colors (customizable) */
+      --grad-orange-r: 247;
+      --grad-orange-g: 147;
+      --grad-orange-b: 26;
+      --grad-green-r: 74;
+      --grad-green-g: 222;
+      --grad-green-b: 128;
+      --grad-red-r: 248;
+      --grad-red-g: 113;
+      --grad-red-b: 113;
+      --grad-purple-r: 147;
+      --grad-purple-g: 112;
+      --grad-purple-b: 219;
+    }
+
+    /* Light mode */
+    :root.light-mode {
+      --bg-primary: #f5f5f7;
+      --bg-secondary: #e8e8ec;
+      --bg-tertiary: #d8d8dc;
+      --bg-solid: #ffffff;
+      --border-subtle: rgba(0, 0, 0, 0.08);
+      --border-medium: rgba(0, 0, 0, 0.15);
+      --border-hour: rgba(200, 100, 0, 0.5);
+      --text-primary: #1a1a1a;
+      --text-secondary: #555555;
+      --text-muted: #888888;
+      --accent-btc: #d97706;
+      --accent-btc-dim: rgba(217, 119, 6, 0.15);
+      --accent-blue: #2563eb;
+      --accent-green: #16a34a;
+      --accent-red: #dc2626;
+      --accent-purple: #7c3aed;
+      --accent-orange: #ea580c;
     }
     
     /* Tooltip styles */
@@ -852,7 +887,7 @@
       position: fixed;
       bottom: 16px;
       right: 16px;
-      z-index: 1000;
+      z-index: 10001;
       width: 56px;
       height: 56px;
       border-radius: 50%;
@@ -870,6 +905,31 @@
       box-shadow: 0 6px 16px rgba(247,147,26,0.5);
     }
     .mobile-menu-btn:active { transform: scale(0.95); }
+
+    /* Theme Toggle Button */
+    .theme-toggle-btn {
+      position: fixed;
+      bottom: 80px;
+      right: 16px;
+      z-index: 10001;
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      background: var(--bg-tertiary);
+      color: var(--text-primary);
+      border: 1px solid var(--border-medium);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.2rem;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+      cursor: pointer;
+      transition: transform 0.2s, background 0.2s;
+    }
+    .theme-toggle-btn:hover {
+      background: var(--accent-btc-dim);
+    }
+    .theme-toggle-btn:active { transform: scale(0.95); }
 
     /* Mobile Filter Modal */
     .mobile-filter-modal {
@@ -2306,6 +2366,34 @@
             </div>
 
             <div class="mobile-filter-section">
+              <h3>Color Scheme</h3>
+              <div class="mobile-settings-row">
+                <div class="mobile-settings-item">
+                  <span class="mobile-settings-label">Orange (Range):</span>
+                  <input type="color" id="color-orange" value="#f7931a" class="mobile-settings-input" style="width:50px;height:30px;padding:2px;cursor:pointer;" onchange="updateGradientColor('orange', this.value)">
+                </div>
+                <div class="mobile-settings-item">
+                  <span class="mobile-settings-label">Green (Positive):</span>
+                  <input type="color" id="color-green" value="#4ade80" class="mobile-settings-input" style="width:50px;height:30px;padding:2px;cursor:pointer;" onchange="updateGradientColor('green', this.value)">
+                </div>
+                <div class="mobile-settings-item">
+                  <span class="mobile-settings-label">Red (Negative):</span>
+                  <input type="color" id="color-red" value="#f87171" class="mobile-settings-input" style="width:50px;height:30px;padding:2px;cursor:pointer;" onchange="updateGradientColor('red', this.value)">
+                </div>
+                <div class="mobile-settings-item">
+                  <span class="mobile-settings-label">Purple (RSI):</span>
+                  <input type="color" id="color-purple" value="#9370db" class="mobile-settings-input" style="width:50px;height:30px;padding:2px;cursor:pointer;" onchange="updateGradientColor('purple', this.value)">
+                </div>
+              </div>
+              <div style="margin-top:8px;">
+                <button onclick="resetGradientColors()" style="padding:6px 12px;font-size:0.7rem;background:var(--bg-tertiary);color:var(--text-secondary);border:1px solid var(--border-medium);border-radius:4px;cursor:pointer;">Reset to Default</button>
+              </div>
+              <p style="font-size:0.65rem;color:var(--text-muted);margin-top:8px;line-height:1.3;">
+                Customize gradient colors used for different metric types. Changes apply immediately and persist across sessions.
+              </p>
+            </div>
+
+            <div class="mobile-filter-section">
               <h3>Data Settings</h3>
               <div class="mobile-settings-row">
                 <div class="mobile-settings-item" style="flex-direction:row;align-items:center;">
@@ -2398,10 +2486,118 @@
     </div>
   </div>
 
+  <!-- Theme Toggle Button -->
+  <button class="theme-toggle-btn" onclick="toggleTheme()" title="Toggle Light/Dark Mode">🌓</button>
+
   <!-- Global Filter Button - Visible on all tabs -->
   <button class="mobile-menu-btn" onclick="toggleMobileFilterModal()">☰</button>
 
   <script>
+    // ==================== THEME MANAGEMENT ====================
+    function toggleTheme() {
+      const root = document.documentElement;
+      const isLight = root.classList.toggle('light-mode');
+      localStorage.setItem('btc-theme', isLight ? 'light' : 'dark');
+      updateThemeButton();
+    }
+
+    function updateThemeButton() {
+      const btn = document.querySelector('.theme-toggle-btn');
+      const isLight = document.documentElement.classList.contains('light-mode');
+      if (btn) btn.textContent = isLight ? '🌙' : '☀️';
+    }
+
+    function loadTheme() {
+      const saved = localStorage.getItem('btc-theme');
+      if (saved === 'light') {
+        document.documentElement.classList.add('light-mode');
+      }
+      updateThemeButton();
+    }
+
+    // Load theme immediately
+    loadTheme();
+
+    // ==================== COLOR SCHEME MANAGEMENT ====================
+    const DEFAULT_COLORS = {
+      orange: '#f7931a',
+      green: '#4ade80',
+      red: '#f87171',
+      purple: '#9370db'
+    };
+
+    function hexToRgb(hex) {
+      const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+      return result ? {
+        r: parseInt(result[1], 16),
+        g: parseInt(result[2], 16),
+        b: parseInt(result[3], 16)
+      } : null;
+    }
+
+    function rgbToHex(r, g, b) {
+      return '#' + [r, g, b].map(x => {
+        const hex = x.toString(16);
+        return hex.length === 1 ? '0' + hex : hex;
+      }).join('');
+    }
+
+    function updateGradientColor(colorName, hexValue) {
+      const rgb = hexToRgb(hexValue);
+      if (!rgb) return;
+
+      const root = document.documentElement;
+      root.style.setProperty(`--grad-${colorName}-r`, rgb.r);
+      root.style.setProperty(`--grad-${colorName}-g`, rgb.g);
+      root.style.setProperty(`--grad-${colorName}-b`, rgb.b);
+
+      // Save to localStorage
+      const savedColors = JSON.parse(localStorage.getItem('btc-gradient-colors') || '{}');
+      savedColors[colorName] = hexValue;
+      localStorage.setItem('btc-gradient-colors', JSON.stringify(savedColors));
+
+      // Re-render table to apply new colors
+      if (typeof renderTable === 'function') renderTable();
+    }
+
+    function resetGradientColors() {
+      const root = document.documentElement;
+      for (const [name, hex] of Object.entries(DEFAULT_COLORS)) {
+        const rgb = hexToRgb(hex);
+        root.style.setProperty(`--grad-${name}-r`, rgb.r);
+        root.style.setProperty(`--grad-${name}-g`, rgb.g);
+        root.style.setProperty(`--grad-${name}-b`, rgb.b);
+
+        // Update color picker
+        const picker = document.getElementById(`color-${name}`);
+        if (picker) picker.value = hex;
+      }
+      localStorage.removeItem('btc-gradient-colors');
+      if (typeof renderTable === 'function') renderTable();
+    }
+
+    function loadGradientColors() {
+      const savedColors = JSON.parse(localStorage.getItem('btc-gradient-colors') || '{}');
+      const root = document.documentElement;
+
+      for (const [name, defaultHex] of Object.entries(DEFAULT_COLORS)) {
+        const hex = savedColors[name] || defaultHex;
+        const rgb = hexToRgb(hex);
+        if (rgb) {
+          root.style.setProperty(`--grad-${name}-r`, rgb.r);
+          root.style.setProperty(`--grad-${name}-g`, rgb.g);
+          root.style.setProperty(`--grad-${name}-b`, rgb.b);
+        }
+
+        // Update color picker to reflect saved value
+        const picker = document.getElementById(`color-${name}`);
+        if (picker) picker.value = hex;
+      }
+    }
+
+    // Load gradient colors immediately
+    loadGradientColors();
+
     // ==================== CONSTANTS ====================
     const HOURS = Array.from({ length: 24 }, (_, i) => i);
     // ================= RELATIVE VOLUME SETTINGS =================
@@ -4351,6 +4547,9 @@
           statusSpan.style.color = enabled ? 'var(--accent-green)' : 'var(--text-muted)';
         }
       }
+
+      // Update gradient color pickers with saved values
+      loadGradientColors();
     });
 
     function buildRealHours(data) {
