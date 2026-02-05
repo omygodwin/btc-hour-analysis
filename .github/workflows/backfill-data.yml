@@ -1,0 +1,138 @@
+name: Backfill Historical Data
+
+# MANUAL TRIGGER ONLY - No automatic runs
+# This workflow requires explicit date range inputs
+on:
+  workflow_dispatch:
+    inputs:
+      start_date:
+        description: 'Start date (YYYY-MM-DD format, e.g., 2024-06-15)'
+        required: true
+        type: string
+      end_date:
+        description: 'End date (YYYY-MM-DD format, e.g., 2024-06-20)'
+        required: true
+        type: string
+      confirm:
+        description: 'Type "yes" to confirm you want to fetch this data'
+        required: true
+        type: string
+
+jobs:
+  backfill:
+    runs-on: ubuntu-latest
+
+    # Extra safety: only run if confirmation is "yes"
+    if: ${{ github.event.inputs.confirm == 'yes' }}
+
+    permissions:
+      contents: write
+
+    steps:
+      - name: Validate inputs
+        run: |
+          echo "========================================"
+          echo "BACKFILL HISTORICAL DATA"
+          echo "========================================"
+          echo "Start date: ${{ github.event.inputs.start_date }}"
+          echo "End date: ${{ github.event.inputs.end_date }}"
+          echo "Confirmation: ${{ github.event.inputs.confirm }}"
+          echo "========================================"
+
+          # Validate date format (YYYY-MM-DD)
+          START="${{ github.event.inputs.start_date }}"
+          END="${{ github.event.inputs.end_date }}"
+
+          if ! [[ "$START" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}$ ]]; then
+            echo "❌ ERROR: Start date must be in YYYY-MM-DD format"
+            exit 1
+          fi
+
+          if ! [[ "$END" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}$ ]]; then
+            echo "❌ ERROR: End date must be in YYYY-MM-DD format"
+            exit 1
+          fi
+
+          # Validate dates are real dates
+          if ! date -d "$START" &>/dev/null; then
+            echo "❌ ERROR: Invalid start date"
+            exit 1
+          fi
+
+          if ! date -d "$END" &>/dev/null; then
+            echo "❌ ERROR: Invalid end date"
+            exit 1
+          fi
+
+          # Validate end is after start
+          START_TS=$(date -d "$START" +%s)
+          END_TS=$(date -d "$END" +%s)
+
+          if [ "$END_TS" -lt "$START_TS" ]; then
+            echo "❌ ERROR: End date must be after start date"
+            exit 1
+          fi
+
+          # Calculate days
+          DAYS=$(( (END_TS - START_TS) / 86400 ))
+          echo "✓ Date range validated: $DAYS days"
+
+          if [ "$DAYS" -gt 30 ]; then
+            echo "⚠️  WARNING: Large date range ($DAYS days). This may take a while."
+          fi
+
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install pandas requests
+
+      - name: Fetch historical data
+        run: |
+          python fetch_bitcoin_data.py \
+            --start "${{ github.event.inputs.start_date }}" \
+            --end "${{ github.event.inputs.end_date }}"
+        env:
+          BACKFILL_MODE: true
+
+      - name: Check for changes
+        id: check_changes
+        run: |
+          git diff --quiet data/ || echo "changes=true" >> $GITHUB_OUTPUT
+
+      - name: Commit and push
+        if: steps.check_changes.outputs.changes == 'true'
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          git add data/
+
+          if git diff --cached --quiet; then
+            echo "No staged changes to commit"
+            exit 0
+          fi
+
+          git commit -m "📊 Backfill data: ${{ github.event.inputs.start_date }} to ${{ github.event.inputs.end_date }}"
+          git push origin HEAD:main
+
+      - name: Summary
+        if: always()
+        run: |
+          echo "========================================"
+          echo "BACKFILL SUMMARY"
+          echo "========================================"
+          echo "Requested range: ${{ github.event.inputs.start_date }} to ${{ github.event.inputs.end_date }}"
+          echo "Changes committed: ${{ steps.check_changes.outputs.changes || 'false' }}"
+
+          if [ -f data/bitcoin_5m_coinbase.csv ]; then
+            LINES=$(wc -l < data/bitcoin_5m_coinbase.csv)
+            echo "Total records in database: $((LINES - 1))"
+          fi
+          echo "========================================"

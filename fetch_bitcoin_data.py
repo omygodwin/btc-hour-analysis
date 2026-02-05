@@ -2,6 +2,13 @@
 """
 Bitcoin 5-Minute Data Fetcher for GitHub Actions
 Fetches data from Coinbase and optionally Binance, stores in data/ directory
+
+Usage:
+  Normal mode (continues from last timestamp):
+    python fetch_bitcoin_data.py
+
+  Backfill mode (specific date range):
+    python fetch_bitcoin_data.py --start 2024-06-15 --end 2024-06-20
 """
 
 import requests
@@ -10,6 +17,7 @@ from datetime import datetime, timezone, timedelta
 import time
 import os
 import sys
+import argparse
 
 # ==============================================================================
 # CONFIGURATION
@@ -179,64 +187,146 @@ def update_dataset(filename, new_data):
     print(f"✓ Saved {filename} ({len(combined):,} total records)")
     return combined
 
+def parse_args():
+    """Parse command-line arguments"""
+    parser = argparse.ArgumentParser(
+        description='Fetch Bitcoin 5-minute data from Coinbase',
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+Examples:
+  Normal mode (continues from last timestamp):
+    python fetch_bitcoin_data.py
+
+  Backfill specific date range:
+    python fetch_bitcoin_data.py --start 2024-06-15 --end 2024-06-20
+        """
+    )
+    parser.add_argument(
+        '--start',
+        type=str,
+        help='Start date in YYYY-MM-DD format (required for backfill mode)'
+    )
+    parser.add_argument(
+        '--end',
+        type=str,
+        help='End date in YYYY-MM-DD format (required for backfill mode)'
+    )
+    return parser.parse_args()
+
+
+def validate_date(date_str, name):
+    """Validate and parse a date string"""
+    try:
+        dt = datetime.strptime(date_str, '%Y-%m-%d').replace(tzinfo=timezone.utc)
+        return dt
+    except ValueError:
+        print(f"❌ ERROR: Invalid {name} date format: {date_str}")
+        print(f"   Expected format: YYYY-MM-DD (e.g., 2024-06-15)")
+        sys.exit(1)
+
+
 def main():
-    print("\n" + "="*60)
-    print("BITCOIN DATA UPDATER")
-    print(f"Started at: {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S UTC')}")
-    print("="*60)
-    
+    args = parse_args()
+
+    # Determine mode based on arguments
+    backfill_mode = args.start is not None or args.end is not None
+
+    if backfill_mode:
+        # Backfill mode: both start and end are required
+        if not args.start or not args.end:
+            print("❌ ERROR: Both --start and --end are required for backfill mode")
+            print("   Example: python fetch_bitcoin_data.py --start 2024-06-15 --end 2024-06-20")
+            return 1
+
+        start_dt = validate_date(args.start, 'start')
+        end_dt = validate_date(args.end, 'end')
+
+        # Add end of day to end_dt so it includes the full end date
+        end_dt = end_dt + timedelta(days=1) - timedelta(seconds=1)
+
+        if start_dt >= end_dt:
+            print("❌ ERROR: Start date must be before end date")
+            return 1
+
+        print("\n" + "="*60)
+        print("BITCOIN DATA BACKFILL")
+        print(f"Started at: {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S UTC')}")
+        print("="*60)
+        print(f"\n📅 BACKFILL MODE")
+        print(f"   Fetching: {args.start} to {args.end}")
+
+        # No day limit in backfill mode (workflow handles timeout)
+        max_days = None
+    else:
+        # Normal mode: continue from last timestamp
+        print("\n" + "="*60)
+        print("BITCOIN DATA UPDATER")
+        print(f"Started at: {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S UTC')}")
+        print("="*60)
+
+        max_days = MAX_DAYS_PER_RUN
+
+        # Determine start date from existing data
+        last_ts = get_last_timestamp(FILE_COINBASE)
+
+        if last_ts:
+            start_dt = last_ts + timedelta(minutes=5)
+            print(f"\nResuming from: {start_dt}")
+        else:
+            start_dt = datetime.strptime(DEFAULT_START_DATE, '%Y-%m-%d').replace(tzinfo=timezone.utc)
+            print(f"\nStarting fresh from: {start_dt}")
+
+        # End date is now
+        end_dt = datetime.now(timezone.utc)
+
     # Ensure data directory exists
     ensure_data_dir()
-    
-    # Determine start date
-    last_ts = get_last_timestamp(FILE_COINBASE)
-    
-    if last_ts:
-        # Start from next candle after last one we have
-        start_dt = last_ts + timedelta(minutes=5)
-        print(f"\nResuming from: {start_dt}")
-    else:
-        # Start fresh
-        start_dt = datetime.strptime(DEFAULT_START_DATE, '%Y-%m-%d').replace(tzinfo=timezone.utc)
-        print(f"\nStarting fresh from: {start_dt}")
-    
-    # End date is now, but limit to MAX_DAYS_PER_RUN
-    end_dt = datetime.now(timezone.utc)
-    max_end = start_dt + timedelta(days=MAX_DAYS_PER_RUN)
-    
-    if end_dt > max_end:
-        end_dt = max_end
-        print(f"Limiting to {MAX_DAYS_PER_RUN} days: {end_dt}")
-    
+
+    # Apply day limit in normal mode
+    if max_days:
+        max_end = start_dt + timedelta(days=max_days)
+        if end_dt > max_end:
+            end_dt = max_end
+            print(f"Limiting to {max_days} days: {end_dt}")
+
+    # Don't fetch future data
+    now = datetime.now(timezone.utc)
+    if end_dt > now:
+        end_dt = now
+
     # Check if we're already up to date
     if start_dt >= end_dt:
         print("\n✓ Data is already up to date!")
         return 0
-    
+
     # Fetch Coinbase data
     new_coinbase = fetch_coinbase_data(start_dt, end_dt)
-    
+
     # Update dataset
     final_data = update_dataset(FILE_COINBASE, new_coinbase)
-    
+
     # Also save as combined file (for compatibility)
     if not final_data.empty:
         final_data.to_csv(FILE_COMBINED, index=False)
         print(f"✓ Saved {FILE_COMBINED}")
-    
+
     # Summary
     print("\n" + "="*60)
     print("SUMMARY")
     print("="*60)
-    
+
     if not final_data.empty:
         first_ts = final_data['timestamp'].min()
         last_ts = final_data['timestamp'].max()
         print(f"Date range: {first_ts.strftime('%Y-%m-%d')} to {last_ts.strftime('%Y-%m-%d')}")
         print(f"Total candles: {len(final_data):,}")
-    
+
+    if backfill_mode:
+        print(f"\n✓ Backfill complete for {args.start} to {args.end}")
+
     print(f"\nCompleted at: {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S UTC')}")
     return 0
+
 
 if __name__ == "__main__":
     sys.exit(main())
