@@ -7535,6 +7535,8 @@ function populateDatePicker() {
         or00: [], or05: [], or10: [], or15: [], or20: [], or25: [], or30: [], or35: [], or40: [], or45: [], or50: [], or55: [],
         // Bar vs previous bar metric groups (one per minute)
         bp00: [], bp05: [], bp10: [], bp15: [], bp20: [], bp25: [], bp30: [], bp35: [], bp40: [], bp45: [], bp50: [], bp55: [],
+        // Individual 5-minute bar range metric groups (one per minute)
+        br00: [], br05: [], br10: [], br15: [], br20: [], br25: [], br30: [], br35: [], br40: [], br45: [], br50: [], br55: [],
         // Volatility groups
         hvol: [], cvol: [],
         // Friday 5PM reference
@@ -7659,6 +7661,15 @@ function populateDatePicker() {
           });
         });
 
+        // Individual 5-minute bar range metrics (one group per minute)
+        const brMins = ['00', '05', '10', '15', '20', '25', '30', '35', '40', '45', '50', '55'];
+        brMins.forEach(min => {
+          const grp = 'br' + min;
+          ['brRng' + min, 'brUR' + min, 'brLR' + min, 'brMxR' + min, 'brOC' + min].forEach(key => {
+            if (m[key] != null) s[grp].push(m[key]);
+          });
+        });
+
         // Volatility metrics
         if (m.hVol != null) s.hvol.push(m.hVol);
         if (m.hVolRaw != null) s.hvol.push(m.hVolRaw);
@@ -7695,6 +7706,8 @@ function populateDatePicker() {
           or00: [], or05: [], or10: [], or15: [], or20: [], or25: [], or30: [], or35: [], or40: [], or45: [], or50: [], or55: [],
           // Bar vs previous bar metric groups (one per minute)
           bp00: [], bp05: [], bp10: [], bp15: [], bp20: [], bp25: [], bp30: [], bp35: [], bp40: [], bp45: [], bp50: [], bp55: [],
+          // Individual 5-minute bar range metric groups (one per minute)
+          br00: [], br05: [], br10: [], br15: [], br20: [], br25: [], br30: [], br35: [], br40: [], br45: [], br50: [], br55: [],
           // Volatility groups
           hvol: [], cvol: [],
           // Friday 5PM reference
@@ -7828,6 +7841,15 @@ function populateDatePicker() {
           bpMins.forEach(min => {
             const grp = 'bp' + min;
             ['bHH' + min, 'bHL' + min, 'bLH' + min, 'bLL' + min, 'bCH' + min, 'bCL' + min].forEach(key => {
+              if (m[key] != null) s[h][grp].push(m[key]);
+            });
+          });
+
+          // Individual 5-minute bar range metrics (one group per minute)
+          const brMins = ['00', '05', '10', '15', '20', '25', '30', '35', '40', '45', '50', '55'];
+          brMins.forEach(min => {
+            const grp = 'br' + min;
+            ['brRng' + min, 'brUR' + min, 'brLR' + min, 'brMxR' + min, 'brOC' + min].forEach(key => {
               if (m[key] != null) s[h][grp].push(m[key]);
             });
           });
@@ -11561,10 +11583,19 @@ function populateDatePicker() {
       const prefix = prefixes[secKey];
       if (!prefix) return;
 
+      const searchText = (typeof mobileColSearchText !== 'undefined') ? mobileColSearchText : '';
+      const matchesSearch = (col) => {
+        if (!searchText) return true;
+        return col.label.toLowerCase().includes(searchText) ||
+               col.desc.toLowerCase().includes(searchText) ||
+               col.id.toLowerCase().includes(searchText);
+      };
+
       ALL_COLUMNS.forEach(col => {
         const useGroup = secKey === 'bp' || secKey === 'br';
-        if ((useGroup && col.group && col.group.startsWith(prefix)) ||
-            (!useGroup && col.id.startsWith(prefix))) {
+        const inSection = (useGroup && col.group && col.group.startsWith(prefix)) ||
+                          (!useGroup && col.id.startsWith(prefix));
+        if (inSection && matchesSearch(col)) {
           visibleColumns.add(col.id);
         }
       });
@@ -11578,10 +11609,19 @@ function populateDatePicker() {
       const prefix = prefixes[secKey];
       if (!prefix) return;
 
+      const searchText = (typeof mobileColSearchText !== 'undefined') ? mobileColSearchText : '';
+      const matchesSearch = (col) => {
+        if (!searchText) return true;
+        return col.label.toLowerCase().includes(searchText) ||
+               col.desc.toLowerCase().includes(searchText) ||
+               col.id.toLowerCase().includes(searchText);
+      };
+
       ALL_COLUMNS.forEach(col => {
         const useGroup = secKey === 'bp' || secKey === 'br';
-        if ((useGroup && col.group && col.group.startsWith(prefix)) ||
-            (!useGroup && col.id.startsWith(prefix))) {
+        const inSection = (useGroup && col.group && col.group.startsWith(prefix)) ||
+                          (!useGroup && col.id.startsWith(prefix));
+        if (inSection && matchesSearch(col)) {
           visibleColumns.delete(col.id);
         }
       });
