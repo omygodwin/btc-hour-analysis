@@ -540,9 +540,9 @@
     .legend { display: flex; justify-content: center; gap: 16px; padding: 6px; background: var(--bg-secondary); border-top: 1px solid var(--border-subtle); font-size: 0.55rem; flex-wrap: wrap; flex-shrink: 0; }
     .legend-item { display: flex; align-items: center; gap: 4px; color: var(--text-muted); }
     .legend-grad { width: 35px; height: 6px; border-radius: 1px; }
-    .grad-orange { background: linear-gradient(90deg, #0d0d12 0%, rgb(251,146,60) 100%); }
-    .grad-rg { background: linear-gradient(90deg, rgb(248,113,113) 0%, #0d0d12 50%, rgb(74,222,128) 100%); }
-    .grad-purple { background: linear-gradient(90deg, #0d0d12 0%, rgb(167,139,250) 100%); }
+    .grad-orange { background: linear-gradient(90deg, var(--bg-solid) 0%, rgb(251,146,60) 100%); }
+    .grad-rg { background: linear-gradient(90deg, rgb(248,113,113) 0%, var(--bg-solid) 50%, rgb(74,222,128) 100%); }
+    .grad-purple { background: linear-gradient(90deg, var(--bg-solid) 0%, rgb(167,139,250) 100%); }
 
     /* Percentiles Summary Section */
     .percentiles-container {
@@ -677,10 +677,10 @@
     .day-table th, .day-table td { padding: 3px 4px; border: 1px solid var(--border-medium); text-align: center; }
     .day-table thead { position: sticky; top: 0; z-index: 50; }
     .day-table thead tr:first-child th { position: sticky; top: 0; z-index: 50; background: #1a1a24; color: var(--text-muted); font-weight: 500; font-size: 9px; text-transform: uppercase; box-shadow: 0 1px 0 #1a1a24, 0 2px 0 var(--border-medium); }
-    .day-table thead tr:nth-child(2) th { position: sticky; top: 22px; z-index: 49; background: #12121a; color: var(--text-muted); font-weight: 500; font-size: 9px; text-transform: uppercase; box-shadow: 0 1px 0 #12121a, 0 2px 0 var(--border-medium); }
+    .day-table thead tr:nth-child(2) th { position: sticky; top: 22px; z-index: 49; background: var(--bg-secondary); color: var(--text-muted); font-weight: 500; font-size: 9px; text-transform: uppercase; box-shadow: 0 1px 0 var(--bg-secondary), 0 2px 0 var(--border-medium); }
     .day-table tbody { position: relative; z-index: 1; }
-    .day-table .hour-cell { 
-      background: #0d0d12 !important; 
+    .day-table .hour-cell {
+      background: var(--bg-solid) !important; 
       color: var(--accent-btc); 
       font-weight: 600; 
       position: sticky; 
@@ -690,7 +690,7 @@
     }
     .day-table th.hour-cell { z-index: 55; background: #1a1a24 !important; }
     .day-table thead tr:first-child th.hour-cell { z-index: 55; background: #1a1a24 !important; }
-    .day-table thead tr:nth-child(2) th.hour-cell { z-index: 54; background: #12121a !important; }
+    .day-table thead tr:nth-child(2) th.hour-cell { z-index: 54; background: var(--bg-secondary) !important; }
     .day-table .hour-cell.highlighted { background: rgba(247, 147, 26, 0.25) !important; color: #ffc73b; }
     .day-table .hour-row-highlighted td { background: rgba(247, 147, 26, 0.08); }
     .day-table .hour-row-highlighted .hour-cell { background: rgba(247, 147, 26, 0.25) !important; }
@@ -1621,7 +1621,7 @@
 
       <div class="legend">
         <div class="legend-item"><div class="legend-grad grad-orange"></div><span>Range (→Orange)</span></div>
-        <div class="legend-item"><div class="legend-grad" style="background:linear-gradient(90deg, rgb(251,146,60) 0%, #0d0d12 100%)"></div><span>Rank (Orange→)</span></div>
+        <div class="legend-item"><div class="legend-grad" style="background:linear-gradient(90deg, rgb(251,146,60) 0%, var(--bg-solid) 100%)"></div><span>Rank (Orange→)</span></div>
         <div class="legend-item"><div class="legend-grad grad-rg"></div><span>+/- (Red←→Green)</span></div>
         <div class="legend-item"><div class="legend-grad grad-purple"></div><span>RSI (→Purple)</span></div>
         <div class="legend-item"><span style="color:#fbbf24">OB</span>/<span style="color:#60a5fa">OS</span> = Overbought/Oversold</div>
@@ -7698,32 +7698,55 @@ function populateDatePicker() {
     function getActiveDTCols() { return DAY_TOTAL_COLS.filter(c => visibleDTCols.has(c.id)); }
     
     // ==================== GRADIENTS ====================
+    // Theme-aware base color for gradients
+    function getBaseRGB() {
+      const isLight = document.documentElement.classList.contains('light-mode');
+      return isLight ? { r: 245, g: 245, b: 247 } : { r: 13, g: 13, b: 18 };
+    }
+
+    function getBaseBgColor() {
+      const isLight = document.documentElement.classList.contains('light-mode');
+      return isLight ? '#f5f5f7' : '#0d0d12';
+    }
+
     function getOrangeGradient(val, min, max) {
-      if (val == null || max === min) return '#0d0d12';
+      if (val == null || max === min) return getBaseBgColor();
+      const base = getBaseRGB();
       const t = Math.max(0, Math.min(1, (val - min) / (max - min)));
-      return `rgb(${Math.round(13 + t * 238)}, ${Math.round(13 + t * 133)}, ${Math.round(18 + t * 42)})`;
+      // Blend from base to orange (251, 146, 60)
+      return `rgb(${Math.round(base.r + t * (251 - base.r))}, ${Math.round(base.g + t * (146 - base.g))}, ${Math.round(base.b + t * (60 - base.b))})`;
     }
-    
+
     function getOrangeGradientInverted(val, min, max) {
-      if (val == null || max === min) return '#0d0d12';
+      if (val == null || max === min) return getBaseBgColor();
+      const base = getBaseRGB();
       const t = 1 - Math.max(0, Math.min(1, (val - min) / (max - min)));
-      return `rgb(${Math.round(13 + t * 238)}, ${Math.round(13 + t * 133)}, ${Math.round(18 + t * 42)})`;
+      // Blend from base to orange (251, 146, 60)
+      return `rgb(${Math.round(base.r + t * (251 - base.r))}, ${Math.round(base.g + t * (146 - base.g))}, ${Math.round(base.b + t * (60 - base.b))})`;
     }
-    
+
     function getPurpleGradient(val, min, max) {
-      if (val == null || max === min) return '#0d0d12';
+      if (val == null || max === min) return getBaseBgColor();
+      const base = getBaseRGB();
       const t = Math.max(0, Math.min(1, (val - min) / (max - min)));
 
       // Use power curve to emphasize extremes
-      // Low values stay darker, high values become more vibrant purple
+      // Low values stay closer to base, high values become more vibrant purple
       const curved = Math.pow(t, 1.8);
 
-      return `rgb(${Math.round(13 + curved * 154)}, ${Math.round(13 + curved * 126)}, ${Math.round(18 + curved * 232)})`;
+      // Blend from base to purple (167, 139, 250)
+      return `rgb(${Math.round(base.r + curved * (167 - base.r))}, ${Math.round(base.g + curved * (139 - base.g))}, ${Math.round(base.b + curved * (250 - base.b))})`;
     }
     
     function getRGGradient(val, min, max, allValues) {
-      if (val == null) return '#0d0d12';
-      if (val === 0) return '#0d0d12';
+      const baseBg = getBaseBgColor();
+      const base = getBaseRGB();
+      if (val == null) return baseBg;
+      if (val === 0) return baseBg;
+
+      // Green target: (74, 222, 128), Red target: (248, 113, 113)
+      const green = { r: 74, g: 222, b: 128 };
+      const red = { r: 248, g: 113, b: 113 };
 
       // If allValues is provided, use percentile-based gradient
       if (allValues && allValues.length > 0) {
@@ -7732,80 +7755,95 @@ function populateDatePicker() {
         if (val > 0) {
           // For positive values, calculate percentile within positive values
           const positiveValues = sorted.filter(v => v > 0);
-          if (positiveValues.length === 0) return '#0d0d12';
+          if (positiveValues.length === 0) return baseBg;
 
           // Find position of val in positiveValues
           const position = positiveValues.findIndex(v => v >= val);
           const percentile = position >= 0 ? position / positiveValues.length : 1;
 
-          // Map percentile to gradient intensity (0 = transparent, 1 = full green)
+          // Map percentile to gradient intensity (0 = base, 1 = full green)
           const t = Math.min(1, percentile);
-          return `rgba(${Math.round(13 + t * 61)}, ${Math.round(13 + t * 209)}, ${Math.round(18 + t * 110)}, ${0.2 + t * 0.8})`;
+          return `rgb(${Math.round(base.r + t * (green.r - base.r))}, ${Math.round(base.g + t * (green.g - base.g))}, ${Math.round(base.b + t * (green.b - base.b))})`;
         } else {
           // For negative values, calculate percentile within negative values
           const negativeValues = sorted.filter(v => v < 0);
-          if (negativeValues.length === 0) return '#0d0d12';
+          if (negativeValues.length === 0) return baseBg;
 
           // Find position of val in negativeValues (reversed, so more negative = higher intensity)
           const position = negativeValues.findIndex(v => v >= val);
           const percentile = position >= 0 ? 1 - (position / negativeValues.length) : 0;
 
-          // Map percentile to gradient intensity (0 = transparent, 1 = full red)
+          // Map percentile to gradient intensity (0 = base, 1 = full red)
           const t = Math.min(1, percentile);
-          return `rgba(${Math.round(13 + t * 235)}, ${Math.round(13 + t * 100)}, ${Math.round(18 + t * 95)}, ${0.2 + t * 0.8})`;
+          return `rgb(${Math.round(base.r + t * (red.r - base.r))}, ${Math.round(base.g + t * (red.g - base.g))}, ${Math.round(base.b + t * (red.b - base.b))})`;
         }
       }
 
-      // Fallback to original min/max based gradient with alpha for transparency
+      // Fallback to original min/max based gradient
       if (val > 0) {
         const t = Math.min(1, val / Math.max(max, 1));
-        return `rgba(${Math.round(13 + t * 61)}, ${Math.round(13 + t * 209)}, ${Math.round(18 + t * 110)}, ${0.2 + t * 0.8})`;
+        return `rgb(${Math.round(base.r + t * (green.r - base.r))}, ${Math.round(base.g + t * (green.g - base.g))}, ${Math.round(base.b + t * (green.b - base.b))})`;
       } else {
         const t = Math.min(1, Math.abs(val) / Math.abs(Math.min(min, -1)));
-        return `rgba(${Math.round(13 + t * 235)}, ${Math.round(13 + t * 100)}, ${Math.round(18 + t * 95)}, ${0.2 + t * 0.8})`;
+        return `rgb(${Math.round(base.r + t * (red.r - base.r))}, ${Math.round(base.g + t * (red.g - base.g))}, ${Math.round(base.b + t * (red.b - base.b))})`;
       }
     }
     
     function getEstablishedHourGradient(hour) {
-      if (hour == null) return '#0d0d12';
-      // 12am-11am (hours 0-11): cyan gradient (transparent to cyan)
+      const baseBg = getBaseBgColor();
+      const base = getBaseRGB();
+      if (hour == null) return baseBg;
+      // Cyan target: (60, 211, 218), Orange target: (251, 146, 60)
+      const cyan = { r: 60, g: 211, b: 218 };
+      const orange = { r: 251, g: 146, b: 60 };
+      // 12am-11am (hours 0-11): cyan gradient (base to cyan)
       if (hour >= 0 && hour <= 11) {
         const t = hour / 11; // 0 at 12am, 1 at 11am
-        return `rgba(${Math.round(13 + t * 47)}, ${Math.round(13 + t * 198)}, ${Math.round(18 + t * 200)}, ${0.2 + t * 0.8})`;
+        return `rgb(${Math.round(base.r + t * (cyan.r - base.r))}, ${Math.round(base.g + t * (cyan.g - base.g))}, ${Math.round(base.b + t * (cyan.b - base.b))})`;
       }
-      // 12pm-11pm (hours 12-23): orange gradient (transparent to orange)
+      // 12pm-11pm (hours 12-23): orange gradient (base to orange)
       else if (hour >= 12 && hour <= 23) {
         const t = (hour - 12) / 11; // 0 at 12pm, 1 at 11pm
-        return `rgba(${Math.round(13 + t * 238)}, ${Math.round(13 + t * 133)}, ${Math.round(18 + t * 42)}, ${0.2 + t * 0.8})`;
+        return `rgb(${Math.round(base.r + t * (orange.r - base.r))}, ${Math.round(base.g + t * (orange.g - base.g))}, ${Math.round(base.b + t * (orange.b - base.b))})`;
       }
-      return '#0d0d12';
+      return baseBg;
     }
 
     function getMinuteGradient(minute) {
-      if (minute == null) return '#0d0d12';
-      // 0-25: Cyan gradient (transparent to cyan)
+      const baseBg = getBaseBgColor();
+      const base = getBaseRGB();
+      if (minute == null) return baseBg;
+      // Cyan target: (60, 211, 218), Orange target: (251, 146, 60)
+      const cyan = { r: 60, g: 211, b: 218 };
+      const orange = { r: 251, g: 146, b: 60 };
+      // 0-25: Cyan gradient (base to cyan)
       if (minute >= 0 && minute <= 25) {
         const t = minute / 25;
-        return `rgba(${Math.round(13 + t * 47)}, ${Math.round(13 + t * 198)}, ${Math.round(18 + t * 200)}, ${0.2 + t * 0.8})`;
+        return `rgb(${Math.round(base.r + t * (cyan.r - base.r))}, ${Math.round(base.g + t * (cyan.g - base.g))}, ${Math.round(base.b + t * (cyan.b - base.b))})`;
       }
-      // 30-55: Orange gradient (transparent to orange)
+      // 30-55: Orange gradient (base to orange)
       else if (minute >= 30 && minute <= 55) {
         const t = (minute - 30) / 25;
-        return `rgba(${Math.round(13 + t * 238)}, ${Math.round(13 + t * 133)}, ${Math.round(18 + t * 42)}, ${0.2 + t * 0.8})`;
+        return `rgb(${Math.round(base.r + t * (orange.r - base.r))}, ${Math.round(base.g + t * (orange.g - base.g))}, ${Math.round(base.b + t * (orange.b - base.b))})`;
       }
-      return '#0d0d12';
+      return baseBg;
     }
 
     function getGreenBarGradient(val) {
-      if (val == null) return '#0d0d12';
+      const baseBg = getBaseBgColor();
+      const base = getBaseRGB();
+      if (val == null) return baseBg;
+      // Green target: (74, 222, 128), Red target: (248, 113, 113)
+      const green = { r: 74, g: 222, b: 128 };
+      const red = { r: 248, g: 113, b: 113 };
       if (val < 6) {
         const t = (6 - val) / 6;
-        return `rgb(${Math.round(13 + t * 235)}, ${Math.round(13 + t * 100)}, ${Math.round(18 + t * 95)})`;
+        return `rgb(${Math.round(base.r + t * (red.r - base.r))}, ${Math.round(base.g + t * (red.g - base.g))}, ${Math.round(base.b + t * (red.b - base.b))})`;
       } else if (val > 6) {
         const t = (val - 6) / 6;
-        return `rgb(${Math.round(13 + t * 61)}, ${Math.round(13 + t * 209)}, ${Math.round(18 + t * 110)})`;
+        return `rgb(${Math.round(base.r + t * (green.r - base.r))}, ${Math.round(base.g + t * (green.g - base.g))}, ${Math.round(base.b + t * (green.b - base.b))})`;
       }
-      return '#0d0d12';
+      return baseBg;
     }
     
     function getRSIGradient(val) {
@@ -8640,7 +8678,7 @@ function populateDatePicker() {
             const w = ['dOpen','dHigh','dLow','dClose'].includes(c.id) ? 52 : ['dOC','dOCH','d5pmOC','wOC'].includes(c.id) ? 48 : 38;
             const isLast = i === dtCols.length - 1;
             let val = day[c.id];
-            let bg = '#0d0d12';
+            let bg = getBaseBgColor();
             let cls = 'day-total-cell';
             let extraStyle = '';
             
@@ -8751,7 +8789,7 @@ function populateDatePicker() {
             }
             else v = m?.[col.id];
 
-            let bg = '#0d0d12';
+            let bg = getBaseBgColor();
 
             // Special case for mxrPct, rngPct, and bar % columns: always use 0-100 range
             if ((col.id === 'mxrPct' || col.id === 'rngPct' || col.id.startsWith('brMxR%') || col.id.startsWith('brMnR%')) && col.gradient === 'orange') {
@@ -9799,7 +9837,7 @@ function populateDatePicker() {
               }
               
               const shouldColor = calColorDays.has(dow) && (!calColorDates || calColorDates.has(dateStr));
-              let bg = '#0d0d12';
+              let bg = getBaseBgColor();
               
               if (shouldColor && v != null) {
                 bg = colorBy === 'dOC' ? getRGGradient(v, stats.min, stats.max) : getOrangeGradient(v, stats.min, stats.max);
@@ -10283,7 +10321,7 @@ function populateDatePicker() {
             // Render dynamic columns
             pm5Cols.forEach((col, ci) => {
               const v = hm[col.id];
-              let bg = '#0d0d12';
+              let bg = getBaseBgColor();
               let cls = 'data-cell';
               if (ci === 0 && hi === 0) cls += ' hour-border-left';
 
@@ -11314,7 +11352,7 @@ function populateDatePicker() {
             bodyHTML += '<td style="color:var(--text-muted)">—</td>';
           } else {
             let displayVal = val;
-            let bg = '#0d0d12';
+            let bg = getBaseBgColor();
             let cellClass = '';
             const cStats = colStats[colId];
 
@@ -11710,7 +11748,7 @@ function populateDatePicker() {
       let bodyHTML = '';
       dateSummary.forEach(entry => {
         // Heat map gradient based on count
-        let countBg = '#0d0d12';
+        let countBg = getBaseBgColor();
         if (maxCount > 0) {
           countBg = getOrangeGradient(entry.count, 0, maxCount);
         }
