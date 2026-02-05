@@ -2388,9 +2388,9 @@
     
     const ALL_COLUMNS = [
       // ===== RANGE METRICS (grouped together) =====
-      { id: 'rng', label: 'Rng', desc: 'Range', default: false, gradient: 'orange', group: 'rng' },
+      { id: 'rng', label: 'Rng', desc: 'Range', default: true, gradient: 'orange', group: 'rng' },
       { id: 'rngPct', label: 'Rng%', desc: 'Hourly Range Percentile (0-100%)', default: false, gradient: 'orange', group: 'rng' },
-      { id: 'rngPctMax', label: 'Rng%Mx', desc: 'Range as % of day max Rng', default: false, gradient: 'orange', group: 'pctmax' },
+      { id: 'rngPctMax', label: 'Rng%Mx', desc: 'Range as % of day max Rng', default: true, gradient: 'orange', group: 'pctmax' },
       { id: 'rngRk', label: 'Rng#', desc: 'Range Rank', default: false, gradient: 'orange-inv', group: 'rank' },
       { id: 'ur', label: 'UR', desc: 'Upper Rng', default: false, gradient: 'orange', group: 'urlr' },
       { id: 'urPctMax', label: 'UR%Mx', desc: 'Upper Range as % of day max UR', default: false, gradient: 'orange', group: 'pctmax' },
@@ -2399,14 +2399,14 @@
       { id: 'lrPctMax', label: 'LR%Mx', desc: 'Lower Range as % of day max LR', default: false, gradient: 'orange', group: 'pctmax' },
       { id: 'lrRk', label: 'LR#', desc: 'Lower Rng Rank', default: false, gradient: 'orange-inv', group: 'rank' },
       { id: 'mxr', label: 'MxR', desc: 'Max Range', default: true, gradient: 'orange', group: 'mxr' },
-      { id: 'mxrPct', label: 'MxR%', desc: 'Max Range Percentile (0-100%)', default: true, gradient: 'orange', group: 'mxr' },
-      { id: 'mxrPctMax', label: 'MxR%Mx', desc: 'Max Range as % of day max MxR', default: false, gradient: 'orange', group: 'pctmax' },
+      { id: 'mxrPct', label: 'MxR%', desc: 'Max Range Percentile (0-100%)', default: false, gradient: 'orange', group: 'mxr' },
+      { id: 'mxrPctMax', label: 'MxR%Mx', desc: 'Max Range as % of day max MxR', default: true, gradient: 'orange', group: 'pctmax' },
       { id: 'mxrRk', label: 'MxR#', desc: 'Max Rng Rank', default: false, gradient: 'orange-inv', group: 'rank' },
       { id: 'mnr', label: 'MnR', desc: 'Min Range (min of UR/LR)', default: false, gradient: 'orange', group: 'mnr' },
       { id: 'mnrPct', label: 'MnR%', desc: 'Min Range Percentile (0-100%)', default: false, gradient: 'orange', group: 'mnr' },
       { id: 'mnrPctMax', label: 'MnR%Mx', desc: 'Min Range as % of day max MnR', default: false, gradient: 'orange', group: 'pctmax' },
       { id: 'mnrRk', label: 'MnR#', desc: 'Min Rng Rank', default: false, gradient: 'orange-inv', group: 'rank' },
-      { id: 'mxrPctRng', label: 'MxR/R%', desc: 'Max Range as % of Total Range', default: false, gradient: 'orange', group: 'mxrpct' },
+      { id: 'mxrPctRng', label: 'MxR/R%', desc: 'Max Range as % of Total Range', default: true, gradient: 'orange', group: 'mxrpct' },
       { id: 'up', label: '#Up', desc: 'Lvls Up', default: false, gradient: null },
       { id: 'dn', label: '#Dn', desc: 'Lvls Down', default: false, gradient: null },
       { id: 'totl', label: 'TotL', desc: 'Total Levels', default: false, gradient: 'orange', group: 'mxl' },
@@ -2418,20 +2418,20 @@
       { id: 'mxl', label: 'MxL', desc: 'Max Level', default: false, gradient: 'orange', group: 'mxl' },
       { id: 'mxlRk', label: 'MxL#', desc: 'Max Lvl Rank', default: false, gradient: 'orange-inv', group: 'rank' },
       { id: 'cl', label: '#Cl', desc: 'Net Lvls', default: false, gradient: 'rg', group: 'cl' },
-      { id: 'oc', label: 'O-C', desc: 'Open-Close', default: true, gradient: 'rg', group: 'oc' },
-      { id: 'oc25', label: 'OC25', desc: ':00-:25 O-C', default: true, gradient: 'rg', group: 'oc' },
-      { id: 'oc55', label: 'OC55', desc: ':30-:55 O-C', default: true, gradient: 'rg', group: 'oc' },
+      { id: 'oc', label: 'O-C', desc: 'Open-Close', default: false, gradient: 'rg', group: 'oc' },
+      { id: 'oc25', label: 'OC25', desc: ':00-:25 O-C', default: false, gradient: 'rg', group: 'oc' },
+      { id: 'oc55', label: 'OC55', desc: ':30-:55 O-C', default: false, gradient: 'rg', group: 'oc' },
       { id: 'ocRk', label: 'OC#', desc: 'O-C Rank', default: false, gradient: 'orange-inv', group: 'rank' },
-      { id: 'ocPctDir', label: 'OC/D%', desc: 'O-C as % of max move in close direction (OC/UR if +, OC/LR if -)', default: false, gradient: 'rg', group: 'ocpct' },
-      { id: 'ocPctBias', label: 'OC/B%', desc: 'O-C as % of directional bias (OC / |UR-LR|)', default: false, gradient: 'rg', group: 'ocpct' },
+      { id: 'ocPctDir', label: 'OC/D%', desc: 'O-C as % of max move in close direction (OC/UR if +, OC/LR if -)', default: true, gradient: 'rg', group: 'ocpct' },
+      { id: 'ocPctBias', label: 'OC/B%', desc: 'O-C as % of directional bias (OC / |UR-LR|)', default: true, gradient: 'rg', group: 'ocpct' },
       { id: 'cdrU', label: 'CDU', desc: 'Cum Day Up', default: false, gradient: 'orange-col', group: 'cdr' },
       { id: 'cdrD', label: 'CDD', desc: 'Cum Day Dn', default: false, gradient: 'orange-col', group: 'cdr' },
-      { id: 'mxcd', label: 'MxCD', desc: 'Max Cum D', default: true, gradient: 'orange-col', group: 'mxcd' },
-      { id: 'cdr', label: 'CDR', desc: 'Cum Day Rng', default: true, gradient: 'rg-col', group: 'cdrRG' },
+      { id: 'mxcd', label: 'MxCD', desc: 'Max Cum D', default: false, gradient: 'orange-col', group: 'mxcd' },
+      { id: 'cdr', label: 'CDR', desc: 'Cum Day Rng', default: false, gradient: 'rg-col', group: 'cdrRG' },
       { id: 'hm', label: 'HMin', desc: 'High Min', default: false, gradient: 'minute' },
       { id: 'lm', label: 'LMin', desc: 'Low Min', default: false, gradient: 'minute' },
-      { id: 'maxRngBarMin', label: 'MxRBm', desc: 'Max Range Bar Minute', default: true, gradient: 'minute', group: 'maxrngbar' },
-      { id: 'maxRngBarVal', label: 'MxRBv', desc: 'Max Range Bar Value', default: true, gradient: 'orange', group: 'maxrngbar' },
+      { id: 'maxRngBarMin', label: 'MxRBm', desc: 'Max Range Bar Minute', default: false, gradient: 'minute', group: 'maxrngbar' },
+      { id: 'maxRngBarVal', label: 'MxRBv', desc: 'Max Range Bar Value', default: false, gradient: 'orange', group: 'maxrngbar' },
       { id: 'o', label: 'Open', desc: 'Open', default: false, gradient: null },
       { id: 'hi', label: 'High', desc: 'High', default: false, gradient: null },
       { id: 'lo', label: 'Low', desc: 'Low', default: false, gradient: null },
@@ -2471,8 +2471,8 @@
       // 5PM hourly cumulative columns
       { id: 'p5CdrU', label: '5CU', desc: '5PM Cum Up', default: false, gradient: 'orange-col', group: 'p5cdr' },
       { id: 'p5CdrD', label: '5CD', desc: '5PM Cum Dn', default: false, gradient: 'orange-col', group: 'p5cdr' },
-      { id: 'p5Mxcd', label: '5MxC', desc: '5PM Max Cum', default: true, gradient: 'orange-col', group: 'p5mxcd' },
-      { id: 'p5Cdr', label: '5CR', desc: '5PM Cum Rng', default: true, gradient: 'rg-col', group: 'p5cdrRG' },
+      { id: 'p5Mxcd', label: '5MxC', desc: '5PM Max Cum', default: false, gradient: 'orange-col', group: 'p5mxcd' },
+      { id: 'p5Cdr', label: '5CR', desc: '5PM Cum Rng', default: false, gradient: 'rg-col', group: 'p5cdrRG' },
       // Bar count metrics
       { id: 'cumGreenBars', label: 'CumG', desc: 'Cumulative green bars', default: false, gradient: 'orange', group: 'bars' },
       { id: 'cumRedBars', label: 'CumR', desc: 'Cumulative red bars', default: false, gradient: 'orange', group: 'bars' },
@@ -2488,11 +2488,11 @@
       // After bar metrics (last bar where threshold exceeded)
       { id: 'lastAfterHiBarMin', label: 'LAHm', desc: 'Last bar with after high > threshold', default: false, gradient: 'minute', group: 'afterbar' },
       { id: 'lastAfterLoBarMin', label: 'LALm', desc: 'Last bar with after low > threshold', default: false, gradient: 'minute', group: 'afterbar' },
-      { id: 'maxLastAfterBarMin', label: 'MxLABm', desc: 'Max of LAHm and LALm', default: true, gradient: 'minute', group: 'afterbar' },
+      { id: 'maxLastAfterBarMin', label: 'MxLABm', desc: 'Max of LAHm and LALm', default: false, gradient: 'minute', group: 'afterbar' },
       // Dynamic after-bar metrics (bar minute configurable, default :35)
       { id: 'barXAfterHi', label: 'BXAH', desc: 'After-bar high (configurable minute)', default: false, gradient: 'orange', group: 'bx' },
       { id: 'barXAfterLo', label: 'BXAL', desc: 'After-bar low (configurable minute)', default: false, gradient: 'orange', group: 'bx' },
-      { id: 'maxBXHL', label: 'MxBX', desc: 'Max of BXAH and BXAL', default: true, gradient: 'orange', group: 'bx' },
+      { id: 'maxBXHL', label: 'MxBX', desc: 'Max of BXAH and BXAL', default: false, gradient: 'orange', group: 'bx' },
       // Consecutive new high/low intervals
       { id: 'consNewHi', label: 'ConHi', desc: 'Max consecutive new highs', default: false, gradient: 'orange', group: 'cons' },
       { id: 'consNewLo', label: 'ConLo', desc: 'Max consecutive new lows', default: false, gradient: 'orange', group: 'cons' },
@@ -2832,10 +2832,10 @@
     ];
 
     const DAY_TOTAL_COLS = [
-      { id: 'dRng', label: 'DRng', desc: 'Day Range', default: true, gradient: 'orange' },
-      { id: 'dUR', label: 'DUR', desc: 'Day Up Rng', default: true, gradient: 'orange' },
-      { id: 'dLR', label: 'DLR', desc: 'Day Low Rng', default: true, gradient: 'orange' },
-      { id: 'dOC', label: 'DO-C', desc: 'Day O-C', default: true, gradient: 'rg' },
+      { id: 'dRng', label: 'DRng', desc: 'Day Range', default: false, gradient: 'orange' },
+      { id: 'dUR', label: 'DUR', desc: 'Day Up Rng', default: false, gradient: 'orange' },
+      { id: 'dLR', label: 'DLR', desc: 'Day Low Rng', default: false, gradient: 'orange' },
+      { id: 'dOC', label: 'DO-C', desc: 'Day O-C', default: false, gradient: 'rg' },
       { id: 'dOCH', label: 'O-CH', desc: 'O-C to Hour', default: false, gradient: 'rg' },
       { id: 'dHiHr', label: 'HiHr', desc: 'High Hour', default: false },
       { id: 'dLoHr', label: 'LoHr', desc: 'Low Hour', default: false },
@@ -3183,11 +3183,37 @@
       if (!container) return;
       container.innerHTML = '';
 
-      // Separate CR, OR, and LV columns from other columns
+      // Add selected columns section at top
+      const selectedCols = ALL_COLUMNS.filter(c => visibleColumns.has(c.id));
+      if (selectedCols.length > 0) {
+        const selectedSection = document.createElement('div');
+        selectedSection.style.cssText = 'margin-bottom:16px;padding:8px;background:rgba(34,197,94,0.1);border:1px solid rgba(34,197,94,0.3);border-radius:6px;';
+
+        const selectedHeader = document.createElement('div');
+        selectedHeader.style.cssText = 'font-weight:600;color:var(--accent-green);font-size:0.7rem;margin-bottom:6px;';
+        selectedHeader.textContent = `Selected Columns (${selectedCols.length})`;
+        selectedSection.appendChild(selectedHeader);
+
+        const selectedGrid = document.createElement('div');
+        selectedGrid.style.cssText = 'display:flex;flex-wrap:wrap;gap:4px;';
+        selectedCols.forEach(col => {
+          const chip = document.createElement('span');
+          chip.style.cssText = 'display:inline-flex;align-items:center;gap:4px;background:var(--bg-secondary);padding:2px 6px;border-radius:4px;font-size:0.6rem;color:var(--text-primary);cursor:pointer;';
+          chip.innerHTML = `${col.label} <span style="color:var(--text-muted);font-size:0.55rem;">×</span>`;
+          chip.title = col.desc;
+          chip.onclick = () => { toggleColumn(col.id); updateMobileColumnGrid(); };
+          selectedGrid.appendChild(chip);
+        });
+        selectedSection.appendChild(selectedGrid);
+        container.appendChild(selectedSection);
+      }
+
+      // Separate CR, OR, LV, and BP columns from other columns
       const crCols = ALL_COLUMNS.filter(c => c.id.startsWith('cr'));
       const orCols = ALL_COLUMNS.filter(c => c.id.startsWith('or'));
       const lvCols = ALL_COLUMNS.filter(c => c.id.startsWith('lv'));
-      const otherCols = ALL_COLUMNS.filter(c => !c.id.startsWith('cr') && !c.id.startsWith('or') && !c.id.startsWith('lv'));
+      const bpCols = ALL_COLUMNS.filter(c => c.group && c.group.startsWith('bp'));
+      const otherCols = ALL_COLUMNS.filter(c => !c.id.startsWith('cr') && !c.id.startsWith('or') && !c.id.startsWith('lv') && !(c.group && c.group.startsWith('bp')));
 
       // Render other columns first
       otherCols.forEach(col => {
@@ -3220,12 +3246,23 @@
         container.appendChild(item);
       });
 
-      // Add CR columns section header
+      // Add CR columns section header (collapsed by default)
       if (crCols.length > 0) {
         const crHeader = document.createElement('div');
-        crHeader.style.cssText = 'margin-top:16px;padding:8px 4px;background:rgba(247,147,26,0.1);border-radius:4px;font-weight:600;color:var(--accent-btc);font-size:0.75rem;cursor:pointer;display:flex;align-items:center;gap:8px;';
-        crHeader.innerHTML = `<span id="cr-section-arrow" style="transition:transform 0.2s;">▼</span> Close-to-Rest Metrics (${crCols.length} columns)`;
-        crHeader.onclick = () => {
+        crHeader.style.cssText = 'margin-top:16px;padding:8px 4px;background:rgba(247,147,26,0.1);border-radius:4px;font-weight:600;color:var(--accent-btc);font-size:0.75rem;cursor:pointer;display:flex;align-items:center;justify-content:space-between;';
+
+        const crHeaderLeft = document.createElement('div');
+        crHeaderLeft.style.cssText = 'display:flex;align-items:center;gap:8px;';
+        crHeaderLeft.innerHTML = `<span id="cr-section-arrow" style="transition:transform 0.2s;transform:rotate(-90deg);">▼</span> Close-to-Rest (${crCols.length})`;
+
+        const crBtns = document.createElement('div');
+        crBtns.style.cssText = 'display:flex;gap:4px;';
+        crBtns.innerHTML = `<button style="font-size:0.55rem;padding:2px 6px;background:var(--bg-secondary);border:1px solid var(--border-medium);border-radius:3px;color:var(--text-primary);cursor:pointer;" onclick="event.stopPropagation();showAllMobileSectionCols('cr');">All</button><button style="font-size:0.55rem;padding:2px 6px;background:var(--bg-secondary);border:1px solid var(--border-medium);border-radius:3px;color:var(--text-primary);cursor:pointer;" onclick="event.stopPropagation();hideAllMobileSectionCols('cr');">None</button>`;
+
+        crHeader.appendChild(crHeaderLeft);
+        crHeader.appendChild(crBtns);
+        crHeader.onclick = (e) => {
+          if (e.target.tagName === 'BUTTON') return;
           const section = document.getElementById('cr-cols-section');
           const arrow = document.getElementById('cr-section-arrow');
           if (section.style.display === 'none') {
@@ -3240,7 +3277,7 @@
 
         const crSection = document.createElement('div');
         crSection.id = 'cr-cols-section';
-        crSection.style.cssText = 'padding-left:8px;border-left:2px solid rgba(247,147,26,0.3);margin-left:4px;';
+        crSection.style.cssText = 'padding-left:8px;border-left:2px solid rgba(247,147,26,0.3);margin-left:4px;display:none;';
 
         // Group CR columns by minute
         const crMinutes = ['00', '05', '10', '15', '20', '25', '30', '35', '40', '45', '50'];
@@ -3291,9 +3328,20 @@
       // Add OR columns section header
       if (orCols.length > 0) {
         const orHeader = document.createElement('div');
-        orHeader.style.cssText = 'margin-top:16px;padding:8px 4px;background:rgba(100,149,237,0.1);border-radius:4px;font-weight:600;color:var(--accent-blue);font-size:0.75rem;cursor:pointer;display:flex;align-items:center;gap:8px;';
-        orHeader.innerHTML = `<span id="or-section-arrow" style="transition:transform 0.2s;">▼</span> Open-to-Bar Metrics (${orCols.length} columns)`;
-        orHeader.onclick = () => {
+        orHeader.style.cssText = 'margin-top:16px;padding:8px 4px;background:rgba(100,149,237,0.1);border-radius:4px;font-weight:600;color:var(--accent-blue);font-size:0.75rem;cursor:pointer;display:flex;align-items:center;justify-content:space-between;';
+
+        const orHeaderLeft = document.createElement('div');
+        orHeaderLeft.style.cssText = 'display:flex;align-items:center;gap:8px;';
+        orHeaderLeft.innerHTML = `<span id="or-section-arrow" style="transition:transform 0.2s;transform:rotate(-90deg);">▼</span> Open-to-Bar (${orCols.length})`;
+
+        const orBtns = document.createElement('div');
+        orBtns.style.cssText = 'display:flex;gap:4px;';
+        orBtns.innerHTML = `<button style="font-size:0.55rem;padding:2px 6px;background:var(--bg-secondary);border:1px solid var(--border-medium);border-radius:3px;color:var(--text-primary);cursor:pointer;" onclick="event.stopPropagation();showAllMobileSectionCols('or');">All</button><button style="font-size:0.55rem;padding:2px 6px;background:var(--bg-secondary);border:1px solid var(--border-medium);border-radius:3px;color:var(--text-primary);cursor:pointer;" onclick="event.stopPropagation();hideAllMobileSectionCols('or');">None</button>`;
+
+        orHeader.appendChild(orHeaderLeft);
+        orHeader.appendChild(orBtns);
+        orHeader.onclick = (e) => {
+          if (e.target.tagName === 'BUTTON') return;
           const section = document.getElementById('or-cols-section');
           const arrow = document.getElementById('or-section-arrow');
           if (section.style.display === 'none') {
@@ -3308,7 +3356,7 @@
 
         const orSection = document.createElement('div');
         orSection.id = 'or-cols-section';
-        orSection.style.cssText = 'padding-left:8px;border-left:2px solid rgba(100,149,237,0.3);margin-left:4px;';
+        orSection.style.cssText = 'padding-left:8px;border-left:2px solid rgba(100,149,237,0.3);margin-left:4px;display:none;';
 
         // Group OR columns by minute
         const orMinutes = ['00', '05', '10', '15', '20', '25', '30', '35', '40', '45', '50', '55'];
@@ -3359,9 +3407,20 @@
       // Add LV columns section header
       if (lvCols.length > 0) {
         const lvHeader = document.createElement('div');
-        lvHeader.style.cssText = 'margin-top:16px;padding:8px 4px;background:rgba(147,112,219,0.1);border-radius:4px;font-weight:600;color:var(--accent-purple);font-size:0.75rem;cursor:pointer;display:flex;align-items:center;gap:8px;';
-        lvHeader.innerHTML = `<span id="lv-section-arrow" style="transition:transform 0.2s;">▼</span> Bar Level Metrics (${lvCols.length} columns)`;
-        lvHeader.onclick = () => {
+        lvHeader.style.cssText = 'margin-top:16px;padding:8px 4px;background:rgba(147,112,219,0.1);border-radius:4px;font-weight:600;color:var(--accent-purple);font-size:0.75rem;cursor:pointer;display:flex;align-items:center;justify-content:space-between;';
+
+        const lvHeaderLeft = document.createElement('div');
+        lvHeaderLeft.style.cssText = 'display:flex;align-items:center;gap:8px;';
+        lvHeaderLeft.innerHTML = `<span id="lv-section-arrow" style="transition:transform 0.2s;transform:rotate(-90deg);">▼</span> Bar Levels (${lvCols.length})`;
+
+        const lvBtns = document.createElement('div');
+        lvBtns.style.cssText = 'display:flex;gap:4px;';
+        lvBtns.innerHTML = `<button style="font-size:0.55rem;padding:2px 6px;background:var(--bg-secondary);border:1px solid var(--border-medium);border-radius:3px;color:var(--text-primary);cursor:pointer;" onclick="event.stopPropagation();showAllMobileSectionCols('lv');">All</button><button style="font-size:0.55rem;padding:2px 6px;background:var(--bg-secondary);border:1px solid var(--border-medium);border-radius:3px;color:var(--text-primary);cursor:pointer;" onclick="event.stopPropagation();hideAllMobileSectionCols('lv');">None</button>`;
+
+        lvHeader.appendChild(lvHeaderLeft);
+        lvHeader.appendChild(lvBtns);
+        lvHeader.onclick = (e) => {
+          if (e.target.tagName === 'BUTTON') return;
           const section = document.getElementById('lv-cols-section');
           const arrow = document.getElementById('lv-section-arrow');
           if (section.style.display === 'none') {
@@ -3376,7 +3435,7 @@
 
         const lvSection = document.createElement('div');
         lvSection.id = 'lv-cols-section';
-        lvSection.style.cssText = 'padding-left:8px;border-left:2px solid rgba(147,112,219,0.3);margin-left:4px;';
+        lvSection.style.cssText = 'padding-left:8px;border-left:2px solid rgba(147,112,219,0.3);margin-left:4px;display:none;';
 
         // Group LV columns by minute
         const lvMinutes = ['00', '05', '10', '15', '20', '25', '30', '35', '40', '45', '50', '55'];
@@ -3422,6 +3481,85 @@
         });
 
         container.appendChild(lvSection);
+      }
+
+      // Add BP (Bar vs Previous Bar) columns section header (collapsed by default)
+      if (bpCols.length > 0) {
+        const bpHeader = document.createElement('div');
+        bpHeader.style.cssText = 'margin-top:16px;padding:8px 4px;background:rgba(59,130,246,0.1);border-radius:4px;font-weight:600;color:#3b82f6;font-size:0.75rem;cursor:pointer;display:flex;align-items:center;justify-content:space-between;';
+
+        const bpHeaderLeft = document.createElement('div');
+        bpHeaderLeft.style.cssText = 'display:flex;align-items:center;gap:8px;';
+        bpHeaderLeft.innerHTML = `<span id="bp-section-arrow" style="transition:transform 0.2s;transform:rotate(-90deg);">▼</span> Bar vs Prev H/L (${bpCols.length})`;
+
+        const bpBtns = document.createElement('div');
+        bpBtns.style.cssText = 'display:flex;gap:4px;';
+        bpBtns.innerHTML = `<button style="font-size:0.55rem;padding:2px 6px;background:var(--bg-secondary);border:1px solid var(--border-medium);border-radius:3px;color:var(--text-primary);cursor:pointer;" onclick="event.stopPropagation();showAllMobileSectionCols('bp');">All</button><button style="font-size:0.55rem;padding:2px 6px;background:var(--bg-secondary);border:1px solid var(--border-medium);border-radius:3px;color:var(--text-primary);cursor:pointer;" onclick="event.stopPropagation();hideAllMobileSectionCols('bp');">None</button>`;
+
+        bpHeader.appendChild(bpHeaderLeft);
+        bpHeader.appendChild(bpBtns);
+        bpHeader.onclick = (e) => {
+          if (e.target.tagName === 'BUTTON') return;
+          const section = document.getElementById('bp-cols-section');
+          const arrow = document.getElementById('bp-section-arrow');
+          if (section.style.display === 'none') {
+            section.style.display = 'block';
+            arrow.style.transform = 'rotate(0deg)';
+          } else {
+            section.style.display = 'none';
+            arrow.style.transform = 'rotate(-90deg)';
+          }
+        };
+        container.appendChild(bpHeader);
+
+        const bpSection = document.createElement('div');
+        bpSection.id = 'bp-cols-section';
+        bpSection.style.cssText = 'padding-left:8px;border-left:2px solid rgba(59,130,246,0.3);margin-left:4px;display:none;';
+
+        // Group BP columns by minute
+        const bpMinutes = ['00', '05', '10', '15', '20', '25', '30', '35', '40', '45', '50', '55'];
+        bpMinutes.forEach(min => {
+          const minCols = bpCols.filter(c => c.group === 'bp' + min);
+          if (minCols.length > 0) {
+            const minHeader = document.createElement('div');
+            minHeader.style.cssText = 'margin-top:8px;padding:4px;font-size:0.65rem;color:#3b82f6;font-weight:500;';
+            minHeader.textContent = `:${min} Bar`;
+            bpSection.appendChild(minHeader);
+
+            minCols.forEach(col => {
+              const item = document.createElement('div');
+              item.className = 'mobile-settings-item';
+              item.style.padding = '6px 8px';
+              item.style.cursor = 'pointer';
+              item.onclick = () => {
+                toggleColumn(col.id);
+                updateMobileColumnGrid();
+              };
+
+              const checkbox = document.createElement('input');
+              checkbox.type = 'checkbox';
+              checkbox.checked = visibleColumns.has(col.id);
+              checkbox.style.accentColor = '#3b82f6';
+              checkbox.onclick = (e) => e.stopPropagation();
+              checkbox.onchange = () => {
+                toggleColumn(col.id);
+              };
+
+              const label = document.createElement('span');
+              label.className = 'mobile-settings-label';
+              label.textContent = `${col.label} (${col.desc})`;
+              label.style.flex = '1';
+              label.style.marginLeft = '8px';
+              label.style.fontSize = '0.65rem';
+
+              item.appendChild(checkbox);
+              item.appendChild(label);
+              bpSection.appendChild(item);
+            });
+          }
+        });
+
+        container.appendChild(bpSection);
       }
     }
 
@@ -11127,6 +11265,39 @@ function populateDatePicker() {
     function setRangeCols() { visibleColumns = new Set(['rng','ur','lr','mxr','mxrRk','rngRk']); document.querySelectorAll('#col-grid input').forEach(cb => { const colId = cb.id.replace('col-', ''); cb.checked = visibleColumns.has(colId); }); renderTable(); updateMobileColumnGrid(); }
     function setOHLCVCols() { visibleColumns = new Set(['o','hi','lo','c','v']); document.querySelectorAll('#col-grid input').forEach(cb => { const colId = cb.id.replace('col-', ''); cb.checked = visibleColumns.has(colId); }); renderTable(); updateMobileColumnGrid(); }
     function setRSICols() { visibleColumns = new Set(['rsiMax','rsiMin','rsiAvg','rsiOpen','rsiClose','rsiDelta','rsiOBmin','rsiOSmin','sigMax','sigMin','sigAvg','obos']); document.querySelectorAll('#col-grid input').forEach(cb => { const colId = cb.id.replace('col-', ''); cb.checked = visibleColumns.has(colId); }); renderTable(); updateMobileColumnGrid(); }
+
+    // Mobile section bulk toggle functions
+    function showAllMobileSectionCols(secKey) {
+      const prefixes = { cr: 'cr', or: 'or', lv: 'lv', bp: 'bp' };
+      const prefix = prefixes[secKey];
+      if (!prefix) return;
+
+      ALL_COLUMNS.forEach(col => {
+        if ((secKey === 'bp' && col.group && col.group.startsWith('bp')) ||
+            (secKey !== 'bp' && col.id.startsWith(prefix))) {
+          visibleColumns.add(col.id);
+        }
+      });
+      document.querySelectorAll('#col-grid input').forEach(cb => { const colId = cb.id.replace('col-', ''); cb.checked = visibleColumns.has(colId); });
+      renderTable();
+      updateMobileColumnGrid();
+    }
+
+    function hideAllMobileSectionCols(secKey) {
+      const prefixes = { cr: 'cr', or: 'or', lv: 'lv', bp: 'bp' };
+      const prefix = prefixes[secKey];
+      if (!prefix) return;
+
+      ALL_COLUMNS.forEach(col => {
+        if ((secKey === 'bp' && col.group && col.group.startsWith('bp')) ||
+            (secKey !== 'bp' && col.id.startsWith(prefix))) {
+          visibleColumns.delete(col.id);
+        }
+      });
+      document.querySelectorAll('#col-grid input').forEach(cb => { const colId = cb.id.replace('col-', ''); cb.checked = visibleColumns.has(colId); });
+      renderTable();
+      updateMobileColumnGrid();
+    }
 
     // Close-to-rest-of-hour metrics preset functions
     function setCRCols(minute) {
