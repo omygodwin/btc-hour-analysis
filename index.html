@@ -536,6 +536,8 @@
     .data-cell.neutral { color: var(--text-muted) !important; }
     .data-cell.ob { color: #fbbf24 !important; font-weight: 600; }
     .data-cell.os { color: #60a5fa !important; font-weight: 600; }
+    :root.light-mode .data-cell.up { color: var(--text-primary) !important; }
+    :root.light-mode .data-cell.down { color: var(--text-primary) !important; }
     
     .legend { display: flex; justify-content: center; gap: 16px; padding: 6px; background: var(--bg-secondary); border-top: 1px solid var(--border-subtle); font-size: 0.55rem; flex-wrap: wrap; flex-shrink: 0; }
     .legend-item { display: flex; align-items: center; gap: 4px; color: var(--text-muted); }
@@ -9048,6 +9050,7 @@ function populateDatePicker() {
     function renderDayView() {
       const date = document.getElementById('day-view-date').value;
       if (!date || !barsByET[date]) return;
+      const _isLight = document.documentElement.classList.contains('light-mode');
 
       const lvl = parseInt(document.getElementById('day-level-size').value) || 250;
       const hlFrom = parseInt(document.getElementById('day-hl-from').value);
@@ -9329,9 +9332,9 @@ function populateDatePicker() {
           bd += `<td class="group-border" style="background:${getOrangeGradient(hm.rng, hStats.rng.min, hStats.rng.max)}">${hm.rng}</td>`;
           bd += `<td style="background:${getOrangeGradient(hm.ur, hStats.urlr.min, hStats.urlr.max)}">${hm.ur}</td>`;
           bd += `<td style="background:${getOrangeGradient(hm.lr, hStats.urlr.min, hStats.urlr.max)}">${hm.lr}</td>`;
-          bd += `<td style="color:${hm.up > 0 ? '#a7f3d0' : ''}">${hm.up}</td>`;
-          bd += `<td style="color:${hm.dn > 0 ? '#fecaca' : ''}">${hm.dn}</td>`;
-          bd += `<td style="color:${hm.cl > 0 ? '#a7f3d0' : hm.cl < 0 ? '#fecaca' : ''}">${hm.cl > 0 ? '+' + hm.cl : hm.cl}</td>`;
+          bd += `<td style="color:${!_isLight && hm.up > 0 ? '#a7f3d0' : ''}">${hm.up}</td>`;
+          bd += `<td style="color:${!_isLight && hm.dn > 0 ? '#fecaca' : ''}">${hm.dn}</td>`;
+          bd += `<td style="color:${!_isLight ? (hm.cl > 0 ? '#a7f3d0' : hm.cl < 0 ? '#fecaca' : '') : ''}">${hm.cl > 0 ? '+' + hm.cl : hm.cl}</td>`;
           bd += `<td>:${String(hm.hm).padStart(2,'0')}</td>`;
           bd += `<td>:${String(hm.lm).padStart(2,'0')}</td>`;
           bd += `<td class="${hm.oc >= 0 ? 'up' : 'down'}" style="background:${getRGGradient(hm.oc, hStats.oc.min, hStats.oc.max)}">${hm.oc >= 0 ? '+' : ''}${hm.oc}</td>`;
@@ -9459,6 +9462,7 @@ function populateDatePicker() {
     }
     
     function renderDayViewPanel2(date, lvl, hlFrom, hlTo) {
+      const _isLight = document.documentElement.classList.contains('light-mode');
       const day = etDays[date];
       const bars = barsByET[date];
       if (!day || !bars) return;
@@ -9512,9 +9516,9 @@ function populateDatePicker() {
           bd += `<td class="group-border" style="background:${getOrangeGradient(hm.rng, hStats.rng.min, hStats.rng.max)}">${hm.rng}</td>`;
           bd += `<td style="background:${getOrangeGradient(hm.ur, hStats.urlr.min, hStats.urlr.max)}">${hm.ur}</td>`;
           bd += `<td style="background:${getOrangeGradient(hm.lr, hStats.urlr.min, hStats.urlr.max)}">${hm.lr}</td>`;
-          bd += `<td style="color:${hm.up > 0 ? '#a7f3d0' : ''}">${hm.up}</td>`;
-          bd += `<td style="color:${hm.dn > 0 ? '#fecaca' : ''}">${hm.dn}</td>`;
-          bd += `<td style="color:${hm.cl > 0 ? '#a7f3d0' : hm.cl < 0 ? '#fecaca' : ''}">${hm.cl > 0 ? '+' + hm.cl : hm.cl}</td>`;
+          bd += `<td style="color:${!_isLight && hm.up > 0 ? '#a7f3d0' : ''}">${hm.up}</td>`;
+          bd += `<td style="color:${!_isLight && hm.dn > 0 ? '#fecaca' : ''}">${hm.dn}</td>`;
+          bd += `<td style="color:${!_isLight ? (hm.cl > 0 ? '#a7f3d0' : hm.cl < 0 ? '#fecaca' : '') : ''}">${hm.cl > 0 ? '+' + hm.cl : hm.cl}</td>`;
           bd += `<td class="${hm.oc >= 0 ? 'up' : 'down'}" style="background:${getRGGradient(hm.oc, hStats.oc.min, hStats.oc.max)}">${hm.oc >= 0 ? '+' : ''}${hm.oc}</td>`;
         } else {
           bd += `<td colspan="7" class="group-border" style="color:var(--text-muted)">No data</td>`;
@@ -9610,6 +9614,7 @@ function populateDatePicker() {
     }
     
     function renderHourView() {
+      const _isLight = document.documentElement.classList.contains('light-mode');
       const hour = parseInt(document.getElementById('hour-view-hour').value);
       const lvl = parseInt(document.getElementById('hour-level-size').value) || 250;
       hvSelectedHour = hour;
@@ -9775,9 +9780,9 @@ function populateDatePicker() {
           bd += `<td class="group-border" style="background:${getOrangeGradient(hm.rng, hStats.rng.min, hStats.rng.max)}">${hm.rng}</td>`;
           bd += `<td style="background:${getOrangeGradient(hm.ur, hStats.urlr.min, hStats.urlr.max)}">${hm.ur}</td>`;
           bd += `<td style="background:${getOrangeGradient(hm.lr, hStats.urlr.min, hStats.urlr.max)}">${hm.lr}</td>`;
-          bd += `<td style="color:${hm.up > 0 ? '#a7f3d0' : ''}">${hm.up}</td>`;
-          bd += `<td style="color:${hm.dn > 0 ? '#fecaca' : ''}">${hm.dn}</td>`;
-          bd += `<td style="color:${hm.cl > 0 ? '#a7f3d0' : hm.cl < 0 ? '#fecaca' : ''}">${hm.cl > 0 ? '+' + hm.cl : hm.cl}</td>`;
+          bd += `<td style="color:${!_isLight && hm.up > 0 ? '#a7f3d0' : ''}">${hm.up}</td>`;
+          bd += `<td style="color:${!_isLight && hm.dn > 0 ? '#fecaca' : ''}">${hm.dn}</td>`;
+          bd += `<td style="color:${!_isLight ? (hm.cl > 0 ? '#a7f3d0' : hm.cl < 0 ? '#fecaca' : '') : ''}">${hm.cl > 0 ? '+' + hm.cl : hm.cl}</td>`;
           bd += `<td>:${String(hm.hm).padStart(2,'0')}</td>`;
           bd += `<td>:${String(hm.lm).padStart(2,'0')}</td>`;
           bd += `<td class="${hm.oc >= 0 ? 'up' : 'down'}" style="background:${getRGGradient(hm.oc, hStats.oc.min, hStats.oc.max)}">${hm.oc >= 0 ? '+' : ''}${hm.oc}</td>`;
