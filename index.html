@@ -2571,6 +2571,41 @@
             </div>
 
             <div class="mobile-filter-section">
+              <h3>Backfill Historical Data</h3>
+              <div class="mobile-settings-row">
+                <div class="mobile-settings-item">
+                  <span class="mobile-settings-label">GitHub PAT:</span>
+                  <div style="display:flex;align-items:center;gap:4px;flex:1;">
+                    <input type="password" id="backfill-pat" placeholder="ghp_..." class="mobile-settings-input" style="flex:1;font-size:0.7rem;">
+                    <button onclick="saveBackfillPAT()" style="padding:4px 8px;font-size:0.65rem;background:var(--accent-green);color:#000;border:none;border-radius:3px;cursor:pointer;" title="Save PAT to localStorage">Save</button>
+                    <button onclick="clearBackfillPAT()" style="padding:4px 8px;font-size:0.65rem;background:var(--bg-tertiary);color:var(--text-secondary);border:1px solid var(--border-medium);border-radius:3px;cursor:pointer;" title="Clear saved PAT">Clear</button>
+                  </div>
+                </div>
+                <div class="mobile-settings-item">
+                  <span class="mobile-settings-label">Start Date:</span>
+                  <input type="date" id="backfill-start" class="mobile-settings-input" style="flex:1;font-size:0.7rem;">
+                </div>
+                <div class="mobile-settings-item">
+                  <span class="mobile-settings-label">End Date:</span>
+                  <input type="date" id="backfill-end" class="mobile-settings-input" style="flex:1;font-size:0.7rem;">
+                </div>
+              </div>
+              <div style="margin-top:8px;display:flex;align-items:center;gap:8px;">
+                <button id="backfill-fetch-btn" onclick="triggerBackfill()" style="padding:8px 16px;font-size:0.75rem;background:var(--accent-orange);color:#000;border:none;border-radius:4px;cursor:pointer;font-weight:600;">Fetch Data</button>
+                <span id="backfill-status" style="font-size:0.7rem;color:var(--text-muted);"></span>
+              </div>
+              <div id="backfill-progress" style="display:none;margin-top:8px;">
+                <div style="height:4px;background:var(--bg-tertiary);border-radius:2px;overflow:hidden;">
+                  <div id="backfill-progress-bar" style="height:100%;width:0%;background:var(--accent-orange);transition:width 0.3s;"></div>
+                </div>
+              </div>
+              <p style="font-size:0.65rem;color:var(--text-muted);margin-top:8px;line-height:1.3;">
+                Triggers the <strong>backfill-data.yml</strong> GitHub Actions workflow to fetch historical 5-min data for the given date range and commit it to the repo.
+                Requires a GitHub PAT with <code>actions:write</code> scope (or classic <code>repo</code> scope). PAT is stored locally and never sent anywhere except GitHub API.
+              </p>
+            </div>
+
+            <div class="mobile-filter-section">
               <h3>Analysis Thresholds</h3>
               <div class="mobile-settings-row">
                 <div class="mobile-settings-item">
@@ -4690,6 +4725,174 @@
       }
     }
 
+    // ==================== BACKFILL HISTORICAL DATA ====================
+    const BACKFILL_REPO = 'omygodwin/btc-hour-analysis';
+    const BACKFILL_WORKFLOW = 'backfill-data.yml';
+    let backfillPollTimer = null;
+
+    function saveBackfillPAT() {
+      const pat = document.getElementById('backfill-pat').value.trim();
+      if (!pat) return;
+      localStorage.setItem('btc-github-pat', pat);
+      setBackfillStatus('PAT saved', 'var(--accent-green)');
+    }
+
+    function clearBackfillPAT() {
+      localStorage.removeItem('btc-github-pat');
+      document.getElementById('backfill-pat').value = '';
+      setBackfillStatus('PAT cleared', 'var(--text-muted)');
+    }
+
+    function loadBackfillPAT() {
+      const saved = localStorage.getItem('btc-github-pat');
+      if (saved) {
+        const el = document.getElementById('backfill-pat');
+        if (el) el.value = saved;
+      }
+    }
+
+    function setBackfillStatus(msg, color) {
+      const el = document.getElementById('backfill-status');
+      if (el) {
+        el.textContent = msg;
+        el.style.color = color || 'var(--text-muted)';
+      }
+    }
+
+    function setBackfillProgress(show, pct) {
+      const wrap = document.getElementById('backfill-progress');
+      const bar = document.getElementById('backfill-progress-bar');
+      if (wrap) wrap.style.display = show ? 'block' : 'none';
+      if (bar && pct !== undefined) bar.style.width = pct + '%';
+    }
+
+    function setBackfillLoading(loading) {
+      const btn = document.getElementById('backfill-fetch-btn');
+      if (!btn) return;
+      btn.disabled = loading;
+      btn.style.opacity = loading ? '0.6' : '1';
+      btn.textContent = loading ? 'Running...' : 'Fetch Data';
+    }
+
+    async function triggerBackfill() {
+      const pat = document.getElementById('backfill-pat').value.trim() || localStorage.getItem('btc-github-pat');
+      if (!pat) {
+        setBackfillStatus('Enter a GitHub PAT first', 'var(--accent-red, #f87171)');
+        return;
+      }
+
+      const startDate = document.getElementById('backfill-start').value;
+      const endDate = document.getElementById('backfill-end').value;
+      if (!startDate || !endDate) {
+        setBackfillStatus('Select both start and end dates', 'var(--accent-red, #f87171)');
+        return;
+      }
+      if (startDate > endDate) {
+        setBackfillStatus('Start date must be before end date', 'var(--accent-red, #f87171)');
+        return;
+      }
+
+      setBackfillLoading(true);
+      setBackfillProgress(true, 10);
+      setBackfillStatus('Triggering workflow...', 'var(--accent-orange)');
+
+      try {
+        const resp = await fetch(`https://api.github.com/repos/${BACKFILL_REPO}/actions/workflows/${BACKFILL_WORKFLOW}/dispatches`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${pat}`,
+            'Accept': 'application/vnd.github+json',
+            'X-GitHub-Api-Version': '2022-11-28'
+          },
+          body: JSON.stringify({
+            ref: 'main',
+            inputs: { start_date: startDate, end_date: endDate, confirm: 'yes' }
+          })
+        });
+
+        if (resp.status === 204) {
+          setBackfillProgress(true, 25);
+          setBackfillStatus('Workflow triggered, waiting for run to start...', 'var(--accent-orange)');
+          // Small delay before polling — GitHub needs a moment to create the run
+          setTimeout(() => pollBackfillStatus(pat), 5000);
+        } else {
+          const errBody = await resp.json().catch(() => ({}));
+          const msg = errBody.message || `HTTP ${resp.status}`;
+          setBackfillStatus(`Failed: ${msg}`, 'var(--accent-red, #f87171)');
+          setBackfillLoading(false);
+          setBackfillProgress(false);
+        }
+      } catch (err) {
+        setBackfillStatus(`Error: ${err.message}`, 'var(--accent-red, #f87171)');
+        setBackfillLoading(false);
+        setBackfillProgress(false);
+      }
+    }
+
+    async function pollBackfillStatus(pat) {
+      if (backfillPollTimer) clearTimeout(backfillPollTimer);
+
+      try {
+        const resp = await fetch(`https://api.github.com/repos/${BACKFILL_REPO}/actions/workflows/${BACKFILL_WORKFLOW}/runs?per_page=1`, {
+          headers: {
+            'Authorization': `Bearer ${pat}`,
+            'Accept': 'application/vnd.github+json',
+            'X-GitHub-Api-Version': '2022-11-28'
+          }
+        });
+
+        if (!resp.ok) {
+          setBackfillStatus(`Poll error: HTTP ${resp.status}`, 'var(--accent-red, #f87171)');
+          setBackfillLoading(false);
+          setBackfillProgress(false);
+          return;
+        }
+
+        const data = await resp.json();
+        const run = data.workflow_runs && data.workflow_runs[0];
+
+        if (!run) {
+          setBackfillStatus('Waiting for run to appear...', 'var(--accent-orange)');
+          backfillPollTimer = setTimeout(() => pollBackfillStatus(pat), 5000);
+          return;
+        }
+
+        const status = run.status;
+        const conclusion = run.conclusion;
+
+        if (status === 'completed') {
+          if (conclusion === 'success') {
+            setBackfillProgress(true, 100);
+            setBackfillStatus('Backfill complete! Refreshing data...', 'var(--accent-green)');
+            setBackfillLoading(false);
+            // Wait a moment for GitHub Pages to deploy, then refresh
+            setTimeout(async () => {
+              if (liveDataFetcher) {
+                await liveDataFetcher.refresh();
+              }
+              setBackfillStatus('Done — data refreshed', 'var(--accent-green)');
+              setTimeout(() => setBackfillProgress(false), 2000);
+            }, 10000);
+          } else {
+            setBackfillStatus(`Workflow finished: ${conclusion || 'unknown'}`, 'var(--accent-red, #f87171)');
+            setBackfillLoading(false);
+            setBackfillProgress(false);
+          }
+          return;
+        }
+
+        // Still running
+        const pctMap = { queued: 30, in_progress: 60, waiting: 40 };
+        setBackfillProgress(true, pctMap[status] || 50);
+        setBackfillStatus(`Workflow ${status}...`, 'var(--accent-orange)');
+        backfillPollTimer = setTimeout(() => pollBackfillStatus(pat), 10000);
+      } catch (err) {
+        setBackfillStatus(`Poll error: ${err.message}`, 'var(--accent-red, #f87171)');
+        setBackfillLoading(false);
+        setBackfillProgress(false);
+      }
+    }
+
     // Add click handler to status indicator for manual refresh
     document.addEventListener('DOMContentLoaded', () => {
       const statusIndicator = document.getElementById('live-status');
@@ -4885,6 +5088,7 @@
     
     // Auto-load data on page load (for GitHub Pages)
     window.addEventListener('DOMContentLoaded', () => {
+      loadBackfillPAT();
       setTimeout(() => autoLoadData(), 100);
     });
     
